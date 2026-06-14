@@ -14,6 +14,7 @@ const BTN_B = { cx: 380, cy: 222, r: 19 };  // ジャンプ（攻撃の左）
 const touchDir = { left: false, right: false, up: false, down: false };
 const knob = { x: STICK.cx, y: STICK.cy };
 const pointers = new Map(); // pointerId -> 'stick'|'attack'|'jump'|'tap'
+let lastTap = null;          // 直近タップの論理座標（メニューのヒットテスト用）
 
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
 
@@ -57,6 +58,7 @@ export const Input = {
   _onDown(e) {
     e.preventDefault();
     const { x, y } = this._toLogical(e);
+    lastTap = { x, y };
     let role = 'tap';
     if (x < VIEW_W * 0.5 && dist(x, y, STICK.cx, STICK.cy) < STICK.r + 22) {
       role = 'stick'; this._updateStick(x, y);
@@ -111,6 +113,9 @@ export const Input = {
   get confirm() { return this.pressed('Enter', 'Space', 'KeyJ', 'KeyZ', 'TouchAttack', 'TouchConfirm'); },
 
   endFrame() { pressed.clear(); },
+
+  // 直近タップの論理座標を1回だけ取り出す（メニューのヒットテスト用）
+  consumeTap() { const t = lastTap; lastTap = null; return t; },
 
   // 画面上のタッチUIを描画（playing中のみ）
   drawControls(ctx) {

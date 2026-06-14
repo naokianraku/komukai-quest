@@ -172,6 +172,7 @@ export class Player extends Entity {
     this.speed = 86;
     this.combo = 0;
     this.attackData = null;
+    this.ranged = false; // かんたんモードで true: 攻撃時に飛び道具も出す
   }
 
   update(dt, stage) {
@@ -193,6 +194,7 @@ export class Player extends Entity {
       this.combo = (this.combo + 1) % 3;
       const kb = this.combo === 2 ? 220 : 150; // 3段目は強ノックバック
       this.attackData = { reach: 27 * CHAR_SCALE, dmg: 1, kb, hitSet: new Set() };
+      if (this.ranged && stage.spawnPlayerProjectile) stage.spawnPlayerProjectile(this);
     }
 
     // ジャンプ
@@ -460,6 +462,11 @@ export class Projectile {
       ctx.fillRect(Math.round(sx - 5), Math.round(sy), 10, 4);
       ctx.fillStyle = '#c73333'; // 弾頭
       ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
+    } else if (this.kind === 'tool') {
+      const sy = Math.round(this.y - 12); // プレイヤーの飛び道具（工具）
+      ctx.fillStyle = '#cfd2d6'; ctx.fillRect(Math.round(sx) - 4, sy, 8, 3);
+      ctx.fillStyle = '#9aa0a6'; ctx.fillRect(Math.round(sx) - 4, sy, 8, 1);
+      ctx.fillStyle = '#6f757b'; ctx.fillRect(Math.round(sx) + 2, sy - 1, 2, 5);
     } else {
       const x0 = Math.round(sx) - 2, sy = Math.round(this.y - 10);
       ctx.fillStyle = '#e8e2d0'; ctx.fillRect(x0, sy, 6, 4);   // 書類

@@ -9,7 +9,7 @@ import { resolveMelee, resolveProjectiles, Fx } from './combat.js';
 import { STAGES, SHUKKOU_STAGE, defFor } from './stages.js';
 import {
   drawHUD, drawTitle, drawStageIntro, drawStageClear,
-  drawRankUp, drawEnding, drawGameOver,
+  drawRankUp, drawEnding, drawGameOver, DIFF_BUTTONS,
 } from './ui.js';
 
 const FLOOR_MID = (FLOOR_TOP + FLOOR_BOTTOM) / 2;
@@ -62,6 +62,14 @@ export class Stage {
     let n = 0;
     for (const e of this.entities) if (e.team === 'enemy' && e.alive && !e.isBoss) n++;
     return n;
+  }
+
+  spawnPlayerProjectile(p) {
+    const dir = p.facing || 1;
+    this.projectiles.push(new Projectile(
+      p.x + dir * 10, p.y, dir * 230, 0, 'player',
+      { kind: 'tool', dmg: 1, kb: 80, w: 5 },
+    ));
   }
 
   spawnProjectile(thrower, target) {
@@ -386,6 +394,11 @@ export class Game {
     this.lives = 3;
     this.stage = null;
     this.savedStage = null; // 出向中に本社(Stage3)を退避
+    this.difficulty = 'normal'; // 'normal' | 'easy'
+  }
+
+  applyDifficulty() {
+    if (this.stage && this.stage.player) this.stage.player.ranged = (this.difficulty === 'easy');
   }
 
   enterDetour() {
@@ -394,6 +407,7 @@ export class Game {
     this.stage = new Stage(SHUKKOU_STAGE, this);
     this.stage.isDetour = true;
     this.stage.player.hp = Math.max(5, Math.min(hp, this.stage.player.maxhp)); // HPを引き継ぐ
+    this.applyDifficulty();
     this.state = 'intro'; this.screenT = 0;
   }
 
@@ -411,20 +425,34 @@ export class Game {
   }
 
   start() {
-    this.stageIndex = 0; this.score = 0; this.lives = 3;
+    this.stageIndex = 0; this.score = 0;
+    this.lives = this.difficulty === 'easy' ? 6 : 3;
     this.loadStage(0);
     this.state = 'intro'; this.screenT = 0;
   }
 
-  loadStage(i) { this.stage = new Stage(STAGES[i], this); }
+  loadStage(i) { this.stage = new Stage(STAGES[i], this); this.applyDifficulty(); }
   toGameOver() { this.state = 'gameover'; this.screenT = 0; }
 
   update(dt) {
     this.time += dt; this.screenT += dt;
     switch (this.state) {
-      case 'title':
-        if (Input.confirm) this.start();
+      case 'title': {
+        // 難易度切替（キーボード ←→↑↓ / WASD）
+        if (Input.pressed('ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS')) {
+          this.difficulty = this.difficulty === 'normal' ? 'easy' : 'normal';
+        }
+        const tap = Input.consumeTap();
+        if (tap) {
+          const inB = (b) => tap.x >= b.x && tap.x <= b.x + b.w && tap.y >= b.y && tap.y <= b.y + b.h;
+          if (inB(DIFF_BUTTONS.easy)) { this.difficulty = 'easy'; this.start(); }
+          else if (inB(DIFF_BUTTONS.normal)) { this.difficulty = 'normal'; this.start(); }
+          else this.start(); // ボタン以外のタップは現在の難易度で開始
+        } else if (Input.confirm) {
+          this.start();
+        }
         break;
+      }
       case 'intro':
         if (this.screenT > 0.3 && Input.confirm) { this.state = 'playing'; }
         break;
@@ -468,7 +496,7 @@ export class Game {
       ctx.fillStyle = '#0c0e11'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }
     switch (this.state) {
-      case 'title': drawTitle(ctx, this.time); break;
+      case 'title': drawTitle(ctx, this.time, this.difficulty); break;
       case 'intro': drawStageIntro(ctx, this.stage, this.screenT); break;
       case 'clear': drawStageClear(ctx, this.stage, this.screenT); break;
       case 'rankup': drawRankUp(ctx, STAGES[this.stageIndex + 1]?.playerRank ?? '工場長', this.screenT); break;

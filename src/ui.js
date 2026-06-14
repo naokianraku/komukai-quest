@@ -99,36 +99,30 @@ function drawTitleScene(ctx) {
   ctx.fillStyle = '#cdd5da'; ctx.fillRect(300, 92, 180, 58);
   for (let y = 98; y < 150; y += 11) { ctx.fillStyle = '#a6cad4'; ctx.fillRect(304, y, 172, 7); ctx.fillStyle = '#7fadba'; ctx.fillRect(304, y, 172, 2); }
 
-  // 道路（中央へ収束）＋横断歩道＋路面矢印
+  // 正門の黒い柵（全幅・かなり手前・高さ2倍）。このあと道路を上に重ねてゲート開口を作る。
+  const fBot = 242, fTop = fBot - 44, hedgeTop = fTop - 16, baseTop = fBot - 2;
+  // 背後の植栽（全幅）
+  ctx.fillStyle = '#2f5a32'; ctx.fillRect(0, hedgeTop, VIEW_W, fBot - hedgeTop);
+  ctx.fillStyle = '#3a6e3d'; for (let x = 4; x < VIEW_W; x += 13) { ctx.beginPath(); ctx.arc(x, hedgeTop + 2, 7, 0, Math.PI * 2); ctx.fill(); }
+  // コンクリ基礎（全幅）
+  ctx.fillStyle = '#b9bdc1'; ctx.fillRect(0, baseTop, VIEW_W, 14);
+  ctx.fillStyle = '#969ca2'; ctx.fillRect(0, baseTop + 12, VIEW_W, 2);
+  // 黒い柵（縦バー＋レール、槍状の先端）。右の一部はオレンジ塗装。
+  for (let x = 2; x < VIEW_W; x += 6) {
+    ctx.fillStyle = (x >= 432 && x <= 470) ? '#ff7f0e' : '#16171c';
+    ctx.fillRect(x, fTop, 2, fBot - fTop);
+    ctx.fillRect(x - 1, fTop - 3, 4, 3); // 先端
+  }
+  ctx.fillStyle = '#16171c';
+  ctx.fillRect(0, fTop + 3, VIEW_W, 3);                       // 上レール
+  ctx.fillRect(0, Math.round((fTop + fBot) / 2), VIEW_W, 3);  // 中レール
+
+  // 道路（中央へ収束）を柵の上に重ねる＝ゲート開口（道だけ通れる）＋横断歩道＋矢印
   ctx.fillStyle = '#777c83';
   ctx.beginPath(); ctx.moveTo(150, VIEW_H); ctx.lineTo(330, VIEW_H); ctx.lineTo(268, 150); ctx.lineTo(214, 150); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#e6e8ea'; for (let x = 156; x < 326; x += 16) ctx.fillRect(x, 250, 9, 7);
-  ctx.fillStyle = '#dfe2e5'; ctx.fillRect(238, 212, 4, 22);
-  ctx.beginPath(); ctx.moveTo(231, 216); ctx.lineTo(249, 216); ctx.lineTo(240, 206); ctx.closePath(); ctx.fill();
-
-  // 正門の黒い柵（手前向き）。中央のゲート（道路）部分は柵なし＝そこだけ通れる。
-  const gateL = 198, gateR = 284;
-  const segs = [[0, gateL], [gateR, VIEW_W]];
-  // 背後の植栽（手前寄りに配置）
-  for (const [x0, x1] of segs) {
-    ctx.fillStyle = '#2f5a32'; ctx.fillRect(x0, 156, x1 - x0, 28);
-    ctx.fillStyle = '#3a6e3d';
-    for (let x = x0 + 4; x < x1; x += 13) { ctx.beginPath(); ctx.arc(x, 158, 7, 0, Math.PI * 2); ctx.fill(); }
-  }
-  // コンクリ基礎
-  for (const [x0, x1] of segs) { ctx.fillStyle = '#b9bdc1'; ctx.fillRect(x0, 182, x1 - x0, 9); ctx.fillStyle = '#969ca2'; ctx.fillRect(x0, 189, x1 - x0, 2); }
-  // 黒い柵（縦バー＋上下レール、先端あり）。右の一部はオレンジ塗装。
-  const fTop = 162, fBot = 183;
-  for (const [x0, x1] of segs) {
-    for (let x = x0 + 2; x < x1; x += 6) {
-      ctx.fillStyle = (x >= 446 && x <= 474) ? '#ff7f0e' : '#16171c';
-      ctx.fillRect(x, fTop, 2, fBot - fTop);
-      ctx.fillRect(x - 1, fTop - 2, 4, 2); // 槍状の先端
-    }
-    ctx.fillStyle = '#16171c';
-    ctx.fillRect(x0, fTop + 2, x1 - x0, 2);   // 上レール
-    ctx.fillRect(x0, fBot - 4, x1 - x0, 2);   // 下レール
-  }
+  ctx.fillStyle = '#e6e8ea'; for (let x = 158; x < 324; x += 16) ctx.fillRect(x, 256, 9, 7);
+  ctx.fillStyle = '#dfe2e5'; ctx.fillRect(238, 224, 4, 22);
+  ctx.beginPath(); ctx.moveTo(231, 228); ctx.lineTo(249, 228); ctx.lineTo(240, 218); ctx.closePath(); ctx.fill();
 
   // テキスト可読性のための暗幕
   const ov = ctx.createLinearGradient(0, 0, 0, VIEW_H);
@@ -136,15 +130,35 @@ function drawTitleScene(ctx) {
   ctx.fillStyle = ov; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 }
 
-export function drawTitle(ctx, t) {
+// 難易度ボタン（描画とヒットテストで共有）
+export const DIFF_BUTTONS = {
+  normal: { x: 150, y: 170, w: 82, h: 24, label: 'ふつう' },
+  easy: { x: 248, y: 170, w: 82, h: 24, label: 'かんたん' },
+};
+
+function diffBtn(ctx, b, sel) {
+  ctx.fillStyle = sel ? ACCENT : 'rgba(16,18,22,0.9)';
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.strokeStyle = sel ? '#ffffff' : ACCENT; ctx.lineWidth = 1;
+  ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+  ctx.fillStyle = sel ? '#15171a' : INK;
+  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 0.5);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+export function drawTitle(ctx, t, difficulty = 'normal') {
   drawTitleScene(ctx);
-  center(ctx, 'KOMUKAI QUEST', 96, 'bold 34px system-ui, sans-serif', ACCENT);
-  center(ctx, '小 向 ク エ ス ト', 124, 'bold 15px system-ui, sans-serif', INK);
-  center(ctx, '小向戦士となり、小向工場を生き残れ', 162, 'bold 12px system-ui, sans-serif', INK);
-  if (Math.floor(t * 2) % 2 === 0) {
-    center(ctx, 'PRESS ENTER  /  タップでスタート', 218, 'bold 12px system-ui, sans-serif', INK);
-  }
-  center(ctx, '移動 ←↑↓→ / WASD・スティック　攻撃 J/Z　ジャンプ K/X', 244, '9px system-ui, sans-serif', SUB);
+  center(ctx, 'KOMUKAI QUEST', 86, 'bold 34px system-ui, sans-serif', ACCENT);
+  center(ctx, '小 向 ク エ ス ト', 112, 'bold 15px system-ui, sans-serif', INK);
+  center(ctx, '小向戦士となり、小向工場を生き残れ', 142, 'bold 12px system-ui, sans-serif', INK);
+  center(ctx, '難 易 度', 162, 'bold 9px system-ui, sans-serif', SUB);
+  diffBtn(ctx, DIFF_BUTTONS.normal, difficulty === 'normal');
+  diffBtn(ctx, DIFF_BUTTONS.easy, difficulty === 'easy');
+  const desc = difficulty === 'easy' ? 'かんたん: 残機おおめ＋自分も飛び道具' : 'ふつう: 標準ルール';
+  center(ctx, desc, 208, 'bold 9px system-ui, sans-serif', INK);
+  if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 226, 'bold 11px system-ui, sans-serif', INK);
 }
 
 export function drawStageIntro(ctx, stage, t) {
