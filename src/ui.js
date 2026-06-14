@@ -99,13 +99,6 @@ function drawTitleScene(ctx) {
   ctx.fillStyle = '#cdd5da'; ctx.fillRect(300, 92, 180, 58);
   for (let y = 98; y < 150; y += 11) { ctx.fillStyle = '#a6cad4'; ctx.fillRect(304, y, 172, 7); ctx.fillStyle = '#7fadba'; ctx.fillRect(304, y, 172, 2); }
 
-  // 電線＋電柱
-  ctx.strokeStyle = 'rgba(40,40,40,0.45)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(366, 84); ctx.lineTo(VIEW_W, 64); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0, 62); ctx.lineTo(366, 90); ctx.stroke();
-  ctx.fillStyle = '#5a534a'; ctx.fillRect(363, 84, 5, 116);
-  ctx.fillRect(352, 92, 27, 3); ctx.fillRect(355, 100, 21, 3);
-
   // 道路（中央へ収束）＋横断歩道＋路面矢印
   ctx.fillStyle = '#777c83';
   ctx.beginPath(); ctx.moveTo(150, VIEW_H); ctx.lineTo(330, VIEW_H); ctx.lineTo(268, 150); ctx.lineTo(214, 150); ctx.closePath(); ctx.fill();
@@ -113,9 +106,20 @@ function drawTitleScene(ctx) {
   ctx.fillStyle = '#dfe2e5'; ctx.fillRect(238, 212, 4, 22);
   ctx.beginPath(); ctx.moveTo(231, 216); ctx.lineTo(249, 216); ctx.lineTo(240, 206); ctx.closePath(); ctx.fill();
 
-  // ゲートの縞ポール（オレンジ/白）
-  const pole = (px, top, bot) => { for (let y = top; y < bot; y += 9) { ctx.fillStyle = (((y - top) / 9) | 0) % 2 ? '#ff7f0e' : '#f2f2f2'; ctx.fillRect(px - 2, y, 4, 9); } };
-  pole(150, 150, 206); pole(330, 150, 206);
+  // 道路の左右の壁（コンクリ塀・遠近）
+  ctx.fillStyle = '#c2c6ca';
+  ctx.beginPath(); ctx.moveTo(150, VIEW_H); ctx.lineTo(214, 150); ctx.lineTo(214, 138); ctx.lineTo(150, 236); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(330, VIEW_H); ctx.lineTo(268, 150); ctx.lineTo(268, 138); ctx.lineTo(330, 236); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8f9398'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(150, 236); ctx.lineTo(214, 138); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(330, 236); ctx.lineTo(268, 138); ctx.stroke();
+  ctx.strokeStyle = 'rgba(120,124,128,0.55)';
+  for (let i = 1; i < 4; i++) {
+    const lx = 150 + (214 - 150) * i / 4, rx = 330 + (268 - 330) * i / 4;
+    const by = VIEW_H + (150 - VIEW_H) * i / 4, ty = 236 + (138 - 236) * i / 4;
+    ctx.beginPath(); ctx.moveTo(lx, by); ctx.lineTo(lx, ty); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx, by); ctx.lineTo(rx, ty); ctx.stroke();
+  }
 
   // 左の案内サイン柱＋赤ピン
   ctx.fillStyle = '#e8eaec'; ctx.fillRect(116, 120, 12, 30);

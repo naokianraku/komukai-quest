@@ -281,7 +281,13 @@ export class Char extends Entity {
     if (this.hitstun > 0) { this.integrate(dt); return; }
     if (this.state !== 'idle') { this.integrate(dt); return; } // 予備/攻撃/硬直中は動かない
 
-    const target = this.team === 'enemy' ? stage.player : stage.nearestEnemy(this);
+    let target = this.team === 'enemy' ? stage.player : stage.nearestEnemy(this);
+    if (this.team === 'ally' && target) {
+      // 味方は積極的に前に出ない: 近くの敵だけ相手にし、プレイヤーより前に出過ぎない
+      const near = Math.hypot(target.x - this.x, target.y - this.y) <= 64;
+      const tooFarAhead = (this.x - stage.player.x) * stage.player.facing > 24;
+      if (!near || tooFarAhead) target = null;
+    }
     if (!target || !target.alive) {
       if (this.team === 'ally') this.followPlayer(dt, stage);
       this.integrate(dt);

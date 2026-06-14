@@ -24,8 +24,8 @@ export const UNIT_TYPES = {
   // 出向先（関連会社）
   kanren:  { name: '関連会社社員', sprite: 'kanren',  taunts: 'kanren',  hp: 3, speed: 46, reach: 22, dmg: 1, kb: 90,  cooldown: 0.8,  telegraph: 0.4,  score: 120 },
   shukkou: { name: '出向先上長',   sprite: 'shukkou', taunts: 'shukkou', hp: 8, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.46, score: 400 },
-  // 関連会社社長: 強くないが見た目が怖い（低HP・低火力・大きい・赤目）
-  shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.0, hp: 12, speed: 30, reach: 30, dmg: 1, kb: 120, cooldown: 0.95, telegraph: 0.5, score: 1500 },
+  // 関連会社社長: 見た目は怖い（黒スーツ/白髪/日焼け/赤目）。能力は普通の部長級。
+  shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.0, hp: 14, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.46, score: 1500 },
 
   // 味方（同じプロジェクトのメンバー）
   ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },

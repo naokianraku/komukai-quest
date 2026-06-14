@@ -90,8 +90,8 @@ export const CHAR_PALETTES = {
   // 出向先（関連会社）
   kanren:  { map: 'worker', h: '#5a7a6a' }, // 関連会社社員: 灰緑
   shukkou: { map: 'worker', h: '#8a5a2a' }, // 出向先上長: 茶
-  // 関連会社社長: 黒スーツ・白髪・蒼白い肌・赤い目（強くないが見た目が怖い）
-  shacho:  { map: 'suit', b: '#0a0a0e', p: '#08080c', t: '#7a0a0a', h: '#d0d0d0', s: '#cfc6b0', e: '#ff2a2a' },
+  // 関連会社社長: 黒スーツ・白髪・日焼け顔・赤い目
+  shacho:  { map: 'suit', b: '#0a0a0e', p: '#08080c', t: '#7a0a0a', h: '#e2e2e2', s: '#a86a3a', e: '#ff2a2a' },
   kyaku:  { map: 'suit', b: '#8a5a34', p: '#73492a', t: '#c0392b', h: '#3a2a1a' }, // 客: 茶スーツ赤ネクタイ
   vendor: { map: 'suit', b: '#37506e', p: '#2f4660', t: '#aeb4bc', h: '#241c14' }, // ベンダー: 紺スーツ灰ネクタイ
   boss1:  { map: 'worker', h: '#2a4f8a' },                                  // 生産部長: 青ヘルメット
