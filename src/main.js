@@ -63,8 +63,18 @@ export class Stage {
 
   spawnProjectile(thrower, target) {
     const dirx = Math.sign(target.x - thrower.x) || 1;
-    const vy = clamp(target.y - thrower.y, -28, 28);
-    this.projectiles.push(new Projectile(thrower.x + dirx * 8, thrower.y, dirx * 150, vy, thrower.team));
+    if (thrower.projKind === 'missile') {
+      this.projectiles.push(new Projectile(
+        thrower.x + dirx * 10, thrower.y, dirx * 200, 0, thrower.team,
+        { kind: 'missile', dmg: 2, kb: 130, w: 8, homing: true, target },
+      ));
+    } else {
+      const vy = clamp(target.y - thrower.y, -28, 28);
+      this.projectiles.push(new Projectile(
+        thrower.x + dirx * 8, thrower.y, dirx * 150, vy, thrower.team,
+        { kind: 'paper', dmg: 1, kb: 70, w: 5 },
+      ));
+    }
   }
 
   spawnWave(w) {

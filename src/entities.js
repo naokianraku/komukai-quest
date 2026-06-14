@@ -250,6 +250,9 @@ export class Char extends Entity {
     this.telegraph = def.telegraph || 0.32;
     this.active = def.activeDur || 0.14;
     this.thrower = !!def.thrower;
+    this.projKind = def.proj || 'paper';
+    this.projRange = def.projRange || 210;
+    this.throwCooldown = def.throwCooldown || 1.6;
     this.isBoss = !!def.boss;
     this.score = def.score || 100;
     this.scale = (def.scale || 1) * CHAR_SCALE;
@@ -289,17 +292,26 @@ export class Char extends Entity {
     this.facing = sign(dx) || this.facing;
     const inRange = Math.abs(dx) <= this.atkReach * 0.9 && Math.abs(dy) <= DEPTH_TOL;
 
-    // 投擲（スタッフ部門が書類を投げる等）
+    // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
-    if (this.thrower && this.team === 'enemy' && !inRange &&
-        Math.abs(dy) < DEPTH_TOL + 5 && Math.abs(dx) < 210 && this.throwT <= 0) {
+    const aligned = this.projKind === 'missile' || Math.abs(dy) < DEPTH_TOL + 5; // ミサイルは誘導なので奥行きズレOK
+    if (this.thrower && this.team === 'enemy' && !inRange && aligned &&
+        Math.abs(dx) < this.projRange && this.throwT <= 0) {
       stage.spawnProjectile(this, target);
-      this.setTaunt(0.6); // 書類を投げつけながら一言
-      this.throwT = 1.6 + (this.id % 3) * 0.5;
+      this.setTaunt(0.6); // 撃ちながら一言
+      this.throwT = this.throwCooldown + (this.id % 3) * 0.4;
     }
 
     if (inRange) {
       this.startAttack();
+    } else if (this.projKind === 'missile' && Math.abs(dx) < 130) {
+      // ミサイル兵は近すぎると離れて撃つ（カイト）。ただし画面内＆到達可能な範囲に留める
+      const nx = -sign(dx) || -1;
+      const ny = Math.abs(dy) > 6 ? sign(dy) : 0;
+      this.x += nx * this.speed * dt;
+      this.y += ny * this.speed * 0.5 * dt;
+      this.x = clamp(this.x, stage.camera.x + 16, stage.lockX + 28);
+      this.moving = true;
     } else {
       const nx = Math.abs(dx) > 3 ? sign(dx) : 0;
       const ny = Math.abs(dy) > 3 ? sign(dy) : 0;
@@ -394,15 +406,31 @@ export class Char extends Entity {
 }
 
 export class Projectile {
-  constructor(x, y, vx, vy, team) {
+  constructor(x, y, vx, vy, team, opts = {}) {
     this.id = nextId();
     this.x = x; this.y = y; this.z = 0;
     this.vx = vx; this.vy = vy;
     this.team = team;
-    this.dmg = 1; this.life = 3; this.alive = true; this.w = 5;
+    this.kind = opts.kind || 'paper';
+    this.dmg = opts.dmg ?? 1;
+    this.kb = opts.kb ?? 70;
+    this.w = opts.w ?? 5;
+    this.homing = !!opts.homing;
+    this.target = opts.target || null;
+    this.life = this.kind === 'missile' ? 4 : 3;
+    this.age = 0;
+    this.alive = true;
   }
 
   update(dt) {
+    this.age += dt;
+    if (this.homing && this.target && this.target.alive) {
+      // 奥行きを誘導弾としてじわっと標的のyへ寄せる
+      const dy = this.target.y - this.y;
+      this.vy = clamp(this.vy + clamp(dy, -1, 1) * 130 * dt, -64, 64);
+      const dirx = sign(this.target.x - this.x) || sign(this.vx) || 1;
+      this.vx = clamp(this.vx + dirx * 44 * dt, -260, 260);
+    }
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
@@ -410,9 +438,26 @@ export class Projectile {
   }
 
   draw(ctx, camX) {
-    const sx = Math.round(this.x - camX) - 2;
-    const sy = Math.round(this.y - 9);
-    ctx.fillStyle = '#e8e2d0'; ctx.fillRect(sx, sy, 5, 4);   // 書類
-    ctx.fillStyle = '#b8b2a0'; ctx.fillRect(sx, sy, 5, 1);
+    const sx = this.x - camX;
+    if (this.kind === 'missile') {
+      const dir = this.vx >= 0 ? 1 : -1;
+      const sy = this.y - 12;
+      // 炎・煙の尾
+      ctx.save();
+      ctx.globalAlpha = 0.85; ctx.fillStyle = '#ff9c2a';
+      ctx.fillRect(Math.round(sx - dir * 8), Math.round(sy), 5, 4);
+      ctx.globalAlpha = 0.45; ctx.fillStyle = '#cfcfcf';
+      ctx.fillRect(Math.round(sx - dir * 13), Math.round(sy + 1), 5, 3);
+      ctx.restore();
+      // 弾体
+      ctx.fillStyle = '#3a3f48';
+      ctx.fillRect(Math.round(sx - 5), Math.round(sy), 10, 4);
+      ctx.fillStyle = '#c73333'; // 弾頭
+      ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
+    } else {
+      const x0 = Math.round(sx) - 2, sy = Math.round(this.y - 10);
+      ctx.fillStyle = '#e8e2d0'; ctx.fillRect(x0, sy, 6, 4);   // 書類
+      ctx.fillStyle = '#b8b2a0'; ctx.fillRect(x0, sy, 6, 1);
+    }
   }
 }

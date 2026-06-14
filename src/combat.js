@@ -40,7 +40,7 @@ export function resolveMelee(entities, fx) {
   }
 }
 
-// 投擲物の解決
+// 投擲物・飛び道具の解決（高さzが合わないとヒットしない＝ジャンプで回避可）
 export function resolveProjectiles(projectiles, entities, fx) {
   for (const p of projectiles) {
     if (!p.alive) continue;
@@ -49,7 +49,9 @@ export function resolveProjectiles(projectiles, entities, fx) {
       if (sameSide(p, t)) continue;
       if (Math.abs(p.x - t.x) > t.w / 2 + 3) continue;
       if (Math.abs(p.y - t.y) > DEPTH_TOL) continue;
-      applyHit(t, Math.sign(p.vx) || 1, p.dmg, 70, fx);
+      if (Math.abs((p.z || 0) - t.z) > Z_TOL) continue; // ジャンプで頭上を通せる
+      applyHit(t, Math.sign(p.vx) || 1, p.dmg, p.kb || 70, fx);
+      if (p.kind === 'missile') fx.boom(p.x, p.y - 10);
       p.alive = false;
       break;
     }
@@ -78,6 +80,18 @@ export class Fx {
   betray(x, y) {
     this.texts.push({ x, y: y - 14, str: '裏切り！', color: '#ff4a4a', life: 1.4, vy: -10, big: true });
     this.hit(x, y - 8, '#ff4a4a');
+  }
+
+  // ミサイル着弾の大爆発
+  boom(x, y) {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const sp = 90 + (i % 4) * 42;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55, color: i % 2 ? '#ff7f0e' : '#ffd24a', size: 3 + (i % 3),
+      });
+    }
   }
 
   update(dt) {

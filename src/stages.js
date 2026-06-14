@@ -11,6 +11,8 @@ export const UNIT_TYPES = {
   exctrl: { name: '輸出管理',     sprite: 'exctrl', taunts: 'exctrl', hp: 3, speed: 38, reach: 21, dmg: 1, kb: 90,  cooldown: 0.8, telegraph: 0.46, score: 200 },
   kyaku:  { name: '客',          sprite: 'kyaku',  taunts: 'kyaku',  hp: 2, speed: 66, reach: 22, dmg: 2, kb: 110, cooldown: 0.7, telegraph: 0.36, score: 120 },
   vendor: { name: '調達先ベンダー', sprite: 'vendor', taunts: 'vendor', hp: 4, speed: 44, reach: 24, dmg: 1, kb: 90,  cooldown: 0.8, telegraph: 0.44, score: 160 },
+  // 携行ミサイル兵: 遠距離から誘導弾を撃つ射手（防衛工場ネタ）。離れて撃つカイト型。ジャンプで回避可。
+  missile: { name: '携行ミサイル兵', sprite: 'missile', taunts: 'missile', hp: 3, speed: 34, reach: 20, dmg: 1, kb: 80, cooldown: 0.9, telegraph: 0.5, thrower: true, proj: 'missile', projRange: 340, throwCooldown: 2.4, score: 240 },
 
   // 味方（同じプロジェクトのメンバー）
   ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
@@ -72,7 +74,7 @@ export const STAGES = [
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
     waves: [
       { x: 380, enemies: [{ type: 'vendor', count: 2 }, { type: 'kyaku', count: 1 }] },
-      { x: 800, enemies: [{ type: 'vendor', count: 2 }, { type: 'staff', count: 2 }] },
+      { x: 800, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
       { x: 1250, enemies: [{ type: 'vendor', count: 3 }, { type: 'senpai', count: 1 }] },
     ],
     allies: [
@@ -90,8 +92,8 @@ export const STAGES = [
     bg: { scene: 'boardroom', wall: '#1c1726', floor: '#2c2640', detail: '#120d1a', accent: '#c79a3a' },
     waves: [
       { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'kyaku', count: 1 }] },
-      { x: 820, enemies: [{ type: 'vendor', count: 2 }, { type: 'staff', count: 2 }] },
-      { x: 1300, enemies: [{ type: 'kyaku', count: 2 }, { type: 'vendor', count: 2 }, { type: 'senpai', count: 1 }] },
+      { x: 820, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
+      { x: 1300, enemies: [{ type: 'kyaku', count: 2 }, { type: 'missile', count: 2 }, { type: 'vendor', count: 1 }] },
     ],
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'time', value: 16 } }, // 最後の味方も裏切る
