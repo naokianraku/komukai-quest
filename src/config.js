@@ -10,7 +10,7 @@ export const DEPTH_TOL = 14;        // 当たり判定の奥行き許容 (y)
 export const Z_TOL = 18;            // 当たり判定の高さ許容 (z)
 export const CHAR_SCALE = 1.6;      // キャラ全体の表示倍率（大きめ）
 
-// 出世ランク（小向戦士 → 小隊長(課長級) → 大隊長(部長級) → 司令官(工場長超級)）
+// 出世ランク（小向戦士 → 小隊長(主務級) → 大隊長(EX級) → 司令官(課長級)）
 export const RANKS = ['小向戦士', '小向小隊長', '小向大隊長', '小向司令官'];
 
 export const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
