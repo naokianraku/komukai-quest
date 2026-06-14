@@ -81,6 +81,12 @@ export const CHAR_PALETTES = {
   dr:     { map: 'worker', h: '#b03030' },                                  // 設計審査委員: 緋色ヘルメット（徒党）
   exctrl: { map: 'worker', h: '#3f51b5' },                                  // 輸出管理: 藍色ヘルメット（徒党）
   missile: { map: 'worker', h: '#6e7b2e' },                                 // 携行ミサイル兵: 国防色ヘルメット
+  // PMR（プロジェクトマネジメント審査会）の部長たち
+  pmr_seisan:    { map: 'worker', h: '#2a4f8a' }, // 生産部長: 青
+  pmr_seizou:    { map: 'worker', h: '#2f7d4a' }, // 製造部長: 緑
+  pmr_choutatsu: { map: 'worker', h: '#b07a2a' }, // 調達部長: 橙茶
+  pmr_gijutsu:   { map: 'worker', h: '#5a4ab0' }, // 技術管理部長: 青紫
+  pmr_hinshou:   { map: 'worker', h: '#a03a7a' }, // 品証部長: 赤紫
   kyaku:  { map: 'suit', b: '#8a5a34', p: '#73492a', t: '#c0392b', h: '#3a2a1a' }, // 客: 茶スーツ赤ネクタイ
   vendor: { map: 'suit', b: '#37506e', p: '#2f4660', t: '#aeb4bc', h: '#241c14' }, // ベンダー: 紺スーツ灰ネクタイ
   boss1:  { map: 'worker', h: '#2a4f8a' },                                  // 生産部長: 青ヘルメット
@@ -92,9 +98,11 @@ export const CHAR_PALETTES = {
 // 頭上に出す役職ラベル（ボス以外の識別用。ボスはボスHPバーで表示）
 export const TYPE_LABEL = {
   buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: '味方',
+  pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',
+  pmr_seisan: '#6a9ad8', pmr_seizou: '#5cc28a', pmr_choutatsu: '#d8a45c', pmr_gijutsu: '#9a8ce0', pmr_hinshou: '#d87ab0',
 };
 
 function bake(map, base, overrides) {

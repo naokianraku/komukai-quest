@@ -14,6 +14,13 @@ export const UNIT_TYPES = {
   // 携行ミサイル兵: 遠距離から誘導弾を撃つ射手（防衛工場ネタ）。離れて撃つカイト型。ジャンプで回避可。
   missile: { name: '携行ミサイル兵', sprite: 'missile', taunts: 'missile', hp: 3, speed: 34, reach: 20, dmg: 1, kb: 80, cooldown: 0.9, telegraph: 0.5, thrower: true, proj: 'missile', projRange: 340, throwCooldown: 2.4, score: 240 },
 
+  // PMR（プロジェクトマネジメント審査会）: 部長たちの徒党。生産部長が最強、他は少し弱め。
+  pmr_seisan:    { name: '生産部長',     sprite: 'pmr_seisan',    taunts: 'pmr', hp: 8, speed: 44, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.44, score: 400 },
+  pmr_seizou:    { name: '製造部長',     sprite: 'pmr_seizou',    taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_choutatsu: { name: '調達部長',     sprite: 'pmr_choutatsu', taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_gijutsu:   { name: '技術管理部長', sprite: 'pmr_gijutsu',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_hinshou:   { name: '品証部長',     sprite: 'pmr_hinshou',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+
   // 味方（同じプロジェクトのメンバー）
   ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
 
@@ -69,13 +76,16 @@ export const STAGES = [
     id: 3,
     name: '大隊長編 — 調達・渉外フロア',
     playerRank: '小向大隊長',
-    intro: '大隊長（EX級）へ。会議室で納期遅延と不具合のベンダー、他事業部との消耗戦。\nついに「工場長」が立ちはだかる。協力会社は本当に味方か？',
+    intro: '大隊長（EX級）へ。会議室で納期遅延のベンダーと、部長たちの「PMR（PM審査会）」が詰めてくる。\nついに「工場長」が立ちはだかる。協力会社は本当に味方か？',
     width: 1750,
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
     waves: [
       { x: 380, enemies: [{ type: 'vendor', count: 2 }, { type: 'kyaku', count: 1 }] },
       { x: 800, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
-      { x: 1250, enemies: [{ type: 'vendor', count: 3 }, { type: 'senpai', count: 1 }] },
+      { x: 1250, label: 'プロジェクトマネージメント審査会（PMR）', enemies: [
+        { type: 'pmr_seisan', count: 1 }, { type: 'pmr_seizou', count: 1 }, { type: 'pmr_choutatsu', count: 1 },
+        { type: 'pmr_gijutsu', count: 1 }, { type: 'pmr_hinshou', count: 1 },
+      ] },
     ],
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'bossHp', value: 0.5 } }, // 手のひら返し
