@@ -1,5 +1,6 @@
 .DS_Store
 
-# セリフは外部公開しない（ローカル限定）
+# セリフ一覧・変換ツール・バックアップは外部公開しない（ローカル限定）
 セリフ一覧.md
-scripts/gen-serifs.mjs
+scripts/
+src/taunts.js.bak
