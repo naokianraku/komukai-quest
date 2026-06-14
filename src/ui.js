@@ -107,18 +107,18 @@ function drawTitleScene(ctx) {
   ctx.beginPath(); ctx.moveTo(231, 216); ctx.lineTo(249, 216); ctx.lineTo(240, 206); ctx.closePath(); ctx.fill();
 
   // 正門の黒い柵（手前向き）。中央のゲート（道路）部分は柵なし＝そこだけ通れる。
-  const gateL = 202, gateR = 280;
+  const gateL = 198, gateR = 284;
   const segs = [[0, gateL], [gateR, VIEW_W]];
-  // 背後の植栽
+  // 背後の植栽（手前寄りに配置）
   for (const [x0, x1] of segs) {
-    ctx.fillStyle = '#2f5a32'; ctx.fillRect(x0, 132, x1 - x0, 28);
+    ctx.fillStyle = '#2f5a32'; ctx.fillRect(x0, 156, x1 - x0, 28);
     ctx.fillStyle = '#3a6e3d';
-    for (let x = x0 + 4; x < x1; x += 13) { ctx.beginPath(); ctx.arc(x, 134, 7, 0, Math.PI * 2); ctx.fill(); }
+    for (let x = x0 + 4; x < x1; x += 13) { ctx.beginPath(); ctx.arc(x, 158, 7, 0, Math.PI * 2); ctx.fill(); }
   }
   // コンクリ基礎
-  for (const [x0, x1] of segs) { ctx.fillStyle = '#b9bdc1'; ctx.fillRect(x0, 158, x1 - x0, 9); ctx.fillStyle = '#969ca2'; ctx.fillRect(x0, 165, x1 - x0, 2); }
+  for (const [x0, x1] of segs) { ctx.fillStyle = '#b9bdc1'; ctx.fillRect(x0, 182, x1 - x0, 9); ctx.fillStyle = '#969ca2'; ctx.fillRect(x0, 189, x1 - x0, 2); }
   // 黒い柵（縦バー＋上下レール、先端あり）。右の一部はオレンジ塗装。
-  const fTop = 138, fBot = 159;
+  const fTop = 162, fBot = 183;
   for (const [x0, x1] of segs) {
     for (let x = x0 + 2; x < x1; x += 6) {
       ctx.fillStyle = (x >= 446 && x <= 474) ? '#ff7f0e' : '#16171c';
@@ -129,11 +129,6 @@ function drawTitleScene(ctx) {
     ctx.fillRect(x0, fTop + 2, x1 - x0, 2);   // 上レール
     ctx.fillRect(x0, fBot - 4, x1 - x0, 2);   // 下レール
   }
-
-  // 植栽（左：常緑 / 右：紅葉）
-  ctx.fillStyle = '#2f5a32'; ctx.beginPath(); ctx.arc(18, 134, 15, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7a4420'; ctx.fillRect(450, 124, 4, 22);
-  ctx.fillStyle = '#c06a2a'; ctx.beginPath(); ctx.arc(452, 116, 17, 0, Math.PI * 2); ctx.fill();
 
   // テキスト可読性のための暗幕
   const ov = ctx.createLinearGradient(0, 0, 0, VIEW_H);
