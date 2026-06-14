@@ -132,8 +132,8 @@ function drawTitleScene(ctx) {
 
 // 難易度ボタン（描画とヒットテストで共有）
 export const DIFF_BUTTONS = {
-  normal: { x: 150, y: 170, w: 82, h: 24, label: 'ふつう' },
-  easy: { x: 248, y: 170, w: 82, h: 24, label: 'かんたん' },
+  normal: { x: 176, y: 166, w: 58, h: 17, label: 'ふつう' },
+  easy: { x: 246, y: 166, w: 58, h: 17, label: 'かんたん' },
 };
 
 function diffBtn(ctx, b, sel) {
@@ -142,7 +142,7 @@ function diffBtn(ctx, b, sel) {
   ctx.strokeStyle = sel ? '#ffffff' : ACCENT; ctx.lineWidth = 1;
   ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
   ctx.fillStyle = sel ? '#15171a' : INK;
-  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.font = 'bold 10px system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 0.5);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -152,13 +152,13 @@ export function drawTitle(ctx, t, difficulty = 'normal') {
   drawTitleScene(ctx);
   center(ctx, 'KOMUKAI QUEST', 86, 'bold 34px system-ui, sans-serif', ACCENT);
   center(ctx, '小 向 ク エ ス ト', 112, 'bold 15px system-ui, sans-serif', INK);
-  center(ctx, '小向戦士となり、小向工場を生き残れ', 142, 'bold 12px system-ui, sans-serif', INK);
-  center(ctx, '難 易 度', 162, 'bold 9px system-ui, sans-serif', SUB);
+  center(ctx, '小向戦士となり、小向工場を生き残れ', 140, 'bold 12px system-ui, sans-serif', INK);
+  center(ctx, '難易度', 159, '8px system-ui, sans-serif', SUB);
   diffBtn(ctx, DIFF_BUTTONS.normal, difficulty === 'normal');
   diffBtn(ctx, DIFF_BUTTONS.easy, difficulty === 'easy');
   const desc = difficulty === 'easy' ? 'かんたん: 残機おおめ＋自分も飛び道具' : 'ふつう: 標準ルール';
-  center(ctx, desc, 208, 'bold 9px system-ui, sans-serif', INK);
-  if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 226, 'bold 11px system-ui, sans-serif', INK);
+  center(ctx, desc, 195, '8px system-ui, sans-serif', INK);
+  if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 209, 'bold 9px system-ui, sans-serif', INK);
 }
 
 export function drawStageIntro(ctx, stage, t) {
