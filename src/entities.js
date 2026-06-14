@@ -57,10 +57,10 @@ function roundRectPath(ctx, x, y, w, h, r) {
 
 // 頭上の「言葉の暴力」吹き出し
 function drawSpeechBubble(ctx, cx, bottomY, text, big) {
-  ctx.font = (big ? 'bold 9px' : '8px') + ' system-ui, sans-serif';
+  ctx.font = (big ? 'bold 14px' : 'bold 11px') + ' system-ui, sans-serif';
   const tw = ctx.measureText(text).width;
-  const w = Math.ceil(tw) + 8;
-  const h = big ? 14 : 12;
+  const w = Math.ceil(tw) + 10;
+  const h = big ? 19 : 16;
   let x = Math.round(cx - w / 2);
   x = Math.max(2, Math.min(x, VIEW_W - w - 2));
   const y = Math.round(bottomY - h - 4);
@@ -310,7 +310,7 @@ export class Char extends Entity {
       const ny = Math.abs(dy) > 6 ? sign(dy) : 0;
       this.x += nx * this.speed * dt;
       this.y += ny * this.speed * 0.5 * dt;
-      this.x = clamp(this.x, stage.camera.x + 16, stage.lockX + 28);
+      this.x = clamp(this.x, stage.camera.x + 16, stage.lockX + 8); // 壁際で必ず届く範囲に留める
       this.moving = true;
     } else {
       const nx = Math.abs(dx) > 3 ? sign(dx) : 0;

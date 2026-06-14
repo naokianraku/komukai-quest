@@ -6,7 +6,7 @@ import { Input } from './input.js';
 import { buildSprites } from './sprites.js';
 import { Player, Char, Projectile } from './entities.js';
 import { resolveMelee, resolveProjectiles, Fx } from './combat.js';
-import { STAGES, defFor } from './stages.js';
+import { STAGES, SHUKKOU_STAGE, defFor } from './stages.js';
 import {
   drawHUD, drawTitle, drawStageIntro, drawStageClear,
   drawRankUp, drawEnding, drawGameOver,
@@ -36,6 +36,9 @@ export class Stage {
     this.cleared = false;
     this.banner = null;
     this.bannerT = 0;
+    this.door = data.door ? { x: data.door.x, y: FLOOR_TOP + 14, used: false } : null;
+    this.detourRequested = false;
+    this.isDetour = false;
 
     for (const a of (data.allies || [])) {
       const c = new Char(a.x, FLOOR_MID, defFor(a.type));
@@ -193,6 +196,12 @@ export class Stage {
     this.updateCamera();
     this.handlePlayerDeath();
     this.bannerT = Math.max(0, this.bannerT - dt);
+    // 「出向」の扉に触れたら分岐をリクエスト
+    if (this.door && !this.door.used &&
+        Math.abs(this.player.x - this.door.x) < 16 && Math.abs(this.player.y - this.door.y) < 22) {
+      this.door.used = true;
+      this.detourRequested = true;
+    }
   }
 
   drawBackground(ctx) {
@@ -301,8 +310,30 @@ export class Stage {
     ctx.fillStyle = bg.accent; ctx.fillRect(0, 24, VIEW_W, 1);
   }
 
+  drawDoor(ctx) {
+    if (!this.door) return;
+    const sx = this.door.x - this.camera.x;
+    if (sx < -30 || sx > VIEW_W + 30) return;
+    const baseY = this.door.y, w = 26, h = 46;
+    const x = Math.round(sx - w / 2), y = Math.round(baseY - h);
+    ctx.fillStyle = '#caa15a'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4); // 金枠
+    ctx.fillStyle = '#14110d'; ctx.fillRect(x, y, w, h);                 // 暗い開口
+    ctx.strokeStyle = '#ff7f0e'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    // プレート「出向」
+    ctx.fillStyle = '#ff7f0e'; ctx.fillRect(x - 4, y - 14, w + 8, 12);
+    ctx.fillStyle = '#15171a'; ctx.font = 'bold 9px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('出向', x + w / 2, y - 8);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    // 足元の点滅マーカー（ここに触れろ）
+    ctx.globalAlpha = 0.45 + 0.35 * Math.sin(this.time * 5);
+    ctx.fillStyle = '#ff7f0e'; ctx.fillRect(Math.round(sx - 9), Math.round(baseY + 1), 18, 2);
+    ctx.globalAlpha = 1;
+  }
+
   render(ctx) {
     this.drawBackground(ctx);
+    this.drawDoor(ctx);
     // 足元yで奥行きソート（下にいる者が手前）
     const order = this.entities.filter((e) => e.alive).sort((a, b) => a.y - b.y);
     for (const e of order) e.draw(ctx, this.camera.x);
@@ -354,6 +385,29 @@ export class Game {
     this.score = 0;
     this.lives = 3;
     this.stage = null;
+    this.savedStage = null; // 出向中に本社(Stage3)を退避
+  }
+
+  enterDetour() {
+    const hp = this.stage.player.hp;
+    this.savedStage = this.stage;
+    this.stage = new Stage(SHUKKOU_STAGE, this);
+    this.stage.isDetour = true;
+    this.stage.player.hp = Math.max(5, Math.min(hp, this.stage.player.maxhp)); // HPを引き継ぐ
+    this.state = 'intro'; this.screenT = 0;
+  }
+
+  returnFromDetour() {
+    const hp = this.stage.player.hp;
+    const back = this.savedStage;
+    this.savedStage = null;
+    back.player.hp = Math.max(5, hp);
+    back.player.x = back.door.x + 34; // 扉の先へ
+    back.player.invuln = 1.4;
+    back.detourRequested = false;
+    back.banner = '出向先を制圧！本社へ帰還'; back.bannerT = 2.6;
+    this.stage = back;
+    this.state = 'playing'; this.screenT = 0;
   }
 
   start() {
@@ -376,9 +430,15 @@ export class Game {
         break;
       case 'playing':
         this.stage.update(dt);
-        if (this.stage.cleared) {
-          this.state = this.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
-          this.screenT = 0;
+        if (this.stage.detourRequested && !this.stage.isDetour) {
+          this.enterDetour();               // 「出向」の扉に触れた → 関連会社へ
+        } else if (this.stage.cleared) {
+          if (this.stage.isDetour) {
+            this.returnFromDetour();         // 関連会社を制圧 → 本社(Stage3)へ帰還
+          } else {
+            this.state = this.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
+            this.screenT = 0;
+          }
         }
         break;
       case 'clear':

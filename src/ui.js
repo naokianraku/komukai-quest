@@ -74,8 +74,66 @@ export function drawHUD(ctx, game, stage) {
   }
 }
 
+// タイトル背景: 小向工場の正門をイメージしたドット絵風シーン
+function drawTitleScene(ctx) {
+  // 空
+  const sky = ctx.createLinearGradient(0, 0, 0, 150);
+  sky.addColorStop(0, '#4f97cf'); sky.addColorStop(1, '#c2def0');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, VIEW_W, 150);
+  // 地面（アスファルト）
+  ctx.fillStyle = '#8a8f96'; ctx.fillRect(0, 150, VIEW_W, VIEW_H - 150);
+
+  // 左の高層棟（白いビル）＋窓グリッド
+  ctx.fillStyle = '#9aa2aa'; ctx.fillRect(0, 32, 150, 5);
+  ctx.fillStyle = '#d6dade'; ctx.fillRect(0, 36, 150, 114);
+  ctx.fillStyle = '#bcc2c8'; ctx.fillRect(126, 36, 24, 114);
+  ctx.fillStyle = '#6f7b88';
+  for (let y = 50; y < 150; y += 12) for (let x = 8; x < 120; x += 15) ctx.fillRect(x, y, 9, 7);
+
+  // 連絡通路（スカイブリッジ）
+  ctx.fillStyle = '#c8ccd0'; ctx.fillRect(150, 112, 56, 14);
+  ctx.fillStyle = '#7a8694'; for (let x = 154; x < 204; x += 8) ctx.fillRect(x, 115, 5, 8);
+
+  // 右の低層棟（ガラス張り）
+  ctx.fillStyle = '#b6bec4'; ctx.fillRect(300, 88, 180, 5);
+  ctx.fillStyle = '#cdd5da'; ctx.fillRect(300, 92, 180, 58);
+  for (let y = 98; y < 150; y += 11) { ctx.fillStyle = '#a6cad4'; ctx.fillRect(304, y, 172, 7); ctx.fillStyle = '#7fadba'; ctx.fillRect(304, y, 172, 2); }
+
+  // 電線＋電柱
+  ctx.strokeStyle = 'rgba(40,40,40,0.45)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(366, 84); ctx.lineTo(VIEW_W, 64); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 62); ctx.lineTo(366, 90); ctx.stroke();
+  ctx.fillStyle = '#5a534a'; ctx.fillRect(363, 84, 5, 116);
+  ctx.fillRect(352, 92, 27, 3); ctx.fillRect(355, 100, 21, 3);
+
+  // 道路（中央へ収束）＋横断歩道＋路面矢印
+  ctx.fillStyle = '#777c83';
+  ctx.beginPath(); ctx.moveTo(150, VIEW_H); ctx.lineTo(330, VIEW_H); ctx.lineTo(268, 150); ctx.lineTo(214, 150); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e6e8ea'; for (let x = 156; x < 326; x += 16) ctx.fillRect(x, 250, 9, 7);
+  ctx.fillStyle = '#dfe2e5'; ctx.fillRect(238, 212, 4, 22);
+  ctx.beginPath(); ctx.moveTo(231, 216); ctx.lineTo(249, 216); ctx.lineTo(240, 206); ctx.closePath(); ctx.fill();
+
+  // ゲートの縞ポール（オレンジ/白）
+  const pole = (px, top, bot) => { for (let y = top; y < bot; y += 9) { ctx.fillStyle = (((y - top) / 9) | 0) % 2 ? '#ff7f0e' : '#f2f2f2'; ctx.fillRect(px - 2, y, 4, 9); } };
+  pole(150, 150, 206); pole(330, 150, 206);
+
+  // 左の案内サイン柱＋赤ピン
+  ctx.fillStyle = '#e8eaec'; ctx.fillRect(116, 120, 12, 30);
+  ctx.fillStyle = '#c73333'; ctx.beginPath(); ctx.arc(122, 116, 4, 0, Math.PI * 2); ctx.fill();
+
+  // 植栽（左：常緑 / 右：紅葉）
+  ctx.fillStyle = '#2f5a32'; ctx.beginPath(); ctx.arc(18, 134, 15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7a4420'; ctx.fillRect(450, 124, 4, 22);
+  ctx.fillStyle = '#c06a2a'; ctx.beginPath(); ctx.arc(452, 116, 17, 0, Math.PI * 2); ctx.fill();
+
+  // テキスト可読性のための暗幕
+  const ov = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  ov.addColorStop(0, 'rgba(8,10,14,0.34)'); ov.addColorStop(0.5, 'rgba(8,10,14,0.55)'); ov.addColorStop(1, 'rgba(8,10,14,0.40)');
+  ctx.fillStyle = ov; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+}
+
 export function drawTitle(ctx, t) {
-  ctx.fillStyle = '#0c0e11'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  drawTitleScene(ctx);
   center(ctx, 'KOMUKAI QUEST', 96, 'bold 34px system-ui, sans-serif', ACCENT);
   center(ctx, '小 向 ク エ ス ト', 124, 'bold 15px system-ui, sans-serif', INK);
   center(ctx, '小向戦士となり、小向工場を生き残れ', 162, 'bold 12px system-ui, sans-serif', INK);

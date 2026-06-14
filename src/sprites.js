@@ -87,6 +87,11 @@ export const CHAR_PALETTES = {
   pmr_choutatsu: { map: 'worker', h: '#b07a2a' }, // 調達部長: 橙茶
   pmr_gijutsu:   { map: 'worker', h: '#5a4ab0' }, // 技術管理部長: 青紫
   pmr_hinshou:   { map: 'worker', h: '#a03a7a' }, // 品証部長: 赤紫
+  // 出向先（関連会社）
+  kanren:  { map: 'worker', h: '#5a7a6a' }, // 関連会社社員: 灰緑
+  shukkou: { map: 'worker', h: '#8a5a2a' }, // 出向先上長: 茶
+  // 関連会社社長: 黒スーツ・白髪・蒼白い肌・赤い目（強くないが見た目が怖い）
+  shacho:  { map: 'suit', b: '#0a0a0e', p: '#08080c', t: '#7a0a0a', h: '#d0d0d0', s: '#cfc6b0', e: '#ff2a2a' },
   kyaku:  { map: 'suit', b: '#8a5a34', p: '#73492a', t: '#c0392b', h: '#3a2a1a' }, // 客: 茶スーツ赤ネクタイ
   vendor: { map: 'suit', b: '#37506e', p: '#2f4660', t: '#aeb4bc', h: '#241c14' }, // ベンダー: 紺スーツ灰ネクタイ
   boss1:  { map: 'worker', h: '#2a4f8a' },                                  // 生産部長: 青ヘルメット
@@ -99,6 +104,7 @@ export const CHAR_PALETTES = {
 export const TYPE_LABEL = {
   buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: '味方',
   pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
+  kanren: '関連社員', shukkou: '出向先上長',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',

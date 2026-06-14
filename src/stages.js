@@ -21,6 +21,12 @@ export const UNIT_TYPES = {
   pmr_gijutsu:   { name: '技術管理部長', sprite: 'pmr_gijutsu',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
   pmr_hinshou:   { name: '品証部長',     sprite: 'pmr_hinshou',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
 
+  // 出向先（関連会社）
+  kanren:  { name: '関連会社社員', sprite: 'kanren',  taunts: 'kanren',  hp: 3, speed: 46, reach: 22, dmg: 1, kb: 90,  cooldown: 0.8,  telegraph: 0.4,  score: 120 },
+  shukkou: { name: '出向先上長',   sprite: 'shukkou', taunts: 'shukkou', hp: 8, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.46, score: 400 },
+  // 関連会社社長: 強くないが見た目が怖い（低HP・低火力・大きい・赤目）
+  shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.0, hp: 12, speed: 30, reach: 30, dmg: 1, kb: 120, cooldown: 0.95, telegraph: 0.5, score: 1500 },
+
   // 味方（同じプロジェクトのメンバー）
   ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
 
@@ -79,6 +85,7 @@ export const STAGES = [
     intro: '大隊長（EX級）へ。会議室で納期遅延のベンダーと、部長たちの「PMR（PM審査会）」が詰めてくる。\nついに「工場長」が立ちはだかる。協力会社は本当に味方か？',
     width: 1750,
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
+    door: { x: 1050 }, // 「出向」の扉（触れると関連会社サブステージへ）
     waves: [
       { x: 380, enemies: [{ type: 'vendor', count: 2 }, { type: 'kyaku', count: 1 }] },
       { x: 800, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
@@ -112,3 +119,19 @@ export const STAGES = [
     boss: { type: 'boss4', x: 1750 },
   },
 ];
+
+// 出向サブステージ（Stage3の「出向」扉から分岐。クリアで本社=Stage3へ帰還）
+export const SHUKKOU_STAGE = {
+  id: 'shukkou',
+  name: '出向編 — 関連会社',
+  playerRank: '大隊長（出向中）',
+  intro: '「出向」の扉に触れた——関連会社へ出向となった。\n社員と出向先上長、そして“顔が怖い”関連会社社長を倒し、本社へ戻れ。',
+  width: 1500,
+  bg: { scene: 'office', wall: '#2e3640', floor: '#48525e', detail: '#1f262e', accent: '#7a8a9a' },
+  waves: [
+    { x: 360, enemies: [{ type: 'kanren', count: 3 }] },
+    { x: 780, label: '出向先上長 登場', enemies: [{ type: 'kanren', count: 2 }, { type: 'shukkou', count: 1 }] },
+  ],
+  allies: [],
+  boss: { type: 'shacho', x: 1400 },
+};
