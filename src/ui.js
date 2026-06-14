@@ -106,24 +106,29 @@ function drawTitleScene(ctx) {
   ctx.fillStyle = '#dfe2e5'; ctx.fillRect(238, 212, 4, 22);
   ctx.beginPath(); ctx.moveTo(231, 216); ctx.lineTo(249, 216); ctx.lineTo(240, 206); ctx.closePath(); ctx.fill();
 
-  // 道路の左右の壁（コンクリ塀・遠近）
-  ctx.fillStyle = '#c2c6ca';
-  ctx.beginPath(); ctx.moveTo(150, VIEW_H); ctx.lineTo(214, 150); ctx.lineTo(214, 138); ctx.lineTo(150, 236); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(330, VIEW_H); ctx.lineTo(268, 150); ctx.lineTo(268, 138); ctx.lineTo(330, 236); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#8f9398'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(150, 236); ctx.lineTo(214, 138); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(330, 236); ctx.lineTo(268, 138); ctx.stroke();
-  ctx.strokeStyle = 'rgba(120,124,128,0.55)';
-  for (let i = 1; i < 4; i++) {
-    const lx = 150 + (214 - 150) * i / 4, rx = 330 + (268 - 330) * i / 4;
-    const by = VIEW_H + (150 - VIEW_H) * i / 4, ty = 236 + (138 - 236) * i / 4;
-    ctx.beginPath(); ctx.moveTo(lx, by); ctx.lineTo(lx, ty); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(rx, by); ctx.lineTo(rx, ty); ctx.stroke();
+  // 正門の黒い柵（手前向き）。中央のゲート（道路）部分は柵なし＝そこだけ通れる。
+  const gateL = 202, gateR = 280;
+  const segs = [[0, gateL], [gateR, VIEW_W]];
+  // 背後の植栽
+  for (const [x0, x1] of segs) {
+    ctx.fillStyle = '#2f5a32'; ctx.fillRect(x0, 132, x1 - x0, 28);
+    ctx.fillStyle = '#3a6e3d';
+    for (let x = x0 + 4; x < x1; x += 13) { ctx.beginPath(); ctx.arc(x, 134, 7, 0, Math.PI * 2); ctx.fill(); }
   }
-
-  // 左の案内サイン柱＋赤ピン
-  ctx.fillStyle = '#e8eaec'; ctx.fillRect(116, 120, 12, 30);
-  ctx.fillStyle = '#c73333'; ctx.beginPath(); ctx.arc(122, 116, 4, 0, Math.PI * 2); ctx.fill();
+  // コンクリ基礎
+  for (const [x0, x1] of segs) { ctx.fillStyle = '#b9bdc1'; ctx.fillRect(x0, 158, x1 - x0, 9); ctx.fillStyle = '#969ca2'; ctx.fillRect(x0, 165, x1 - x0, 2); }
+  // 黒い柵（縦バー＋上下レール、先端あり）。右の一部はオレンジ塗装。
+  const fTop = 138, fBot = 159;
+  for (const [x0, x1] of segs) {
+    for (let x = x0 + 2; x < x1; x += 6) {
+      ctx.fillStyle = (x >= 446 && x <= 474) ? '#ff7f0e' : '#16171c';
+      ctx.fillRect(x, fTop, 2, fBot - fTop);
+      ctx.fillRect(x - 1, fTop - 2, 4, 2); // 槍状の先端
+    }
+    ctx.fillStyle = '#16171c';
+    ctx.fillRect(x0, fTop + 2, x1 - x0, 2);   // 上レール
+    ctx.fillRect(x0, fBot - 4, x1 - x0, 2);   // 下レール
+  }
 
   // 植栽（左：常緑 / 右：紅葉）
   ctx.fillStyle = '#2f5a32'; ctx.beginPath(); ctx.arc(18, 134, 15, 0, Math.PI * 2); ctx.fill();
