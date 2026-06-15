@@ -228,6 +228,7 @@ export class Stage {
     // シーン別の壁装飾（視差スクロール）
     const scene = bg.scene || 'factory';
     if (scene === 'office') this.bgOffice(ctx, cam, bg);
+    else if (scene === 'office_win') this.bgOfficeWin(ctx, cam, bg);
     else if (scene === 'meeting') this.bgMeeting(ctx, cam, bg);
     else if (scene === 'boardroom') this.bgBoardroom(ctx, cam, bg);
     else this.bgFactory(ctx, cam, bg);
@@ -255,6 +256,38 @@ export class Stage {
     }
     // 上部の配管ライン
     ctx.fillStyle = bg.accent; ctx.fillRect(0, 14, VIEW_W, 2);
+  }
+
+  bgOfficeWin(ctx, cam, bg) {
+    // 外が見える大きな窓（空＋遠景ビル、視差）
+    const sp = 132, off = -((cam * 0.45) % sp);
+    for (let x = off - sp; x < VIEW_W + sp; x += sp) {
+      const px = Math.round(x), wx = px + 14, wy = 22, ww = 104, wh = 116;
+      const sky = ctx.createLinearGradient(0, wy, 0, wy + wh);
+      sky.addColorStop(0, '#7fb0d8'); sky.addColorStop(1, '#bcd6ea');
+      ctx.fillStyle = sky; ctx.fillRect(wx, wy, ww, wh);
+      ctx.fillStyle = '#9fb6c8'; // 遠景ビル
+      ctx.fillRect(wx + 8, wy + 46, 22, wh - 46);
+      ctx.fillRect(wx + 40, wy + 64, 26, wh - 64);
+      ctx.fillRect(wx + 74, wy + 34, 20, wh - 34);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      for (let yy = wy + 52; yy < wy + wh - 6; yy += 12) { ctx.fillRect(wx + 12, yy, 4, 5); ctx.fillRect(wx + 46, yy, 4, 5); ctx.fillRect(wx + 78, yy, 4, 5); }
+      ctx.strokeStyle = bg.detail; ctx.lineWidth = 3; ctx.strokeRect(wx, wy, ww, wh);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
+      ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2); ctx.stroke();
+    }
+    ctx.fillStyle = bg.accent; ctx.fillRect(0, 16, VIEW_W, 2); // 天井ライン
+    // オフィス机（壁際・視差）
+    const dsp = 92, doff = -((cam * 0.7) % dsp);
+    for (let x = doff - dsp; x < VIEW_W + dsp; x += dsp) {
+      const px = Math.round(x);
+      ctx.fillStyle = '#3a2f24'; ctx.fillRect(px + 6, 158, 64, 4);
+      ctx.fillStyle = '#7a6448'; ctx.fillRect(px + 6, 150, 64, 9);
+      ctx.fillStyle = '#5b4a34'; ctx.fillRect(px + 10, 159, 6, 14); ctx.fillRect(px + 60, 159, 6, 14);
+      ctx.fillStyle = '#23272e'; ctx.fillRect(px + 24, 136, 22, 15); // モニタ
+      ctx.fillStyle = '#3a6e8c'; ctx.fillRect(px + 26, 138, 18, 11);
+    }
   }
 
   bgOffice(ctx, cam, bg) {

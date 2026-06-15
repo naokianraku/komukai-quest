@@ -28,7 +28,7 @@ export const UNIT_TYPES = {
   shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.0, hp: 14, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.46, score: 1500 },
 
   // 味方（同じプロジェクトのメンバー）
-  ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
+  ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', taunts: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
 
   // ボス: 工場内の三大ボス（生産部長/技師長/工場長）＋ 真のボス（事業部長）
   boss1: { name: '生産部長', sprite: 'boss1', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.50, score: 1000 },
@@ -52,7 +52,7 @@ export const STAGES = [
     location: '60号7階',
     intro: '入社5年目。新プロジェクトに配属、PM担当に任命された。\n設計審査（ランクB）を退け、生産部長を倒せ。',
     width: 1700,
-    bg: { scene: 'factory', wall: '#262b33', floor: '#373d46', detail: '#191e25', accent: '#5a6470' },
+    bg: { scene: 'office_win', wall: '#36404c', floor: '#5a6470', detail: '#1d2530', accent: '#8a96a4' },
     waves: [
       { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'senpai', count: 1 }] },
       { x: 760, enemies: [{ type: 'senpai', count: 1 }, { type: 'staff', count: 2 }] },

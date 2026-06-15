@@ -266,6 +266,7 @@ export class Char extends Entity {
     this.betrayed = false;
     this.tauntCat = def.taunts || null;
     this.fumbleT = 7 + (this.id % 6); // 味方のうっかり攻撃までの時間
+    this.chatterT = 1.2 + (this.id % 6) * 0.6; // 攻撃以外でしゃべるまでの時間
   }
 
   setTaunt(extra = 0.4) {
@@ -279,6 +280,14 @@ export class Char extends Entity {
     this.advanceFSM(dt);
     if (this.team === 'ally' && !this.betrayed) this.tryFumble(dt, stage);
     if (!this.isBoss && this.hitstun <= 0) this.separate(dt, stage); // 間隔保持（固まり防止）
+    // 敵は攻撃していなくても時々しゃべる（味方は攻撃時のみ＝ここでは喋らない）
+    if (this.team === 'enemy' && this.tauntCat) {
+      this.chatterT -= dt;
+      if (this.chatterT <= 0 && this.tauntT <= 0) {
+        this.setTaunt(0.9);
+        this.chatterT = 3.5 + (this.id % 4) + Math.random() * 2.5;
+      }
+    }
 
     if (this.hitstun > 0) { this.integrate(dt); return; }
     if (this.state !== 'idle') { this.integrate(dt); return; } // 予備/攻撃/硬直中は動かない
@@ -333,7 +342,7 @@ export class Char extends Entity {
   // 同じ陣営の仲間と重ならないよう、近すぎる相手から少し離れる（取り囲み＝固まり防止）
   separate(dt, stage) {
     let px = 0, py = 0, cnt = 0;
-    const R = 22;
+    const R = this.w + 6; // 体格に応じた間隔（大型化に追従）
     for (const o of stage.entities) {
       if (o === this || !o.alive || o.isBoss || o.team !== this.team) continue;
       const dx = this.x - o.x, dy = this.y - o.y;
@@ -354,7 +363,7 @@ export class Char extends Entity {
 
   startAttack() {
     this.state = 'telegraph'; this.stateT = this.telegraph; this.moving = false;
-    if (this.team === 'enemy') this.setTaunt(); // 攻撃と同時に言葉の暴力
+    if (this.tauntCat) this.setTaunt(); // 攻撃時にしゃべる（味方の掛け声もここ）
   }
 
   // 味方のうっかり攻撃: 時々、後ろから意図しない一撃を入れてくる（言い訳つき）
