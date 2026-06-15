@@ -92,7 +92,7 @@ function drawLabel(ctx, cx, topY, text, color) {
   const y = Math.round(topY - h);
   ctx.fillStyle = 'rgba(13,17,24,0.82)';
   roundRectPath(ctx, x, y, w, h, 3); ctx.fill();
-  ctx.fillStyle = color;
+  ctx.fillStyle = color || '#e6e9ec'; // 色未定義でも黒文字にならないよう明色フォールバック
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
