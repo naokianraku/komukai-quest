@@ -58,10 +58,17 @@ export function drawHUD(ctx, game, stage) {
   ctx.fillText('SCORE ' + String(game.score).padStart(6, '0'), VIEW_W - 10, 18);
   ctx.textAlign = 'left';
 
-  // ステージ名
-  ctx.fillStyle = SUB; ctx.font = '9px system-ui, sans-serif';
+  // 現在地（はっきり表示）＋ ステージ名（小さく）
   ctx.textAlign = 'right';
-  ctx.fillText(stage.data.name, VIEW_W - 10, 30);
+  if (stage.location) {
+    ctx.fillStyle = ACCENT; ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillText('📍 ' + stage.location, VIEW_W - 10, 32);
+    ctx.fillStyle = SUB; ctx.font = '8px system-ui, sans-serif';
+    ctx.fillText(stage.data.name, VIEW_W - 10, 43);
+  } else {
+    ctx.fillStyle = SUB; ctx.font = '9px system-ui, sans-serif';
+    ctx.fillText(stage.data.name, VIEW_W - 10, 30);
+  }
   ctx.textAlign = 'left';
 
   // ボスHPバー

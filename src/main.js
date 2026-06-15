@@ -36,6 +36,9 @@ export class Stage {
     this.cleared = false;
     this.banner = null;
     this.bannerT = 0;
+    this.bannerColor = 'rgba(120,16,16,0.88)';
+    this.location = data.location || '';
+    if (this.location) { this.banner = this.location; this.bannerColor = 'rgba(22,42,74,0.92)'; this.bannerT = 2.8; } // 開始時に現在地表示
     this.door = data.door ? { x: data.door.x, y: FLOOR_TOP + 14, used: false } : null;
     this.detourRequested = false;
     this.isDetour = false;
@@ -111,6 +114,10 @@ export class Stage {
     this.boss = new Char(this.width - 60, FLOOR_MID, defFor(this.data.boss.type));
     this.entities.push(this.boss);
     this.lockX = this.width - 40;
+    if (this.data.bossLocation) { // 例: 事業部長は本社へ
+      this.location = this.data.bossLocation;
+      this.banner = this.data.bossLocation; this.bannerColor = 'rgba(22,42,74,0.92)'; this.bannerT = 2.8;
+    }
   }
 
   checkBetrayal() {
@@ -147,7 +154,7 @@ export class Stage {
         this.spawnWave(w);
         this.spawned[this.currentWave] = true;
         this.lockX = w.x;
-        if (w.label) { this.banner = w.label; this.bannerT = 2.6; } // 徒党出現バナー
+        if (w.label) { this.banner = w.label; this.bannerColor = 'rgba(120,16,16,0.88)'; this.bannerT = 2.6; } // 徒党出現バナー
       }
       if (this.spawned[this.currentWave] && this.aliveEnemies() === 0) {
         this.currentWave++;
@@ -368,7 +375,7 @@ export class Stage {
     // 徒党出現バナー
     if (this.bannerT > 0 && this.banner) {
       ctx.globalAlpha = Math.min(1, this.bannerT);
-      ctx.fillStyle = 'rgba(120,16,16,0.85)';
+      ctx.fillStyle = this.bannerColor || 'rgba(120,16,16,0.85)';
       ctx.fillRect(0, 96, VIEW_W, 30);
       ctx.fillStyle = '#ff7f0e'; ctx.fillRect(0, 96, VIEW_W, 1); ctx.fillRect(0, 125, VIEW_W, 1);
       ctx.fillStyle = '#ffffff';
@@ -419,7 +426,7 @@ export class Game {
     back.player.x = back.door.x + 34; // 扉の先へ
     back.player.invuln = 1.4;
     back.detourRequested = false;
-    back.banner = '出向先を制圧！本社へ帰還'; back.bannerT = 2.6;
+    back.banner = '出向先を制圧！' + (back.location || '本社') + 'へ帰還'; back.bannerColor = 'rgba(22,42,74,0.92)'; back.bannerT = 2.6;
     this.stage = back;
     this.state = 'playing'; this.screenT = 0;
   }
