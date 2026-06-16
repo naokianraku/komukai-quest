@@ -54,7 +54,7 @@ export const STAGES = [
     name: '戦士編 — 新プロジェクト配属',
     playerRank: '小向戦士',
     location: '60号7階',
-    intro: '入社5年目。新プロジェクトに配属、PM担当に任命された。\n設計審査（ランクB）を退け、生産部長を倒せ。',
+    intro: '入社5年目。新プロジェクトに配属、PM担当に任命された。\n設計審査（ランクB）を退け、技術部長を倒せ。',
     width: 1700,
     bg: { scene: 'office_win', wall: '#36404c', floor: '#5a6470', detail: '#1d2530', accent: '#8a96a4' },
     waves: [
