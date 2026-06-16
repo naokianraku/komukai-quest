@@ -87,10 +87,10 @@ export const STAGES = [
   },
   {
     id: 3,
-    name: '大隊長編 — 調達・渉外フロア',
+    name: '大隊長編 — 生産管理・生産企画フロア',
     playerRank: '小向大隊長',
     location: '60号5階',
-    intro: '大隊長（EX級）へ。ベンダーと「PMR審査会」が詰めてくる。\n工場長を倒せ。協力会社は味方か？',
+    intro: '大隊長（EX級）へ。生管スタッフと「PMR審査会」が詰めてくる。\n工場長を倒せ。',
     width: 1750,
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
     door: { x: 1050 }, // 「出向」の扉（触れると関連会社サブステージへ）
