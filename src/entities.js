@@ -6,6 +6,7 @@ import {
 import { drawSprite, SPRITE_W, SPRITE_H, TYPE_LABEL, TYPE_COLOR } from './sprites.js';
 import { randomTaunt } from './taunts.js';
 import { Input } from './input.js';
+import { Audio } from './audio.js';
 
 function drawShadow(ctx, sx, y, w) {
   ctx.save();
@@ -195,6 +196,7 @@ export class Player extends Entity {
       const kb = this.combo === 2 ? 220 : 150; // 3段目は強ノックバック
       this.attackData = { reach: 27 * CHAR_SCALE, dmg: 1, kb, hitSet: new Set() };
       if (this.ranged && stage.spawnPlayerProjectile) stage.spawnPlayerProjectile(this);
+      Audio.sfxSwing(); // 攻撃の振り音
     }
 
     // ジャンプ

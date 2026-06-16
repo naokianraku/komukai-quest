@@ -1,6 +1,7 @@
 // 戦闘解決（2.5Dの当たり判定）とエフェクト
 import { DEPTH_TOL, Z_TOL } from './config.js';
 import { SPRITE_H } from './sprites.js';
+import { Audio } from './audio.js';
 
 // 同陣営か（player/ally は味方、enemy は敵）
 export function sameSide(a, b) {
@@ -9,6 +10,7 @@ export function sameSide(a, b) {
 
 // ヒット適用（HP減・ノックバック・硬直・無敵・エフェクト）
 export function applyHit(t, dir, dmg, kb, fx) {
+  Audio.sfxHit(); // 命中の打撃音
   t.hp -= dmg;
   t.kbx += dir * kb;
   t.hitstun = 0.18;
