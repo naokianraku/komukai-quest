@@ -512,7 +512,7 @@ export class Game {
           const b = PAUSE_BUTTON;
           if (ptap.x >= b.x && ptap.x <= b.x + b.w && ptap.y >= b.y && ptap.y <= b.y + b.h) togglePause = true;
         }
-        if (togglePause) this.paused = !this.paused;
+        if (togglePause) { this.paused = !this.paused; Audio.setMusicPaused(this.paused); }
         if (this.paused) break; // 停止中は更新しない
         this.stage.update(dt);
         if (this.stage.detourRequested && !this.stage.isDetour) {

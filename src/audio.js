@@ -79,6 +79,13 @@ export const Audio = {
     if (this.enabled) this._start(name);
   },
 
+  // 一時停止: スケジューラを止める（鳴っている音は短いのですぐ消える）／解除で再開
+  setMusicPaused(p) {
+    this._musicPaused = p;
+    if (p) { clearInterval(this._timer); this._timer = null; }
+    else if (this.enabled && this._track) this._start(this._track);
+  },
+
   _start(name) {
     clearInterval(this._timer);
     this._step = 0;
