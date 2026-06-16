@@ -95,8 +95,8 @@ export const STAGES = [
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
     door: { x: 1050 }, // 「出向」の扉（触れると関連会社サブステージへ）
     waves: [
-      { x: 380, enemies: [{ type: 'vendor', count: 2 }, { type: 'kyaku', count: 1 }] },
-      { x: 800, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
+      { x: 380, enemies: [{ type: 'vendor', count: 1 }, { type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
+      { x: 800, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'missile', count: 1 }] },
       { x: 1250, label: 'プロジェクトマネージメント審査会（PMR）', enemies: [
         { type: 'pmr_seisan', count: 1 }, { type: 'pmr_seizou', count: 1 }, { type: 'pmr_choutatsu', count: 1 },
         { type: 'pmr_gijutsu', count: 1 }, { type: 'pmr_hinshou', count: 1 },

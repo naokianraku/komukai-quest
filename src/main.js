@@ -10,6 +10,7 @@ import { STAGES, SHUKKOU_STAGE, defFor } from './stages.js';
 import {
   drawHUD, drawTitle, drawStageIntro, drawStageClear,
   drawRankUp, drawEnding, drawGameOver, DIFF_BUTTONS, MUTE_BUTTON,
+  PAUSE_BUTTON, drawPauseButton, drawPauseOverlay,
 } from './ui.js';
 import { Audio } from './audio.js';
 
@@ -439,6 +440,7 @@ export class Game {
     this.stage = null;
     this.savedStage = null; // 出向中に本社(Stage3)を退避
     this.difficulty = 'normal'; // 'normal' | 'easy'
+    this.paused = false;
   }
 
   applyDifficulty() {
@@ -465,7 +467,7 @@ export class Game {
     back.detourRequested = false;
     back.banner = '出向先を制圧！' + (back.location || '本社') + 'へ帰還'; back.bannerColor = 'rgba(22,42,74,0.92)'; back.bannerT = 2.6;
     this.stage = back;
-    this.state = 'playing'; this.screenT = 0;
+    this.state = 'playing'; this.screenT = 0; this.paused = false;
   }
 
   start() {
@@ -500,9 +502,18 @@ export class Game {
         break;
       }
       case 'intro':
-        if (this.screenT > 0.3 && Input.confirm) { this.state = 'playing'; }
+        if (this.screenT > 0.3 && Input.confirm) { this.state = 'playing'; this.paused = false; }
         break;
-      case 'playing':
+      case 'playing': {
+        // 一時停止トグル（Pキー / Escape / 画面のボタン）
+        let togglePause = Input.pressed('KeyP', 'Escape');
+        const ptap = Input.consumeTap();
+        if (ptap) {
+          const b = PAUSE_BUTTON;
+          if (ptap.x >= b.x && ptap.x <= b.x + b.w && ptap.y >= b.y && ptap.y <= b.y + b.h) togglePause = true;
+        }
+        if (togglePause) this.paused = !this.paused;
+        if (this.paused) break; // 停止中は更新しない
         this.stage.update(dt);
         if (this.stage.detourRequested && !this.stage.isDetour) {
           this.enterDetour();               // 「出向」の扉に触れた → 関連会社へ
@@ -515,6 +526,7 @@ export class Game {
           }
         }
         break;
+      }
       case 'clear':
         if (this.screenT > 0.4 && Input.confirm) { this.state = 'rankup'; this.screenT = 0; }
         break;
@@ -559,7 +571,11 @@ export class Game {
       case 'ending': drawEnding(ctx, this, this.screenT); break;
       case 'gameover': drawGameOver(ctx, this, this.screenT); break;
     }
-    if (this.state === 'playing') Input.drawControls(ctx); // スマホのタッチ操作UI
+    if (this.state === 'playing') {
+      Input.drawControls(ctx); // スマホのタッチ操作UI
+      drawPauseButton(ctx, this.paused);
+      if (this.paused) drawPauseOverlay(ctx);
+    }
   }
 }
 

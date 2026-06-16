@@ -220,3 +220,25 @@ export function drawGameOver(ctx, game, t) {
   center(ctx, 'SCORE ' + String(game.score).padStart(6, '0'), 174, 'bold 12px ui-monospace, monospace', SUB);
   if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER TO RETRY', 210, 'bold 12px system-ui, sans-serif', SUB);
 }
+
+// 一時停止ボタン（プレイ中に表示・タップ/クリック可。Pキーでも）
+export const PAUSE_BUTTON = { x: 222, y: 4, w: 36, h: 18 };
+
+export function drawPauseButton(ctx, paused) {
+  const b = PAUSE_BUTTON;
+  ctx.fillStyle = 'rgba(16,18,22,0.7)'; ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.strokeStyle = ACCENT; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+  ctx.fillStyle = INK;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  if (paused) { // ▶ 再生
+    ctx.beginPath(); ctx.moveTo(cx - 4, cy - 5); ctx.lineTo(cx - 4, cy + 5); ctx.lineTo(cx + 6, cy); ctx.closePath(); ctx.fill();
+  } else { // ❚❚ 一時停止
+    ctx.fillRect(cx - 5, cy - 5, 3, 10); ctx.fillRect(cx + 2, cy - 5, 3, 10);
+  }
+}
+
+export function drawPauseOverlay(ctx) {
+  dim(ctx, 0.62);
+  center(ctx, '一 時 停 止', 116, 'bold 26px system-ui, sans-serif', ACCENT);
+  center(ctx, '再開: P キー / タップ', 150, 'bold 12px system-ui, sans-serif', INK);
+}
