@@ -110,10 +110,9 @@ export const STAGES = [
   },
   {
     id: 4,
-    name: '司令官編 — 経営フロア',
+    name: '司令官編 — 本社 事業部フロア',
     playerRank: '小向司令官',
-    location: '工場長室',
-    bossLocation: '本社', // 事業部長が出現したら本社へ
+    location: '本社 事業部フロア',
     intro: '司令官（課長級）に到達。役員会議室で工場長の上の真のボス「事業部長」が待つ。\n全部署と経営層を蹴散らし頂点を獲れ。最後の味方も…信じられるか？',
     width: 1850,
     bg: { scene: 'boardroom', wall: '#1c1726', floor: '#2c2640', detail: '#120d1a', accent: '#c79a3a' },
