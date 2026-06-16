@@ -32,6 +32,10 @@ export const UNIT_TYPES = {
 
   // ボス: 工場内の三大ボス（生産部長/技師長/工場長）＋ 真のボス（事業部長）
   boss1: { name: '生産部長', sprite: 'boss1', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.50, score: 1000 },
+  // 技術部長（Stage1ボス・セリフは生産部長と同じ）
+  boss_gijutsubu: { name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, score: 1000 },
+  // 生産部長（Stage2で技師長と一緒に出る・非ボスの強敵）
+  seisan: { name: '生産部長', sprite: 'seisan', taunts: 'boss_seisan', hp: 12, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.75, telegraph: 0.46, score: 500 },
   boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  boss: true, scale: 1.6, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, score: 1500 },
   boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   boss: true, scale: 1.7, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, score: 2000 },
   boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
@@ -59,14 +63,14 @@ export const STAGES = [
       { x: 1180, label: '設計審査（ランクB）出現！', enemies: [{ type: 'dr', count: 5 }] },
     ],
     allies: [{ type: 'ally', x: 120, betrayer: false }, { type: 'ally', x: 175, betrayer: false }],
-    boss: { type: 'boss1', x: 1500 },
+    boss: { type: 'boss_gijutsubu', x: 1500 },
   },
   {
     id: 2,
     name: '小隊長編 — スタッフ部門フロア',
     playerRank: '小向小隊長',
     location: '60号6階',
-    intro: '小隊長（主務級）に昇進。スタッフ部門と無茶振りの客が襲う。\n技師長を超えろ。頼れる相棒…のはずが？',
+    intro: '小隊長（主務級）に昇進。スタッフ部門と無茶振りの客が襲う。',
     width: 1700,
     bg: { scene: 'office', wall: '#3a4450', floor: '#5a6470', detail: '#2a323c', accent: '#8a96a4' },
     waves: [
@@ -79,6 +83,7 @@ export const STAGES = [
       { type: 'ally', x: 175, betrayer: false },
     ],
     boss: { type: 'boss2', x: 1600 },
+    coBoss: 'seisan', // 技師長と一緒に生産部長も出現
   },
   {
     id: 3,

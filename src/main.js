@@ -9,8 +9,9 @@ import { resolveMelee, resolveProjectiles, Fx } from './combat.js';
 import { STAGES, SHUKKOU_STAGE, defFor } from './stages.js';
 import {
   drawHUD, drawTitle, drawStageIntro, drawStageClear,
-  drawRankUp, drawEnding, drawGameOver, DIFF_BUTTONS,
+  drawRankUp, drawEnding, drawGameOver, DIFF_BUTTONS, MUTE_BUTTON,
 } from './ui.js';
+import { Audio } from './audio.js';
 
 const FLOOR_MID = (FLOOR_TOP + FLOOR_BOTTOM) / 2;
 
@@ -114,6 +115,9 @@ export class Stage {
     this.boss = new Char(this.width - 60, FLOOR_MID, defFor(this.data.boss.type));
     this.entities.push(this.boss);
     this.lockX = this.width - 40;
+    if (this.data.coBoss) { // ボスと一緒に出る強敵（例: 技師長と生産部長）
+      this.entities.push(new Char(this.width - 110, FLOOR_MID + 20, defFor(this.data.coBoss)));
+    }
     if (this.data.bossLocation) { // 例: 事業部長は本社へ
       this.location = this.data.bossLocation;
       this.banner = this.data.bossLocation; this.bannerColor = 'rgba(22,42,74,0.92)'; this.bannerT = 2.8;
@@ -476,6 +480,7 @@ export class Game {
 
   update(dt) {
     this.time += dt; this.screenT += dt;
+    if (Input.pressed('KeyM')) Audio.toggleMute(); // どの画面でもMでミュート切替
     switch (this.state) {
       case 'title': {
         // 難易度切替（キーボード ←→↑↓ / WASD）
@@ -485,7 +490,8 @@ export class Game {
         const tap = Input.consumeTap();
         if (tap) {
           const inB = (b) => tap.x >= b.x && tap.x <= b.x + b.w && tap.y >= b.y && tap.y <= b.y + b.h;
-          if (inB(DIFF_BUTTONS.easy)) { this.difficulty = 'easy'; this.start(); }
+          if (inB(MUTE_BUTTON)) { Audio.toggleMute(); }            // BGMミュート（開始しない）
+          else if (inB(DIFF_BUTTONS.easy)) { this.difficulty = 'easy'; this.start(); }
           else if (inB(DIFF_BUTTONS.normal)) { this.difficulty = 'normal'; this.start(); }
           else this.start(); // ボタン以外のタップは現在の難易度で開始
         } else if (Input.confirm) {
@@ -526,6 +532,16 @@ export class Game {
         if (this.screenT > 0.5 && Input.confirm) { this.state = 'title'; this.screenT = 0; }
         break;
     }
+    this.updateAudio();
+  }
+
+  updateAudio() {
+    let track = 'stage';
+    if (this.state === 'title') track = 'title';
+    else if (this.state === 'ending') track = 'ending';
+    else if (this.state === 'gameover') track = 'gameover';
+    else if (this.state === 'playing' && this.stage && this.stage.boss && this.stage.boss.alive) track = 'boss';
+    Audio.play(track);
   }
 
   render(ctx) {
@@ -536,7 +552,7 @@ export class Game {
       ctx.fillStyle = '#0c0e11'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }
     switch (this.state) {
-      case 'title': drawTitle(ctx, this.time, this.difficulty); break;
+      case 'title': drawTitle(ctx, this.time, this.difficulty, Audio.muted); break;
       case 'intro': drawStageIntro(ctx, this.stage, this.screenT); break;
       case 'clear': drawStageClear(ctx, this.stage, this.screenT); break;
       case 'rankup': drawRankUp(ctx, STAGES[this.stageIndex + 1]?.playerRank ?? '工場長', this.screenT); break;
@@ -570,6 +586,10 @@ function boot() {
     Input.forceTouch = true; // デバッグ用にPCでもタッチUIを表示
   }
   Input.initTouch(canvas);
+  // 自動再生規制対応: 初回操作でBGMを開始
+  const resumeAudio = () => Audio.resume();
+  addEventListener('keydown', resumeAudio, { once: true });
+  addEventListener('pointerdown', resumeAudio, { once: true });
   const game = new Game();
 
   const STEP = 1 / 60;

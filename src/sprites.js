@@ -95,6 +95,8 @@ export const CHAR_PALETTES = {
   kyaku:  { map: 'suit', b: '#8a5a34', p: '#73492a', t: '#c0392b', h: '#3a2a1a' }, // 客: 茶スーツ赤ネクタイ
   vendor: { map: 'suit', b: '#37506e', p: '#2f4660', t: '#aeb4bc', h: '#241c14' }, // ベンダー: 紺スーツ灰ネクタイ
   boss1:  { map: 'worker', h: '#2a4f8a' },                                  // 生産部長: 青ヘルメット
+  boss_gijutsubu: { map: 'worker', h: '#2a8a86' },                         // 技術部長(Stage1ボス): 青緑ヘルメット
+  seisan:  { map: 'worker', h: '#2a4f8a' },                                // 生産部長(Stage2・非ボス): 青ヘルメット
   boss2:  { map: 'worker', h: '#7a3db0' },                                  // 技師長: 紫ヘルメット
   boss3:  { map: 'worker', h: '#c79a3a' },                                  // 工場長: 金ヘルメット
   boss4:  { map: 'suit', b: '#1c1c24', p: '#16161c', t: '#8a1a1a', h: '#15110c' }, // 事業部長: 黒スーツ赤ネクタイ
@@ -102,14 +104,14 @@ export const CHAR_PALETTES = {
 
 // 頭上に出す役職ラベル（ボス以外の識別用。ボスはボスHPバーで表示）
 export const TYPE_LABEL = {
-  buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: '味方',
+  buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: 'PJメンバ',
   pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
-  kanren: '関連社員', shukkou: '出向先上長',
+  kanren: '関連社員', shukkou: '出向先上長', seisan: '生産部長',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',
   pmr_seisan: '#6a9ad8', pmr_seizou: '#5cc28a', pmr_choutatsu: '#d8a45c', pmr_gijutsu: '#9a8ce0', pmr_hinshou: '#d87ab0',
-  kanren: '#9ad8b8', shukkou: '#d8b07a',
+  kanren: '#9ad8b8', shukkou: '#d8b07a', seisan: '#6a9ad8',
 };
 
 function bake(map, base, overrides) {

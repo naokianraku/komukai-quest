@@ -155,7 +155,9 @@ function diffBtn(ctx, b, sel) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
-export function drawTitle(ctx, t, difficulty = 'normal') {
+export const MUTE_BUTTON = { x: 8, y: 6, w: 66, h: 16 };
+
+export function drawTitle(ctx, t, difficulty = 'normal', muted = false) {
   drawTitleScene(ctx);
   center(ctx, 'KOMUKAI QUEST', 86, 'bold 34px system-ui, sans-serif', ACCENT);
   center(ctx, '小 向 ク エ ス ト', 112, 'bold 15px system-ui, sans-serif', INK);
@@ -163,9 +165,17 @@ export function drawTitle(ctx, t, difficulty = 'normal') {
   center(ctx, '難易度', 159, '8px system-ui, sans-serif', SUB);
   diffBtn(ctx, DIFF_BUTTONS.normal, difficulty === 'normal');
   diffBtn(ctx, DIFF_BUTTONS.easy, difficulty === 'easy');
-  const desc = difficulty === 'easy' ? 'かんたん: 残機おおめ＋自分も飛び道具' : 'ふつう: 標準ルール';
+  const desc = difficulty === 'easy' ? 'かんたん: 残機多め＋自分も飛び道具' : 'ふつう: 標準ルール';
   center(ctx, desc, 195, '8px system-ui, sans-serif', INK);
   if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 209, 'bold 9px system-ui, sans-serif', INK);
+  // BGMミュート切替（クリック/タップ可・Mキーでも）
+  const b = MUTE_BUTTON;
+  ctx.fillStyle = 'rgba(16,18,22,0.85)'; ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.strokeStyle = ACCENT; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+  ctx.fillStyle = INK; ctx.font = 'bold 9px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(muted ? 'BGM ✕' : 'BGM ♪', b.x + b.w / 2, b.y + b.h / 2 + 0.5);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
 export function drawStageIntro(ctx, stage, t) {
