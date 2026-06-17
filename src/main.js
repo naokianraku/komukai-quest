@@ -126,11 +126,13 @@ export class Stage {
   }
 
   checkBetrayal() {
+    // ボスの直前まで来たら PJメンバは全員自動的に裏切る（出向先など味方不在のステージは対象なし）
+    const nearBoss = this.player.x > this.width - 320;
     for (const e of this.entities) {
-      if (e.team !== 'ally' || !e.betrayer || e.betrayed) continue;
+      if (e.team !== 'ally' || e.betrayed) continue;
+      let fire = nearBoss;
       const tr = e.betrayTrigger;
-      let fire = false;
-      if (tr) {
+      if (!fire && e.betrayer && tr) {
         if (tr.type === 'x') fire = this.player.x >= tr.value;
         else if (tr.type === 'time') fire = this.time >= tr.value;
         else if (tr.type === 'bossHp') fire = this.boss && this.boss.alive && (this.boss.hp / this.boss.maxhp) <= tr.value;
