@@ -62,7 +62,7 @@ export const STAGES = [
       { x: 760, enemies: [{ type: 'senpai', count: 1 }, { type: 'staff', count: 2 }] },
       { x: 1180, label: '設計審査（ランクB）出現！', enemies: [{ type: 'dr', count: 5 }] },
     ],
-    allies: [{ type: 'ally', x: 120, betrayer: false }, { type: 'ally', x: 175, betrayer: false }],
+    allies: [{ type: 'ally', x: 120, betrayer: false }, { type: 'ally', x: 175, betrayer: false }, { type: 'ally', x: 230, betrayer: false }],
     boss: { type: 'boss_gijutsubu', x: 1500 },
   },
   {
@@ -81,6 +81,7 @@ export const STAGES = [
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'x', value: 820 } }, // 他部署に引き抜かれ裏切る
       { type: 'ally', x: 175, betrayer: false },
+      { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss2', x: 1600 },
     coBoss: 'seisan', // 技師長と一緒に生産部長も出現
@@ -105,6 +106,7 @@ export const STAGES = [
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'bossHp', value: 0.5 } }, // 手のひら返し
       { type: 'ally', x: 175, betrayer: false },
+      { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss3', x: 1650 },
   },
@@ -124,6 +126,7 @@ export const STAGES = [
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'time', value: 16 } }, // 最後の味方も裏切る
       { type: 'ally', x: 175, betrayer: false },
+      { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss4', x: 1750 },
   },
