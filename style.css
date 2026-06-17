@@ -12,31 +12,36 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  overflow: hidden;
 }
 
 body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: 16px;
+  /* ノッチ/ダイナミックアイランドを避ける（viewport-fit=cover と併用） */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #frame {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 1040px;
+  justify-content: center;
+  gap: 8px;
 }
 
 #game {
-  width: 100%;
-  height: auto;
+  /* 縦・横どちらにも収まるよう 16:9 を保ったまま contain（はみ出さない） */
   aspect-ratio: 16 / 9;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100% - 1.8rem); /* 下のキー説明ぶんを確保 */
   background: #000;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #2a2e34;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   /* 高DPI描画なので滑らかに表示（ドット絵自体はimageSmoothing=falseでくっきり） */
@@ -48,8 +53,15 @@ body {
 }
 
 #hint {
+  flex: 0 0 auto;
   font-size: 13px;
   color: #8b9097;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+/* タッチ端末では画面内に操作UIが出るので、下のキー説明は隠して全面をゲームに使う */
+@media (pointer: coarse) {
+  #hint { display: none; }
+  #game { max-height: 100%; }
 }
