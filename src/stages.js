@@ -36,6 +36,8 @@ export const UNIT_TYPES = {
   boss_gijutsubu: { name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, score: 1000 },
   // 生産部長（Stage2で技師長と一緒に出る・非ボスの強敵）
   seisan: { name: '生産部長', sprite: 'seisan', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
+  // 技術管理部長（Stage2で技師長と一緒に出る・セリフは技術部長/生産部長と同じ boss_seisan）
+  gijutsukanri: { name: '技術管理部長', sprite: 'pmr_gijutsu', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
   boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  boss: true, scale: 1.6, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, score: 1500 },
   boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   boss: true, scale: 1.7, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, score: 2000 },
   boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
@@ -84,7 +86,7 @@ export const STAGES = [
       { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss2', x: 1600 },
-    coBoss: 'seisan', // 技師長と一緒に生産部長も出現
+    coBoss: 'gijutsukanri', // 技師長と一緒に技術管理部長も出現
   },
   {
     id: 3,
@@ -109,6 +111,7 @@ export const STAGES = [
       { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss3', x: 1650 },
+    coBoss: 'seisan', // 工場長と一緒に生産部長も出現
   },
   {
     id: 4,
