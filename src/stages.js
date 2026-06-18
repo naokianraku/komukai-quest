@@ -14,16 +14,16 @@ export const UNIT_TYPES = {
   // 携行ミサイル兵: 遠距離から誘導弾を撃つ射手（防衛工場ネタ）。離れて撃つカイト型。ジャンプで回避可。
   missile: { name: '携行ミサイル兵', sprite: 'missile', taunts: 'missile', hp: 3, speed: 34, reach: 20, dmg: 1, kb: 80, cooldown: 0.9, telegraph: 0.5, thrower: true, proj: 'missile', projRange: 340, throwCooldown: 2.4, score: 240 },
 
-  // PMR（プロジェクトマネジメント審査会）: 部長たちの徒党。生産部長が最強、他は少し弱め。
-  pmr_seisan:    { name: '生産部長',     sprite: 'pmr_seisan',    taunts: 'pmr', hp: 8, speed: 44, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.44, score: 400 },
-  pmr_seizou:    { name: '製造部長',     sprite: 'pmr_seizou',    taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
-  pmr_choutatsu: { name: '調達部長',     sprite: 'pmr_choutatsu', taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
-  pmr_gijutsu:   { name: '技術管理部長', sprite: 'pmr_gijutsu',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
-  pmr_hinshou:   { name: '品証部長',     sprite: 'pmr_hinshou',   taunts: 'pmr', hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  // PMR（プロジェクトマネジメント審査会）: 部長たちの徒党。生産部長が最強、他は少し弱め。elite=地獄でも増殖しない。
+  pmr_seisan:    { name: '生産部長',     sprite: 'pmr_seisan',    taunts: 'pmr', elite: true, hp: 8, speed: 44, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.44, score: 400 },
+  pmr_seizou:    { name: '製造部長',     sprite: 'pmr_seizou',    taunts: 'pmr', elite: true, hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_choutatsu: { name: '調達部長',     sprite: 'pmr_choutatsu', taunts: 'pmr', elite: true, hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_gijutsu:   { name: '技術管理部長', sprite: 'pmr_gijutsu',   taunts: 'pmr', elite: true, hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
+  pmr_hinshou:   { name: '品証部長',     sprite: 'pmr_hinshou',   taunts: 'pmr', elite: true, hp: 5, speed: 40, reach: 24, dmg: 1, kb: 100, cooldown: 0.85, telegraph: 0.5,  score: 250 },
 
   // 出向先（関連会社）
   kanren:  { name: '関連会社社員', sprite: 'kanren',  taunts: 'kanren',  hp: 3, speed: 46, reach: 22, dmg: 1, kb: 90,  cooldown: 0.8,  telegraph: 0.4,  score: 120 },
-  shukkou: { name: '出向先上長',   sprite: 'shukkou', taunts: 'shukkou', hp: 8, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.46, score: 400 },
+  shukkou: { name: '出向先上長',   sprite: 'shukkou', taunts: 'shukkou', elite: true, hp: 8, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.46, score: 400 },
   // 関連会社社長: 見た目は怖い（黒スーツ/白髪/日焼け/赤目）。能力は普通の部長級。
   shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.0, hp: 14, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.46, score: 1500 },
 
@@ -43,6 +43,10 @@ export const UNIT_TYPES = {
   boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
   // 企画部長（事業部長と同時出現・セリフは事業部長と同じ boss_jigyo）
   kikakubucho: { name: '企画部長', sprite: 'kikakubucho', taunts: 'boss_jigyo', scale: 1.85, hp: 16, speed: 48, reach: 32, dmg: 2, kb: 140, cooldown: 0.7, telegraph: 0.44, score: 800 },
+
+  // 中ボス（道中の強敵。midboss=地獄でも増殖しない。セリフは後から セリフ一覧.md の同名カテゴリに追記可）
+  kanrik:    { name: '管理担当K',    sprite: 'kanrik',    taunts: 'kanrik',    midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 }, // Stage2 中ボス
+  seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 }, // Stage3 中ボス
 };
 
 export function defFor(type) {
@@ -80,6 +84,7 @@ export const STAGES = [
     waves: [
       { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
       { x: 780, enemies: [{ type: 'staff', count: 1 }, { type: 'buka', count: 2 }] },
+      { x: 1000, label: '中ボス 管理担当K 出現！', enemies: [{ type: 'kanrik', count: 1 }] },
       { x: 1200, label: '輸出管理チーム出現！', enemies: [{ type: 'exctrl', count: 5 }] },
     ],
     allies: [
@@ -102,6 +107,7 @@ export const STAGES = [
     waves: [
       { x: 380, enemies: [{ type: 'vendor', count: 1 }, { type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
       { x: 800, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'missile', count: 1 }] },
+      { x: 1000, label: '中ボス 生産企画課長 出現！', enemies: [{ type: 'seikikaku', count: 1 }] },
       { x: 1250, label: 'プロジェクトマネージメント審査会（PMR）', enemies: [
         { type: 'pmr_seisan', count: 1 }, { type: 'pmr_seizou', count: 1 }, { type: 'pmr_choutatsu', count: 1 },
         { type: 'pmr_gijutsu', count: 1 }, { type: 'pmr_hinshou', count: 1 },

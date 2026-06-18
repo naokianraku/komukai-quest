@@ -95,8 +95,14 @@ export class Stage {
 
   spawnWave(w) {
     // 種別を1つの配列に展開してから、横にも奥行きにも広く散らして配置
+    // 地獄モードは雑魚（ボス/中ボス/elite以外）の数を2倍にする
+    const hell = this.game && this.game.difficulty === 'hell';
     const list = [];
-    for (const g of w.enemies) for (let k = 0; k < g.count; k++) list.push(g.type);
+    for (const g of w.enemies) {
+      const d = defFor(g.type);
+      const reps = (hell && !d.boss && !d.midboss && !d.elite) ? g.count * 2 : g.count;
+      for (let k = 0; k < reps; k++) list.push(g.type);
+    }
     const total = list.length;
     const band = FLOOR_BOTTOM - FLOOR_TOP - 12;
     for (let n = 0; n < total; n++) {
@@ -474,7 +480,7 @@ export class Game {
 
   start() {
     this.stageIndex = 0; this.score = 0;
-    this.lives = this.difficulty === 'easy' ? 6 : 3;
+    this.lives = this.difficulty === 'easy' ? 6 : this.difficulty === 'hell' ? 2 : 3;
     this.loadStage(0);
     this.state = 'intro'; this.screenT = 0;
   }
@@ -488,8 +494,11 @@ export class Game {
     switch (this.state) {
       case 'title': {
         // 難易度切替（キーボード ←→↑↓ / WASD）
-        if (Input.pressed('ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS')) {
-          this.difficulty = this.difficulty === 'normal' ? 'easy' : 'normal';
+        const DIFFS = ['normal', 'easy', 'hell'];
+        if (Input.pressed('ArrowRight', 'ArrowDown', 'KeyD', 'KeyS')) {
+          this.difficulty = DIFFS[(DIFFS.indexOf(this.difficulty) + 1) % DIFFS.length];
+        } else if (Input.pressed('ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW')) {
+          this.difficulty = DIFFS[(DIFFS.indexOf(this.difficulty) + 2) % DIFFS.length];
         }
         const tap = Input.consumeTap();
         if (tap) {
@@ -497,6 +506,7 @@ export class Game {
           if (inB(MUTE_BUTTON)) { Audio.toggleMute(); }            // BGMミュート（開始しない）
           else if (inB(DIFF_BUTTONS.easy)) { this.difficulty = 'easy'; this.start(); }
           else if (inB(DIFF_BUTTONS.normal)) { this.difficulty = 'normal'; this.start(); }
+          else if (inB(DIFF_BUTTONS.hell)) { this.difficulty = 'hell'; this.start(); }
           else this.start(); // ボタン以外のタップは現在の難易度で開始
         } else if (Input.confirm) {
           this.start();

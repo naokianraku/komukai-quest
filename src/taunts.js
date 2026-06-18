@@ -265,6 +265,14 @@ export const TAUNTS = {
     '説明は自分がやります！',
     'AI今日中に片づけます！',
   ],
+  // 生産企画課長
+  seikikaku: [
+    '俺が中村だ！',
+  ],
+  // 管理担当K
+  kanrik: [
+    '俺が黒目だ！',
+  ],
 };
 
 export function randomTaunt(category) {

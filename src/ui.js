@@ -39,13 +39,15 @@ export function drawHUD(ctx, game, stage) {
   ctx.textAlign = 'left';
   ctx.fillText(stage.data.playerRank, 10, 18);
 
-  // プレイヤーHPバー
+  // プレイヤーHPバー（「仕事体力」ゲージ）
   const p = stage.player;
   const bx = 10, by = 24, bw = 96, bh = 7;
   ctx.fillStyle = '#000'; ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
   ctx.fillStyle = '#3a1414'; ctx.fillRect(bx, by, bw, bh);
   ctx.fillStyle = '#389451'; ctx.fillRect(bx, by, bw * Math.max(0, p.hp / p.maxhp), bh);
   ctx.strokeStyle = '#0d0f12'; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+  ctx.fillStyle = SUB; ctx.font = 'bold 8px system-ui, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('仕事体力', bx + bw + 5, by + bh - 1);
 
   // 残機
   ctx.fillStyle = SUB; ctx.font = '10px system-ui, sans-serif';
@@ -139,8 +141,9 @@ function drawTitleScene(ctx) {
 
 // 難易度ボタン（描画とヒットテストで共有）
 export const DIFF_BUTTONS = {
-  normal: { x: 176, y: 166, w: 58, h: 17, label: 'ふつう' },
-  easy: { x: 246, y: 166, w: 58, h: 17, label: 'かんたん' },
+  normal: { x: 155, y: 166, w: 52, h: 17, label: 'ふつう' },
+  easy: { x: 214, y: 166, w: 52, h: 17, label: 'かんたん' },
+  hell: { x: 273, y: 166, w: 52, h: 17, label: '地獄' },
 };
 
 function diffBtn(ctx, b, sel) {
@@ -165,8 +168,11 @@ export function drawTitle(ctx, t, difficulty = 'normal', muted = false) {
   center(ctx, '難易度', 159, '8px system-ui, sans-serif', SUB);
   diffBtn(ctx, DIFF_BUTTONS.normal, difficulty === 'normal');
   diffBtn(ctx, DIFF_BUTTONS.easy, difficulty === 'easy');
-  const desc = difficulty === 'easy' ? 'かんたん: 残機多め＋自分も飛び道具' : 'ふつう: 標準ルール';
-  center(ctx, desc, 195, '8px system-ui, sans-serif', INK);
+  diffBtn(ctx, DIFF_BUTTONS.hell, difficulty === 'hell');
+  const desc = difficulty === 'easy' ? 'かんたん: 残機多め＋自分も飛び道具'
+    : difficulty === 'hell' ? '地獄: 雑魚が2倍＋残機少なめ'
+    : 'ふつう: 標準ルール';
+  center(ctx, desc, 195, '8px system-ui, sans-serif', difficulty === 'hell' ? '#ff5a5a' : INK);
   if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 209, 'bold 9px system-ui, sans-serif', INK);
   // クレジット（右上・読みやすい位置）
   ctx.fillStyle = SUB; ctx.font = 'bold 8px system-ui, sans-serif';
