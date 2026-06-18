@@ -168,6 +168,9 @@ export function drawTitle(ctx, t, difficulty = 'normal', muted = false) {
   const desc = difficulty === 'easy' ? 'かんたん: 残機多め＋自分も飛び道具' : 'ふつう: 標準ルール';
   center(ctx, desc, 195, '8px system-ui, sans-serif', INK);
   if (Math.floor(t * 2) % 2 === 0) center(ctx, '←→で選択　ENTER / タップで開始', 209, 'bold 9px system-ui, sans-serif', INK);
+  // クレジット（右上・読みやすい位置）
+  ctx.fillStyle = SUB; ctx.font = 'bold 8px system-ui, sans-serif';
+  ctx.textAlign = 'right'; ctx.fillText('© Anraku Tech', VIEW_W - 8, 15); ctx.textAlign = 'left';
   // BGMミュート切替（クリック/タップ可・Mキーでも）
   const b = MUTE_BUTTON;
   ctx.fillStyle = 'rgba(16,18,22,0.85)'; ctx.fillRect(b.x, b.y, b.w, b.h);

@@ -91,7 +91,7 @@ export const CHAR_PALETTES = {
   kanren:  { map: 'worker', h: '#5a7a6a' }, // 関連会社社員: 灰緑
   shukkou: { map: 'worker', h: '#8a5a2a' }, // 出向先上長: 茶
   // 関連会社社長: 黒スーツ・白髪・日焼け顔・赤い目
-  shacho:  { map: 'suit', b: '#0a0a0e', p: '#08080c', t: '#7a0a0a', h: '#e2e2e2', s: '#a86a3a', e: '#ff2a2a' },
+  shacho:  { map: 'suit', b: '#0a0a0e', p: '#08080c', t: '#7a0a0a', h: '#241a12', s: '#a86a3a', e: '#ff2a2a' },
   kyaku:  { map: 'suit', b: '#8a5a34', p: '#73492a', t: '#c0392b', h: '#3a2a1a' }, // 客: 茶スーツ赤ネクタイ
   vendor: { map: 'suit', b: '#37506e', p: '#2f4660', t: '#aeb4bc', h: '#241c14' }, // ベンダー: 紺スーツ灰ネクタイ
   boss1:  { map: 'worker', h: '#2a4f8a' },                                  // 生産部長: 青ヘルメット
@@ -100,18 +100,19 @@ export const CHAR_PALETTES = {
   boss2:  { map: 'worker', h: '#7a3db0' },                                  // 技師長: 紫ヘルメット
   boss3:  { map: 'worker', h: '#c79a3a' },                                  // 工場長: 金ヘルメット
   boss4:  { map: 'suit', b: '#1c1c24', p: '#16161c', t: '#8a1a1a', h: '#15110c' }, // 事業部長: 黒スーツ赤ネクタイ
+  kikakubucho: { map: 'suit', b: '#2c2c3c', p: '#222230', t: '#6a6a8c', h: '#1a1410' }, // 企画部長: 紺グレーのスーツ
 };
 
 // 頭上に出す役職ラベル（ボス以外の識別用。ボスはボスHPバーで表示）
 export const TYPE_LABEL = {
   buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: 'PJメンバ',
   pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
-  kanren: '関連社員', shukkou: '出向先上長', seisan: '生産部長',
+  kanren: '関連社員', shukkou: '出向先上長', seisan: '生産部長', kikakubucho: '企画部長',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',
   pmr_seisan: '#6a9ad8', pmr_seizou: '#5cc28a', pmr_choutatsu: '#d8a45c', pmr_gijutsu: '#9a8ce0', pmr_hinshou: '#d87ab0',
-  kanren: '#9ad8b8', shukkou: '#d8b07a', seisan: '#6a9ad8',
+  kanren: '#9ad8b8', shukkou: '#d8b07a', seisan: '#6a9ad8', kikakubucho: '#9aa6cc',
 };
 
 function bake(map, base, overrides) {

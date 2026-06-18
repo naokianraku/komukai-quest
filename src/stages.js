@@ -41,6 +41,8 @@ export const UNIT_TYPES = {
   boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  boss: true, scale: 1.6, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, score: 1500 },
   boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   boss: true, scale: 1.7, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, score: 2000 },
   boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
+  // 企画部長（事業部長と同時出現・セリフは事業部長と同じ boss_jigyo）
+  kikakubucho: { name: '企画部長', sprite: 'kikakubucho', taunts: 'boss_jigyo', scale: 1.85, hp: 16, speed: 48, reach: 32, dmg: 2, kb: 140, cooldown: 0.7, telegraph: 0.44, score: 800 },
 };
 
 export function defFor(type) {
@@ -132,6 +134,7 @@ export const STAGES = [
       { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss4', x: 1750 },
+    coBoss: 'kikakubucho', // 事業部長と一緒に企画部長も出現
   },
 ];
 
