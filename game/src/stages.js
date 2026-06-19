@@ -33,14 +33,14 @@ export const UNIT_TYPES = {
   // ボス: 工場内の三大ボス（生産部長/技師長/工場長）＋ 真のボス（事業部長）
   boss1: { name: '生産部長', sprite: 'boss1', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.50, score: 1000 },
   // 技術部長（Stage1ボス・セリフは生産部長と同じ）
-  boss_gijutsubu: { name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, score: 1000 },
+  boss_gijutsubu: { name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', firstLine: '事前配布資料はもう用意できたか？', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, score: 1000 },
   // 生産部長（Stage2で技師長と一緒に出る・非ボスの強敵）
   seisan: { name: '生産部長', sprite: 'seisan', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
   // 技術管理部長（Stage2で技師長と一緒に出る・セリフは技術部長/生産部長と同じ boss_seisan）
   gijutsukanri: { name: '技術管理部長', sprite: 'pmr_gijutsu', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
-  boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  boss: true, scale: 1.6, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, score: 1500 },
-  boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   boss: true, scale: 1.7, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, score: 2000 },
-  boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
+  boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  firstLine: '事前配布資料にコメントしたけど、本番で全部回答しろよ', boss: true, scale: 1.6, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, score: 1500 },
+  boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   firstLine: '安全とコンプライアンスはすべてに優先する！', boss: true, scale: 1.7, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, score: 2000 },
+  boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', firstLine: '売上あげろ！利益確保しろ！納期守れ！コスト下げろ！', boss: true, scale: 1.85, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, score: 5000 },
   // 企画部長（事業部長と同時出現・セリフは事業部長と同じ boss_jigyo）
   kikakubucho: { name: '企画部長', sprite: 'kikakubucho', taunts: 'boss_jigyo', scale: 1.85, hp: 16, speed: 48, reach: 32, dmg: 2, kb: 140, cooldown: 0.7, telegraph: 0.44, score: 800 },
 
@@ -179,16 +179,16 @@ export const URA_STAGE = {
   name: '真・最終決戦 — 業火の60号7階Aゾーン',
   playerRank: '小向司令官',
   location: '60号7階Aゾーン（業火）',
-  intro: '事業部長を倒した——だが終わりではなかった。\n60号7階Aゾーンが業火に包まれ、奥から「Y下四天王」と魔王Y下が現れる。\n常軌を逸したパワハラに屈するな。すべての元凶を討て。',
-  width: 1750,
+  intro: '事業部長を倒した——だが終わりではなかった。\n60号7階Aゾーンが業火に包まれ、仲間は呑まれて消えた。奥から「Y下四天王」と魔王Y下が現れる。\n常軌を逸したパワハラに屈するな。すべての元凶を討て。',
+  width: 1200,
   bg: { scene: 'hellfire', wall: '#1a0c08', floor: '#2a160c', detail: '#3a1408', accent: '#ff5a14' },
+  // 敵は四天王と魔王のみ（雑魚なし）。味方も登場しない（業火に呑まれた）。
   waves: [
-    { x: 380, label: '焼かれし亡者ども', enemies: [{ type: 'staff', count: 2 }, { type: 'buka', count: 2 }] },
-    { x: 900, label: 'Y下四天王 出現！', enemies: [
+    { x: 480, label: 'Y下四天王 出現！', enemies: [
       { type: 'shitennou_nmura', count: 1 }, { type: 'shitennou_kme', count: 1 },
       { type: 'shitennou_sda', count: 1 }, { type: 'shitennou_hmoto', count: 1 },
     ] },
   ],
   allies: [],
-  boss: { type: 'maou', x: 1650 },
+  boss: { type: 'maou', x: 1140 },
 };

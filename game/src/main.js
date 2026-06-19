@@ -35,6 +35,7 @@ export class Stage {
     this.lockX = data.waves.length ? data.waves[0].x : this.width - 60;
     this.boss = null;
     this.bossStarted = false;
+    this.bossSpokeAt = null; // ボスが一言目を発した時刻（裏切りの基準）
     this.cleared = false;
     this.banner = null;
     this.bannerT = 0;
@@ -119,9 +120,16 @@ export class Stage {
 
   startBoss() {
     this.bossStarted = true;
-    this.boss = new Char(this.width - 60, FLOOR_MID, defFor(this.data.boss.type));
+    const bossDef = defFor(this.data.boss.type);
+    this.boss = new Char(this.width - 60, FLOOR_MID, bossDef);
     this.entities.push(this.boss);
     this.lockX = this.width - 40;
+    this.bossSpokeAt = this.time; // 出現＝一言目を発する（裏切りの基準時刻）
+    if (bossDef.firstLine) { // ボスの一言目だけ固定フレーズ
+      this.boss.taunt = bossDef.firstLine;
+      this.boss.tauntT = 3.6;
+      this.boss.chatterT = 4.2; // 直後に雑談で上書きしない
+    }
     if (this.data.coBoss) { // ボスと一緒に出る強敵（例: 技師長と生産部長）
       this.entities.push(new Char(this.width - 110, FLOOR_MID + 20, defFor(this.data.coBoss)));
     }
@@ -132,8 +140,8 @@ export class Stage {
   }
 
   checkBetrayal() {
-    // ボスの直前まで来たら PJメンバは全員自動的に裏切る（出向先など味方不在のステージは対象なし）
-    const nearBoss = this.player.x > this.width - 320;
+    // ボスが一言目（固定フレーズ）を話したあたりで PJメンバは全員裏切る（少し間を置く）
+    const nearBoss = this.bossSpokeAt != null && (this.time - this.bossSpokeAt) >= 1.5;
     for (const e of this.entities) {
       if (e.team !== 'ally' || e.betrayed) continue;
       let fire = nearBoss;
