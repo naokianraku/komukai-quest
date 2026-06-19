@@ -5,6 +5,8 @@
 
 **▶ プレイ: https://naokianraku.github.io/komukai-quest/**
 
+> 🎮 遊ぶ人向けの説明は **[あそびかた.md](あそびかた.md)** へ（この README は開発者向け）。
+
 - **依存ゼロ**: HTML5 Canvas + 素のJavaScript（ES Modules）。ビルド不要・静的サイト。
 - **ピクセルアート**: ドット絵をコード生成。高DPI描画でくっきり。
 - **2.5D ベルトスクロール**: ファイナルファイト型。奥行き(y)＋ジャンプ(z)。
