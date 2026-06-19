@@ -104,6 +104,9 @@ export const CHAR_PALETTES = {
   // 中ボス
   seikikaku: { map: 'worker', h: '#2a8a5a' }, // 生産企画課長: 緑ヘルメット
   kanrik:    { map: 'worker', h: '#20202a' }, // 管理担当K: 黒ヘルメット
+  // 裏ステージ（業火の60号7階Aゾーン）
+  shitennou: { map: 'suit', b: '#2a1024', p: '#1e0c1a', t: '#8a0a2a', h: '#14100c', e: '#ff3a3a' }, // Y下四天王: 暗紫スーツ・赤目
+  maou:      { map: 'suit', b: '#1a0608', p: '#120406', t: '#c00a0a', h: '#dcdcdc', s: '#b87a4a', e: '#ff1212' }, // 魔王Y下: 漆黒赤スーツ・白髪・日焼け・紅蓮の目
 };
 
 // 頭上に出す役職ラベル（ボス以外の識別用。ボスはボスHPバーで表示）

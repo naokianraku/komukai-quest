@@ -190,7 +190,7 @@ export function drawTitle(ctx, t, difficulty = 'normal', muted = false) {
 export function drawStageIntro(ctx, stage, t) {
   dim(ctx, 0.78);
   panel(ctx, 50, 70, VIEW_W - 100, 130);
-  center(ctx, 'STAGE ' + stage.data.id, 100, 'bold 13px system-ui, sans-serif', ACCENT);
+  center(ctx, stage.data.stageLabel || ('STAGE ' + stage.data.id), 100, 'bold 13px system-ui, sans-serif', ACCENT);
   center(ctx, stage.data.name, 122, 'bold 14px system-ui, sans-serif', INK);
   multiline(ctx, stage.data.intro, VIEW_W / 2, 150, 15, '10px system-ui, sans-serif', SUB);
   if (Math.floor(t * 2) % 2 === 0) {
@@ -214,11 +214,12 @@ export function drawRankUp(ctx, newRank, t) {
 
 export function drawEnding(ctx, game, t) {
   ctx.fillStyle = '#0c0a12'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-  center(ctx, '小 向 司 令 官', 90, 'bold 30px system-ui, sans-serif', '#c79a3a');
-  center(ctx, '生産部長・技師長・工場長を倒し、真のボス「事業部長」をも撃破。', 128, '10px system-ui, sans-serif', INK);
-  center(ctx, '数々の困難と裏切りを越え、あなたは小向の頂点に立った。', 146, '10px system-ui, sans-serif', SUB);
-  center(ctx, '小向戦士の伝説、ここに完結。', 162, '10px system-ui, sans-serif', SUB);
-  center(ctx, 'FINAL SCORE  ' + String(game.score).padStart(6, '0'), 194, 'bold 14px ui-monospace, monospace', ACCENT);
+  center(ctx, '小 向 司 令 官', 88, 'bold 30px system-ui, sans-serif', '#c79a3a');
+  center(ctx, '技術部長・技師長・工場長・事業部長を倒し、その先へ。', 122, '10px system-ui, sans-serif', INK);
+  center(ctx, '業火の60号7階Aゾーンで「Y下四天王」と魔王Y下を討ち果たした。', 138, '10px system-ui, sans-serif', INK);
+  center(ctx, '数々の困難と理不尽、そして裏切りを越え、小向の頂点に立った。', 156, '10px system-ui, sans-serif', SUB);
+  center(ctx, '小向戦士の伝説、ここに完結。', 172, '10px system-ui, sans-serif', SUB);
+  center(ctx, 'FINAL SCORE  ' + String(game.score).padStart(6, '0'), 198, 'bold 14px ui-monospace, monospace', ACCENT);
   if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 230, 'bold 11px system-ui, sans-serif', SUB);
 }
 

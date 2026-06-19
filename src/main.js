@@ -6,7 +6,7 @@ import { Input } from './input.js';
 import { buildSprites } from './sprites.js';
 import { Player, Char, Projectile } from './entities.js';
 import { resolveMelee, resolveProjectiles, Fx } from './combat.js';
-import { STAGES, SHUKKOU_STAGE, defFor } from './stages.js';
+import { STAGES, SHUKKOU_STAGE, URA_STAGE, defFor } from './stages.js';
 import {
   drawHUD, drawTitle, drawStageIntro, drawStageClear,
   drawRankUp, drawEnding, drawGameOver, DIFF_BUTTONS, MUTE_BUTTON,
@@ -244,6 +244,7 @@ export class Stage {
     else if (scene === 'office_win') this.bgOfficeWin(ctx, cam, bg);
     else if (scene === 'meeting') this.bgMeeting(ctx, cam, bg);
     else if (scene === 'boardroom') this.bgBoardroom(ctx, cam, bg);
+    else if (scene === 'hellfire') this.bgHellfire(ctx, cam, bg);
     else this.bgFactory(ctx, cam, bg);
 
     // フロア境界のアクセント
@@ -371,6 +372,70 @@ export class Stage {
     ctx.fillStyle = bg.accent; ctx.fillRect(0, 24, VIEW_W, 1);
   }
 
+  // 業火の60号7階Aゾーン（裏ステージ）: 焼け落ちたオフィス＋立ち上る炎＋火の粉
+  bgHellfire(ctx, cam, bg) {
+    const t = this.time;
+    // 煙る赤黒い空
+    const sky = ctx.createLinearGradient(0, 0, 0, FLOOR_TOP);
+    sky.addColorStop(0, '#0a0503'); sky.addColorStop(0.55, '#2a0c06'); sky.addColorStop(1, '#5a1c08');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, VIEW_W, FLOOR_TOP);
+
+    // 焼け落ちたオフィス（黒い什器のシルエット＋残り火・視差）
+    const sp = 96, off = -((cam * 0.5) % sp);
+    for (let x = off - sp; x < VIEW_W + sp; x += sp) {
+      const px = Math.round(x);
+      ctx.fillStyle = '#0e0705';
+      ctx.fillRect(px + 8, 92, 54, FLOOR_TOP - 92);            // 焼け残りの壁/机
+      ctx.fillRect(px + 30, 66, 14, 30);                       // 倒れた什器
+      ctx.fillStyle = 'rgba(255,90,20,0.45)';                  // 滲む残り火
+      ctx.fillRect(px + 12, 150, 46, 3);
+      ctx.fillStyle = 'rgba(255,170,50,0.4)';
+      ctx.fillRect(px + 16, 126 + Math.round(2 * Math.sin(t * 6 + x)), 6, 6);
+    }
+
+    // 焦げた「Aゾーン」標識
+    const signX = ((-cam * 0.5) % 620 + 620) % 620 + 40;
+    ctx.fillStyle = '#1a0e0a'; ctx.fillRect(Math.round(signX), 28, 74, 18);
+    ctx.strokeStyle = '#ff5a14'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(signX) + 0.5, 28.5, 73, 17);
+    ctx.fillStyle = '#ff9a4a'; ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Aゾーン', Math.round(signX) + 37, 38);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+    // 壁際から立ち上る業火（炎の舌・揺らぎ）
+    const flame = (cx, by, w, h) => {
+      ctx.beginPath();
+      ctx.moveTo(cx - w, by);
+      ctx.quadraticCurveTo(cx - w * 0.5, by - h * 0.6, cx, by - h);
+      ctx.quadraticCurveTo(cx + w * 0.5, by - h * 0.6, cx + w, by);
+      ctx.closePath(); ctx.fill();
+    };
+    for (let x = 0; x < VIEW_W; x += 12) {
+      const f = Math.sin(t * 9 + x * 0.6) * 0.5 + Math.sin(t * 13 + x) * 0.5; // -1..1
+      const h = 26 + (f + 1) * 12, base = FLOOR_TOP + 2, cx = x + 6;
+      ctx.fillStyle = 'rgba(200,40,10,0.85)'; flame(cx, base, 9, h);        // 外炎(赤)
+      ctx.fillStyle = 'rgba(255,120,20,0.9)'; flame(cx, base, 6, h * 0.74); // 中炎(橙)
+      ctx.fillStyle = 'rgba(255,212,80,0.95)'; flame(cx, base, 3, h * 0.46); // 芯(黄)
+    }
+
+    // 床の熱気グロー
+    const fl = ctx.createLinearGradient(0, FLOOR_TOP, 0, VIEW_H);
+    fl.addColorStop(0, 'rgba(255,90,20,0.30)'); fl.addColorStop(1, 'rgba(120,20,0,0.05)');
+    ctx.fillStyle = fl; ctx.fillRect(0, FLOOR_TOP, VIEW_W, VIEW_H - FLOOR_TOP);
+
+    // 舞い上がる火の粉
+    for (let i = 0; i < 30; i++) {
+      const cyc = (t * (0.28 + (i % 5) * 0.05) + i * 0.37) % 1;
+      const ex = ((i * 67 + Math.sin(t * 2 + i) * 8) - cam * 0.3) % VIEW_W;
+      const px = (ex + VIEW_W) % VIEW_W;
+      const ey = FLOOR_TOP - cyc * (FLOOR_TOP - 10);
+      ctx.globalAlpha = 0.7 * (1 - cyc);
+      ctx.fillStyle = (i % 3 === 0) ? '#ffd24a' : '#ff7a1a';
+      ctx.fillRect(Math.round(px), Math.round(ey), 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   drawDoor(ctx) {
     if (!this.door) return;
     const sx = this.door.x - this.camera.x;
@@ -478,6 +543,14 @@ export class Game {
     this.state = 'playing'; this.screenT = 0; this.paused = false;
   }
 
+  // 事業部長を倒した“その先”——業火の裏ステージへ（帰還なし。クリアでエンディング）
+  enterTrueFinal() {
+    this.stage = new Stage(URA_STAGE, this);
+    this.stage.player.hp = this.stage.player.maxhp; // 真の最終決戦は全快で
+    this.applyDifficulty();
+    this.state = 'intro'; this.screenT = 0; this.paused = false;
+  }
+
   start() {
     this.stageIndex = 0; this.score = 0;
     this.lives = this.difficulty === 'easy' ? 6 : this.difficulty === 'hell' ? 2 : 3;
@@ -490,6 +563,7 @@ export class Game {
 
   update(dt) {
     this.time += dt; this.screenT += dt;
+    Input.gameplayActive = this.state === 'playing' && !this.paused; // タッチスティックはプレイ中のみ発動
     if (Input.pressed('KeyM')) Audio.toggleMute(); // どの画面でもMでミュート切替
     switch (this.state) {
       case 'title': {
@@ -532,6 +606,8 @@ export class Game {
         } else if (this.stage.cleared) {
           if (this.stage.isDetour) {
             this.returnFromDetour();         // 関連会社を制圧 → 本社(Stage3)へ帰還
+          } else if (this.stage.data.trueFinal) {
+            this.enterTrueFinal();           // 事業部長撃破 → 業火の裏ステージへ
           } else {
             this.state = this.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
             this.screenT = 0;
