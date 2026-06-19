@@ -3,9 +3,10 @@
 東芝・小向工場を舞台にした、風刺的ベルトスクロール格闘アクション。
 「小向戦士」となり、数々の困難と裏切りを乗り越えて出世の頂点を目指せ。
 
-**▶ プレイ: https://naokianraku.github.io/komukai-quest/**
+**▶ トップページ: https://naokianraku.github.io/komukai-quest/** （「ゲームをする」「遊び方を読む」へ分岐）
+**▶ ゲーム直リンク: https://naokianraku.github.io/komukai-quest/game/**
 
-> 🎮 遊ぶ人向けの説明は **[あそびかた.md](あそびかた.md)** へ（この README は開発者向け）。
+> 🎮 遊ぶ人向けの説明は **[あそびかた.md](あそびかた.md)**（サイト上は [あそびかた.html](あそびかた.html)）へ。この README は開発者向け。
 
 - **依存ゼロ**: HTML5 Canvas + 素のJavaScript（ES Modules）。ビルド不要・静的サイト。
 - **ピクセルアート**: ドット絵をコード生成。高DPI描画でくっきり。
@@ -64,29 +65,35 @@
 - Stage3の「出向」の扉に触れると関連会社（62号6階）へ出向し、社員・出向先上長・関連会社社長を倒すと本社へ帰還。
 
 ## 起動（ローカル）
-ES Modules のため簡易HTTPサーバ経由で開く（`file://` 直開き不可）:
+ES Modules のため簡易HTTPサーバ経由で開く（`file://` 直開き不可）。リポジトリ直下で起動:
 
 ```bash
 cd komukai
 python3 -m http.server 8000     # もしくは: npx serve
-# ブラウザで http://localhost:8000/
+# トップページ: http://localhost:8000/  ／ ゲーム直: http://localhost:8000/game/
 ```
 
-## ソース構成
+## サイト構成
+ルートはトップページ。ゲーム本体は `game/` 配下に独立（自己完結）。
 
 ```
-index.html / style.css
-src/
-  main.js     ループ・状態機械・Stage・ベルトスクロール進行・出向分岐
-  config.js   定数・ユーティリティ
-  input.js    キーボード＋タッチ（仮想スティック/ボタン）
-  audio.js    BGM・効果音（WebAudioチップチューン）
-  sprites.js  ピクセルアート（作業着/スーツ・パレット・役職ラベル）
-  entities.js Player / Char(敵・味方・ボス) / Projectile / 吹き出し
-  combat.js   2.5D 当たり判定・エフェクト
-  stages.js   敵/味方ステータス・ステージ定義（現在地・シーン・台詞カテゴリ）
-  taunts.js   台詞コーパス（セリフ一覧.md から生成）
-  ui.js       HUD・各画面・タイトル
+index.html          トップページ（「ゲームをする」「遊び方を読む」へ分岐）
+あそびかた.html      プレイヤー向けガイド（サイト表示用）
+あそびかた.md        プレイヤー向けガイド（リポジトリ閲覧用・同内容）
+.nojekyll           GitHub Pages を素の静的配信に（Jekyll無効）
+game/
+  index.html / style.css        ゲーム本体（/game/ で配信）
+  src/
+    main.js     ループ・状態機械・Stage・ベルトスクロール進行・出向/裏ステージ分岐
+    config.js   定数・ユーティリティ
+    input.js    キーボード＋タッチ（フローティングスティック/透過ボタン）
+    audio.js    BGM・効果音（WebAudioチップチューン）
+    sprites.js  ピクセルアート（作業着/スーツ・パレット・役職ラベル）
+    entities.js Player / Char(敵・味方・ボス) / Projectile / 吹き出し
+    combat.js   2.5D 当たり判定・エフェクト
+    stages.js   敵/味方ステータス・ステージ定義（現在地・シーン・台詞カテゴリ）
+    taunts.js   台詞コーパス（セリフ一覧.md から生成）
+    ui.js       HUD・各画面・タイトル
 ```
 
-> 台詞の正本 `セリフ一覧.md` と生成スクリプト `scripts/` はローカル管理（リポジトリ非公開）。
+> 台詞の正本 `セリフ一覧.md` と生成スクリプト `scripts/`（出力先 `game/src/taunts.js`）はローカル管理（リポジトリ非公開）。

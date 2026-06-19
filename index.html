@@ -2,15 +2,66 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Komukai Quest — 小向クエスト</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>小向クエスト — Komukai Quest</title>
+  <meta name="description" content="東芝・小向工場を舞台にした風刺アクション。小向戦士となって出世の頂点を目指せ。" />
+  <style>
+    :root { --bg:#15171a; --ink:#e6e9ec; --sub:#9aa0a8; --accent:#ff7f0e; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { min-height:100%; }
+    body {
+      background:
+        radial-gradient(1200px 500px at 50% -10%, #23262c 0%, var(--bg) 60%),
+        var(--bg);
+      color:var(--ink);
+      font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+      min-height:100dvh;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:0; text-align:center;
+      padding:
+        calc(env(safe-area-inset-top) + 28px) 20px
+        calc(env(safe-area-inset-bottom) + 28px);
+    }
+    .badge { font-size:12px; letter-spacing:.18em; color:var(--sub); margin-bottom:14px; }
+    h1 {
+      font-size:clamp(40px, 12vw, 76px); line-height:1; color:var(--accent);
+      letter-spacing:.02em; text-shadow:0 4px 24px rgba(255,127,14,.25);
+    }
+    .jp { font-size:clamp(15px, 4.5vw, 22px); letter-spacing:.32em; margin-top:14px; color:var(--ink); }
+    .tagline { margin-top:18px; color:var(--ink); font-size:clamp(13px, 3.6vw, 16px); }
+    .tagline span { color:var(--accent); }
+    .note { margin-top:8px; color:var(--sub); font-size:12px; }
+
+    .menu { margin-top:38px; display:flex; flex-direction:column; gap:14px; width:min(360px, 90vw); }
+    a.btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      text-decoration:none; font-weight:700; font-size:18px;
+      padding:18px 20px; border-radius:14px; border:1px solid #2a2e34;
+      transition:transform .08s ease, background .15s ease, border-color .15s ease;
+    }
+    a.btn:active { transform:translateY(1px); }
+    a.play { background:var(--accent); color:#15171a; border-color:var(--accent); box-shadow:0 8px 28px rgba(255,127,14,.3); }
+    a.play:hover { background:#ff9233; }
+    a.guide { background:#1b1e23; color:var(--ink); }
+    a.guide:hover { border-color:var(--accent); }
+    .sub { font-size:12px; font-weight:400; color:inherit; opacity:.8; }
+
+    footer { margin-top:40px; color:var(--sub); font-size:12px; }
+    footer a { color:var(--sub); }
+  </style>
 </head>
 <body>
-  <div id="frame">
-    <canvas id="game" width="480" height="270"></canvas>
-    <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　決定: Enter / Space</p>
-  </div>
-  <script type="module" src="src/main.js"></script>
+  <div class="badge">© ANRAKU TECH</div>
+  <h1>KOMUKAI QUEST</h1>
+  <div class="jp">小 向 ク エ ス ト</div>
+  <p class="tagline"><span>小向戦士</span>となり、上司・裏切り・理不尽を越えて<br>出世の頂点を目指せ。</p>
+  <p class="note">インストール不要・ブラウザで遊べる無料アクション（PC / スマホ対応）</p>
+
+  <nav class="menu">
+    <a class="btn play" href="game/">▶ ゲームをする</a>
+    <a class="btn guide" href="あそびかた.html">📖 遊び方を読む<span class="sub">（操作・攻略・世界観）</span></a>
+  </nav>
+
+  <footer>東芝・小向工場を舞台にした風刺アクション</footer>
 </body>
 </html>

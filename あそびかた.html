@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>あそびかた — 小向クエスト</title>
+  <style>
+    :root { --bg:#15171a; --card:#1b1e23; --ink:#e6e9ec; --sub:#9aa0a8; --accent:#ff7f0e; --line:#2a2e34; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      background:var(--bg); color:var(--ink);
+      font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+      line-height:1.7; padding:0 0 64px;
+    }
+    .wrap { max-width:760px; margin:0 auto; padding:0 18px; }
+    header {
+      padding:calc(env(safe-area-inset-top) + 22px) 18px 22px; text-align:center;
+      border-bottom:1px solid var(--line); margin-bottom:26px;
+      background:radial-gradient(900px 320px at 50% -40%, #23262c 0%, var(--bg) 70%);
+    }
+    header h1 { color:var(--accent); font-size:clamp(26px,7vw,40px); letter-spacing:.04em; }
+    header .jp { color:var(--sub); letter-spacing:.3em; margin-top:8px; font-size:13px; }
+    .topbtns { display:flex; gap:10px; justify-content:center; margin-top:18px; flex-wrap:wrap; }
+    a.btn { text-decoration:none; font-weight:700; padding:11px 18px; border-radius:11px; border:1px solid var(--line); font-size:15px; }
+    a.play { background:var(--accent); color:#15171a; border-color:var(--accent); }
+    a.back { background:var(--card); color:var(--ink); }
+    h2 { color:var(--accent); font-size:19px; margin:30px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+    h3 { font-size:15px; margin:18px 0 8px; color:var(--ink); }
+    p, li { color:var(--ink); }
+    .sub { color:var(--sub); }
+    ul { margin:8px 0 8px 1.2em; } li { margin:5px 0; }
+    table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+    th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+    th { background:#202329; color:var(--sub); white-space:nowrap; }
+    code, kbd { background:#202329; border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:13px; }
+    .tip { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:8px; padding:12px 14px; margin:12px 0; }
+    b, strong { color:#fff; }
+    .accent { color:var(--accent); }
+    details { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 14px; margin:16px 0; }
+    details summary { cursor:pointer; font-weight:700; color:var(--accent); padding:8px 0; }
+    details[open] summary { border-bottom:1px solid var(--line); margin-bottom:10px; }
+    footer { text-align:center; color:var(--sub); font-size:12px; margin-top:40px; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>小向クエスト ― あそびかた</h1>
+    <div class="jp">KOMUKAI QUEST</div>
+    <div class="topbtns">
+      <a class="btn play" href="game/">▶ ゲームをする</a>
+      <a class="btn back" href="./">← トップへ戻る</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p>東芝・小向工場を舞台にした、風刺アクションゲーム。あなたは「<b class="accent">小向戦士</b>」。上司・部下・客・調達先ベンダー・スタッフ部門、そして数々の<b>裏切り</b>を乗り越え、出世の頂点を目指せ！</p>
+
+    <h2>目的</h2>
+    <p><b>小向戦士 → 小隊長 → 大隊長 → 司令官</b>と出世しながら、各ステージのボスを倒してエンディングを目指す。体力ゲージは「<b class="accent">仕事体力</b>」。0になると残機が1つ減り、残機が尽きるとゲームオーバー。</p>
+
+    <h2>操作</h2>
+    <h3>📱 スマホ（タッチ）</h3>
+    <table>
+      <tr><th>やること</th><th>操作</th></tr>
+      <tr><td>移動（4方向＋奥行き）</td><td><b>画面の左半分をタッチ</b>すると、その場所が中心のスティックに。指を倒した方向へ動く</td></tr>
+      <tr><td>攻撃（連打でコンボ）</td><td>右下の「<b>攻撃</b>」ボタン</td></tr>
+      <tr><td>ジャンプ</td><td>「攻撃」の真上の「<b>跳</b>」ボタン</td></tr>
+      <tr><td>一時停止</td><td>画面上部の <b>❚❚</b> ボタン</td></tr>
+      <tr><td>決定（メニュー）</td><td>画面をタップ</td></tr>
+    </table>
+    <h3>💻 PC（キーボード）</h3>
+    <table>
+      <tr><th>やること</th><th>キー</th></tr>
+      <tr><td>移動</td><td><kbd>← ↑ ↓ →</kbd> または <kbd>W A S D</kbd></td></tr>
+      <tr><td>攻撃（連打でコンボ）</td><td><kbd>J</kbd> または <kbd>Z</kbd></td></tr>
+      <tr><td>ジャンプ</td><td><kbd>K</kbd> または <kbd>X</kbd></td></tr>
+      <tr><td>一時停止</td><td><kbd>P</kbd> または <kbd>Esc</kbd></td></tr>
+      <tr><td>BGMミュート</td><td><kbd>M</kbd></td></tr>
+      <tr><td>決定</td><td><kbd>Enter</kbd> または <kbd>Space</kbd></td></tr>
+    </table>
+    <p class="sub">※ ブラウザの仕様で、BGMは最初の操作（タップ／キー）から鳴り始めます。</p>
+
+    <h2>難易度（タイトル画面で選択）</h2>
+    <ul>
+      <li><b>ふつう</b> … 標準ルール（残機3）</li>
+      <li><b>かんたん</b> … 残機多め（残機6）＋<b>自分も飛び道具</b>（攻撃で工具を投げる）</li>
+      <li><b class="accent">地獄</b> … <b>雑魚敵が2倍</b>に増殖＋残機少なめ（残機2）。腕に自信があればどうぞ</li>
+    </ul>
+
+    <h2>世界観 ― 敵と「味方」</h2>
+    <ul>
+      <li><b>敵</b>：上司・部下・客・ベンダー・スタッフ部門、各種「審査会」「管理チーム」。攻撃や雑談で、頭上の吹き出しに「<b>言葉の暴力</b>」を浴びせてくる（「全体像が見えない！」「再DRだな」「該非判定はどこだ？」…）。</li>
+      <li><b>味方（PJメンバ）</b>：各ステージに3人。<b>でも、ボスの直前で全員が裏切って敵に回る！</b> さらに戦闘中の<b>うっかり誤射</b>も。信じられるのは自分だけ。</li>
+    </ul>
+
+    <h2>見分け方</h2>
+    <ul>
+      <li><b>作業着は全員水色＋黒の安全靴</b>。客・ベンダー・社長クラスは<b>スーツ</b>。</li>
+      <li><b>ヘルメットの色＋頭上の役職ラベル</b>で識別。自分は<b class="accent">橙の▼マーカー</b>。現在地は画面上部に表示。</li>
+    </ul>
+
+    <h2>攻略のヒント</h2>
+    <div class="tip">
+      <ul style="margin-bottom:0">
+        <li>敵は<b>予備動作</b>のあとに攻撃。動きを見たら、離れるか先に殴る。</li>
+        <li><b>奥行き（上下）をずらす</b>と攻撃をかわせる（2.5D）。横一列に並ばないこと。</li>
+        <li><b>ジャンプ</b>で誘導弾（携行ミサイル兵のミサイル）を回避。</li>
+        <li>集団（徒党）に囲まれたら、画面の端へ動いて<b>各個撃破</b>。</li>
+        <li><b>ボス手前では味方が裏切る</b>。囲まれないよう位置取りを。</li>
+      </ul>
+    </div>
+
+    <h2>ステージ</h2>
+    <table>
+      <tr><th>編</th><th>階級</th><th>ボス・ギミック</th></tr>
+      <tr><td>戦士編<br><span class="sub">技術部・60号7階Cゾーン</span></td><td>小向戦士</td><td>技術部長</td></tr>
+      <tr><td>小隊長編<br><span class="sub">技術管理部・60号7階Dゾーン</span></td><td>小向小隊長</td><td>技師長（＋技術管理部長）／中ボス 管理担当K</td></tr>
+      <tr><td>大隊長編<br><span class="sub">生産管理・生産企画・60号5階</span></td><td>小向大隊長</td><td>工場長（＋生産部長）／中ボス 生産企画課長／「出向」の扉</td></tr>
+      <tr><td>司令官編<br><span class="sub">本社 事業部フロア</span></td><td>小向司令官</td><td>事業部長（＋企画部長）</td></tr>
+    </table>
+    <p>…そして、<b>事業部長を倒した先には？</b></p>
+
+    <details>
+      <summary>🔥 ネタバレ注意（裏ステージ）</summary>
+      <p>事業部長を倒すと、<b>業火に包まれた60号7階Aゾーン</b>へ突入。<b>Y下四天王</b>と、常軌を逸したパワハラを吐く<b class="accent">魔王Y下</b>を倒せば、真エンディング。</p>
+    </details>
+
+    <footer>楽しんでください！　— © Anraku Tech</footer>
+  </main>
+</body>
+</html>
