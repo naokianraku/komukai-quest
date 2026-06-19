@@ -291,6 +291,14 @@ export const TAUNTS = {
     '逃げ場などないぞ',
     '黙って従え',
   ],
+  // S田（Y下四天王・ほとんど喋らない）
+  sda: [
+    '。。。',
+  ],
+  // H本（Y下四天王・ほとんど喋らない）
+  hmoto: [
+    '。。。',
+  ],
 };
 
 export function randomTaunt(category) {

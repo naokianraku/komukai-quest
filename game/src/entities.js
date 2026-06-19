@@ -254,6 +254,7 @@ export class Char extends Entity {
     this.telegraph = def.telegraph || 0.32;
     this.active = def.activeDur || 0.14;
     this.thrower = !!def.thrower;
+    this.passive = !!def.passive; // true=攻撃してこない（近づくが殴らない）
     this.projKind = def.proj || 'paper';
     this.projRange = def.projRange || 210;
     this.throwCooldown = def.throwCooldown || 1.6;
@@ -314,16 +315,21 @@ export class Char extends Entity {
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
     const aligned = this.projKind === 'missile' || Math.abs(dy) < DEPTH_TOL + 5; // ミサイルは誘導なので奥行きズレOK
-    if (this.thrower && this.team === 'enemy' && !inRange && aligned &&
+    if (this.thrower && !this.passive && this.team === 'enemy' && !inRange && aligned &&
         Math.abs(dx) < this.projRange && this.throwT <= 0) {
       stage.spawnProjectile(this, target);
       this.setTaunt(0.6); // 撃ちながら一言
       this.throwT = this.throwCooldown + (this.id % 3) * 0.4;
     }
 
-    if (inRange) {
+    // passive（攻撃しない壁役）は攻撃間合いではなく“殴られる至近距離”まで詰めて立ち止まる
+    // （攻撃間合い≈リーチ70pxで止まると、進行ロック中のプレイヤーが届かず詰む）
+    const passiveClose = this.passive && Math.abs(dx) <= 22 && Math.abs(dy) <= DEPTH_TOL;
+    if (inRange && !this.passive) {
       this.startAttack();
-    } else if (this.projKind === 'missile' && Math.abs(dx) < 130) {
+    } else if (passiveClose) {
+      this.moving = false;
+    } else if (this.projKind === 'missile' && !this.passive && Math.abs(dx) < 130) {
       // ミサイル兵は近すぎると離れて撃つ（カイト）。ただし画面内＆到達可能な範囲に留める
       const nx = -sign(dx) || -1;
       const ny = Math.abs(dy) > 6 ? sign(dy) : 0;

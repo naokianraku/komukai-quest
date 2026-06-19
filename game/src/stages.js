@@ -49,7 +49,12 @@ export const UNIT_TYPES = {
   seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 }, // Stage3 中ボス
 
   // 裏ステージ（事業部長撃破後の真・最終決戦／業火の60号7階Aゾーン）
-  shitennou: { name: 'Y下四天王', sprite: 'shitennou', taunts: 'shitennou', elite: true, scale: 1.6, hp: 20, speed: 44, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
+  // Y下四天王（一人ずつ別キャラ）。N村=生産企画課長／K目=管理担当K の再登場（セリフ流用）。
+  shitennou_nmura: { name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
+  shitennou_kme:   { name: 'K目', sprite: 'shitennou_kme',   taunts: 'kanrik',    elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
+  // S田・H本は攻撃してこない（passive）が体力多め。セリフは「。。。」のみ。
+  shitennou_sda:   { name: 'S田', sprite: 'shitennou_sda',   taunts: 'sda',   elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
+  shitennou_hmoto: { name: 'H本', sprite: 'shitennou_hmoto', taunts: 'hmoto', elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.1, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4, thrower: true, score: 12000 },
 };
 
@@ -179,7 +184,10 @@ export const URA_STAGE = {
   bg: { scene: 'hellfire', wall: '#1a0c08', floor: '#2a160c', detail: '#3a1408', accent: '#ff5a14' },
   waves: [
     { x: 380, label: '焼かれし亡者ども', enemies: [{ type: 'staff', count: 2 }, { type: 'buka', count: 2 }] },
-    { x: 900, label: 'Y下四天王 出現！', enemies: [{ type: 'shitennou', count: 4 }] },
+    { x: 900, label: 'Y下四天王 出現！', enemies: [
+      { type: 'shitennou_nmura', count: 1 }, { type: 'shitennou_kme', count: 1 },
+      { type: 'shitennou_sda', count: 1 }, { type: 'shitennou_hmoto', count: 1 },
+    ] },
   ],
   allies: [],
   boss: { type: 'maou', x: 1650 },

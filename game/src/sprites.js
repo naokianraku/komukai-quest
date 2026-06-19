@@ -104,8 +104,11 @@ export const CHAR_PALETTES = {
   // 中ボス
   seikikaku: { map: 'worker', h: '#2a8a5a' }, // 生産企画課長: 緑ヘルメット
   kanrik:    { map: 'worker', h: '#20202a' }, // 管理担当K: 黒ヘルメット
-  // 裏ステージ（業火の60号7階Aゾーン）
-  shitennou: { map: 'suit', b: '#2a1024', p: '#1e0c1a', t: '#8a0a2a', h: '#14100c', e: '#ff3a3a' }, // Y下四天王: 暗紫スーツ・赤目
+  // 裏ステージ（業火の60号7階Aゾーン）— Y下四天王（一人ずつ別キャラ）
+  shitennou_nmura: { map: 'worker', h: '#2a8a5a' }, // N村（生産企画課長 再登場・緑ヘルメット）
+  shitennou_kme:   { map: 'worker', h: '#20202a' }, // K目（管理担当K 再登場・黒ヘルメット）
+  shitennou_sda:   { map: 'worker', h: '#7a7a4a' }, // S田（くすんだ黄土ヘルメット）
+  shitennou_hmoto: { map: 'worker', h: '#4a5a7a' }, // H本（くすんだ青ヘルメット）
   maou:      { map: 'suit', b: '#1a0608', p: '#120406', t: '#c00a0a', h: '#dcdcdc', s: '#b87a4a', e: '#ff1212' }, // 魔王Y下: 漆黒赤スーツ・白髪・日焼け・紅蓮の目
 };
 
@@ -115,12 +118,14 @@ export const TYPE_LABEL = {
   pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
   kanren: '関連社員', shukkou: '出向先上長', seisan: '生産部長', kikakubucho: '企画部長',
   seikikaku: '生産企画課長', kanrik: '管理担当K',
+  shitennou_nmura: 'N村', shitennou_kme: 'K目', shitennou_sda: 'S田', shitennou_hmoto: 'H本',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',
   pmr_seisan: '#6a9ad8', pmr_seizou: '#5cc28a', pmr_choutatsu: '#d8a45c', pmr_gijutsu: '#9a8ce0', pmr_hinshou: '#d87ab0',
   kanren: '#9ad8b8', shukkou: '#d8b07a', seisan: '#6a9ad8', kikakubucho: '#9aa6cc',
   seikikaku: '#5cd29a', kanrik: '#b0a8e0',
+  shitennou_nmura: '#5cd29a', shitennou_kme: '#b0a8e0', shitennou_sda: '#d8d28a', shitennou_hmoto: '#8aaad0',
 };
 
 function bake(map, base, overrides) {
