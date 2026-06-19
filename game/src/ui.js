@@ -33,6 +33,16 @@ function multiline(ctx, text, cx, y, lineH, font, color) {
 }
 
 export function drawHUD(ctx, game, stage) {
+  // 上部に暗いスクリム（窓など明るい背景でもHUD文字が読めるように）
+  const scrim = ctx.createLinearGradient(0, 0, 0, 54);
+  scrim.addColorStop(0, 'rgba(10,12,16,0.66)');
+  scrim.addColorStop(1, 'rgba(10,12,16,0)');
+  ctx.fillStyle = scrim; ctx.fillRect(0, 0, VIEW_W, 54);
+
+  // 以降のHUD文字は黒い影付きで描く（明るい背景でも沈まないように）
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.92)'; ctx.shadowBlur = 2; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
+
   // ランク名
   ctx.fillStyle = ACCENT;
   ctx.font = 'bold 12px system-ui, sans-serif';
@@ -81,6 +91,8 @@ export function drawHUD(ctx, game, stage) {
     ctx.fillStyle = '#c73333'; ctx.fillRect(bx2, by2, bw2 * Math.max(0, stage.boss.hp / stage.boss.maxhp), 7);
     center(ctx, 'BOSS  ' + stage.boss.typeName, by2 - 4, 'bold 9px system-ui, sans-serif', ACCENT);
   }
+
+  ctx.restore(); // 影設定を解除
 }
 
 // タイトル背景: 小向工場の正門をイメージしたドット絵風シーン
