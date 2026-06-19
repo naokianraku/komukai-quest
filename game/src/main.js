@@ -561,7 +561,7 @@ export class Game {
 
   start() {
     this.stageIndex = 0; this.score = 0;
-    this.lives = this.difficulty === 'easy' ? 6 : this.difficulty === 'hell' ? 2 : 3;
+    this.lives = this.difficulty === 'easy' ? 12 : this.difficulty === 'hell' ? 2 : 3;
     this.loadStage(0);
     this.state = 'intro'; this.screenT = 0;
   }
