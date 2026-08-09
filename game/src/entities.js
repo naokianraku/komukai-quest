@@ -268,6 +268,14 @@ export class Char extends Entity {
     this.betrayTrigger = def.trigger || null;
     this.betrayed = false;
     this.tauntCat = def.taunts || null;
+    // --- 続編(game2)用フラグ。未指定なら1の挙動と完全に同じ ---
+    this.noFumble = !!def.noFumble;     // 味方のうっかり攻撃をしない（同期）
+    this.noBetray = !!def.noBetray;     // 絶対に裏切らない（同期）
+    this.hideHpBar = !!def.hideHpBar;   // ボスHPバーを隠す（L社＝情報が出ない）
+    this.noKb = !!def.noKb;             // 怯まない（なめている＝振り向かない段階）
+    this.faceLock = def.faceLock ?? null; // 顔を向けない（null=通常, -1/1=固定）
+    this.wanderT = 0.4 + (this.id % 7) * 0.3; // mob の徘徊タイマ
+    this.dmgTakenMul = 1;               // 被ダメ倍率（代理店が間に立つと下がる）
     this.fumbleT = 7 + (this.id % 6); // 味方のうっかり攻撃までの時間
     this.chatterT = 1.2 + (this.id % 6) * 0.6; // 攻撃以外でしゃべるまでの時間
   }
@@ -281,7 +289,7 @@ export class Char extends Entity {
   update(dt, stage) {
     this.attackActive = false;
     this.advanceFSM(dt);
-    if (this.team === 'ally' && !this.betrayed) this.tryFumble(dt, stage);
+    if (this.team === 'ally' && !this.betrayed && !this.noFumble) this.tryFumble(dt, stage);
     if (!this.isBoss && this.hitstun <= 0) this.separate(dt, stage); // 間隔保持（固まり防止）
     // 敵は攻撃していなくても時々しゃべる（味方は攻撃時のみ＝ここでは喋らない）
     if (this.team === 'enemy' && this.tauntCat) {
@@ -294,6 +302,9 @@ export class Char extends Entity {
 
     if (this.hitstun > 0) { this.integrate(dt); return; }
     if (this.state !== 'idle') { this.integrate(dt); return; } // 予備/攻撃/硬直中は動かない
+
+    // mob（通行人・傍観者・中間管理職）は索敵も攻撃もしない。その場をゆっくり往復するだけ。
+    if (this.team === 'mob') { this.wander(dt); this.integrate(dt); return; }
 
     let target = this.team === 'enemy' ? stage.player : stage.nearestEnemy(this);
     if (this.team === 'ally' && target) {
@@ -309,7 +320,9 @@ export class Char extends Entity {
     }
 
     const dx = target.x - this.x, dy = target.y - this.y;
-    this.facing = sign(dx) || this.facing;
+    // faceLock: こちらを向かない（なめている）段階。向きを固定したまま攻撃してくる。
+    if (this.faceLock == null) this.facing = sign(dx) || this.facing;
+    else this.facing = this.faceLock;
     const inRange = Math.abs(dx) <= this.atkReach * 0.9 && Math.abs(dy) <= DEPTH_TOL;
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
@@ -345,6 +358,17 @@ export class Char extends Entity {
       this.moving = !!(nx || ny);
     }
     this.integrate(dt);
+  }
+
+  // mob の徘徊: 一定間隔で向きを変え、ゆっくり歩くだけ
+  wander(dt) {
+    this.wanderT -= dt;
+    if (this.wanderT <= 0) {
+      this.facing = Math.random() < 0.5 ? -1 : 1;
+      this.wanderT = 1.6 + Math.random() * 2.6;
+      this.wanderMove = Math.random() < 0.65;
+    }
+    if (this.wanderMove) this.x += this.facing * (this.speed * 0.22) * dt;
   }
 
   // 同じ陣営の仲間と重ならないよう、近すぎる相手から少し離れる（取り囲み＝固まり防止）
@@ -418,7 +442,7 @@ export class Char extends Entity {
   }
 
   drawHpBar(ctx, sx, footY) {
-    if (this.isBoss || this.hp >= this.maxhp) return;
+    if (this.isBoss || this.hideHpBar || this.hp >= this.maxhp) return;
     const w = 14 * this.scale, h = 2;
     const top = footY - SPRITE_H * this.scale - 4;
     ctx.fillStyle = '#000';

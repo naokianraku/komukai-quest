@@ -8,15 +8,22 @@ export function sameSide(a, b) {
   return (a.team !== 'enemy') === (b.team !== 'enemy');
 }
 
+// 攻撃対象になり得るか。mob（通行人・傍観者）は誰からも狙われない。
+// sameSide が2値（enemy かどうか）なので、mob は敵からは「別陣営」に見えてしまう。ここで弾く。
+export function targetable(t) { return t.team !== 'mob'; }
+
 // ヒット適用（HP減・ノックバック・硬直・無敵・エフェクト）
 export function applyHit(t, dir, dmg, kb, fx) {
   Audio.sfxHit(); // 命中の打撃音
-  t.hp -= dmg;
-  t.kbx += dir * kb;
+  // dmgTakenMul: 続編の「代理店を介すと言葉が薄まる」等で被ダメを増減（未設定なら1＝1と同じ）
+  const eff = dmg * (t.dmgTakenMul ?? 1);
+  t.hp -= eff;
+  t.kbx += dir * (t.noKb ? 0 : kb); // noKb: 怯まないボス（続編の「振り向かない」演出）
   t.hitstun = 0.18;
   t.invuln = 0.24;
   fx.hit(t.x, t.y - 9, t.isBoss ? '#ff7f0e' : '#ffd24a');
-  fx.text(t.x, t.y - SPRITE_H, '-' + dmg, '#ffe39a');
+  const shown = Math.round(eff * 10) / 10;
+  fx.text(t.x, t.y - SPRITE_H, '-' + shown, '#ffe39a');
   if (t.hp <= 0) { t.hp = 0; t.alive = false; }
 }
 
@@ -29,6 +36,7 @@ export function resolveMelee(entities, fx) {
     const maxX = a.facing > 0 ? a.x + reach : a.x;
     for (const t of entities) {
       if (t === a || !t.alive) continue;
+      if (!targetable(t)) continue;
       if (sameSide(a, t)) continue;
       if (hitSet.has(t.id)) continue;
       if (t.invuln > 0) continue;
@@ -48,6 +56,7 @@ export function resolveProjectiles(projectiles, entities, fx) {
     if (!p.alive) continue;
     for (const t of entities) {
       if (!t.alive || t.invuln > 0) continue;
+      if (!targetable(t)) continue;
       if (sameSide(p, t)) continue;
       if (Math.abs(p.x - t.x) > t.w / 2 + 3) continue;
       if (Math.abs(p.y - t.y) > DEPTH_TOL) continue;
