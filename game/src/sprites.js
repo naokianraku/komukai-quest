@@ -128,6 +128,14 @@ export const TYPE_COLOR = {
   shitennou_nmura: '#5cd29a', shitennou_kme: '#b0a8e0', shitennou_sda: '#d8d28a', shitennou_hmoto: '#8aaad0',
 };
 
+// 続編(game2)などから、追加のキャラパレット/ラベルを登録するためのフック。
+// buildSprites() より前に呼ぶこと。未使用なら1の挙動は一切変わらない。
+export function registerPalettes(extra) { Object.assign(CHAR_PALETTES, extra); }
+export function registerTypeMeta(labels, colors) {
+  if (labels) Object.assign(TYPE_LABEL, labels);
+  if (colors) Object.assign(TYPE_COLOR, colors);
+}
+
 function bake(map, base, overrides) {
   const palette = { ...base, ...overrides };
   const w = map[0].length, h = map.length;
