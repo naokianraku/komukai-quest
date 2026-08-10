@@ -34,9 +34,13 @@ body {
 }
 
 #game {
-  /* 縦・横どちらにも収まるよう 16:9 を保ったまま contain（はみ出さない） */
+  /* 縦・横どちらにも収まるよう 16:9 を保ったまま contain（はみ出さない）。
+     width:auto だと canvas の属性値(480)が初期幅になり、JS が毎フレーム
+     canvas.width = 表示幅 x dpr を書き戻すため、最終サイズが dpr 依存になる
+     （Retina では結果的に拡大されるが、非Retina では 480px のまま小さい）。
+     表示幅をビューポートから直接決めて dpr に依存しないようにする。 */
   aspect-ratio: 16 / 9;
-  width: auto;
+  width: min(100%, calc((100dvh - 1.8rem) * 16 / 9));
   height: auto;
   max-width: 100%;
   max-height: calc(100% - 1.8rem); /* 下のキー説明ぶんを確保 */
@@ -63,5 +67,5 @@ body {
 /* タッチ端末では画面内に操作UIが出るので、下のキー説明は隠して全面をゲームに使う */
 @media (pointer: coarse) {
   #hint { display: none; }
-  #game { max-height: 100%; }
+  #game { width: min(100%, calc(100dvh * 16 / 9)); max-height: 100%; }
 }
