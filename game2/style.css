@@ -1,4 +1,6 @@
-/* 文脈のデザイン言語準拠: ダーク基調・オレンジ #ff7f0e アクセント・システムフォント */
+/* 小向クエスト2 用。1の game/style.css のコピーだが、canvas の id が #game2 なので
+   セレクタを差し替えてある（#game のままだとサイズ指定が一切当たらない）。
+   文脈のデザイン言語準拠: ダーク基調・オレンジ #ff7f0e アクセント・システムフォント */
 :root {
   --bg: #15171a;
   --ink: #d0d3d6;
@@ -33,13 +35,17 @@ body {
   gap: 8px;
 }
 
-#game {
-  /* 縦・横どちらにも収まるよう 16:9 を保ったまま contain（はみ出さない） */
+#game2 {
+  /* 縦・横どちらにも収まるよう 16:9 を保ったまま contain（はみ出さない）。
+     width:auto だと canvas の属性値(480)が初期幅になり、JS が毎フレーム
+     canvas.width = 表示幅 x dpr を書き戻すため、dpr によって最終サイズが変わる
+     （dpr=1 では 480 のまま小さく、dpr=2 では膨張し続けて画面が壊れる）。
+     表示幅をビューポートから直接決めて dpr に依存しないようにする。 */
   aspect-ratio: 16 / 9;
-  width: auto;
+  width: min(100%, calc((100dvh - 3.6rem) * 16 / 9));
   height: auto;
   max-width: 100%;
-  max-height: calc(100% - 1.8rem); /* 下のキー説明ぶんを確保 */
+  max-height: calc(100% - 3.6rem); /* 下のキー説明ぶん(2行)を確保 */
   background: #000;
   border-radius: 10px;
   border: 1px solid #2a2e34;
@@ -63,5 +69,5 @@ body {
 /* タッチ端末では画面内に操作UIが出るので、下のキー説明は隠して全面をゲームに使う */
 @media (pointer: coarse) {
   #hint { display: none; }
-  #game { max-height: 100%; }
+  #game2 { width: min(100%, calc(100dvh * 16 / 9)); max-height: 100%; }
 }
