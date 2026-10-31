@@ -3,16 +3,23 @@
 // ゲームロジックは一切変更していない。既存の Stage をそのまま動かし、
 // 描画だけ three.js に差し替えている（x=横 / y=奥行き / z=高さ の3軸がもともとあるため）。
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { FLOOR_TOP, FLOOR_BOTTOM } from '../../game/src/config.js';
+import { PLAY, setPlay, playMid } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
+import { Char } from '../../game/src/entities.js';
 import { Stage } from '../../game/src/main.js';
-import { STAGES } from '../../game/src/stages.js';
+import { STAGES, defFor } from '../../game/src/stages.js';
+
 import { buildVoxelForType } from '../../game/src/voxel.js';
 import { TYPE_LABEL } from '../../game/src/sprites.js';
 import { Audio } from '../../game/src/audio.js';
 
+// 歩ける奥行きを2Dの2倍に広げる。2Dは帯76px(=25ワールドユニット≒キャラ2人分)で、
+// 記号としては成立するが3Dの透視では窮屈に見えるため。216を中心に±75へ。
+// あわせて奥行き許容も比例配分で広げる（18/76 ≒ 30/150）。
+setPlay({ top: 141, bottom: 291, depthTol: 30 });
+
 const S = 1 / 3;                               // ゲーム座標 → ワールド座標
-const FLOOR_MID = (FLOOR_TOP + FLOOR_BOTTOM) / 2;
+const FLOOR_MID = playMid();
 const wx = (gx) => gx * S;
 const wz = (gy) => (gy - FLOOR_MID) * S;
 const wy = (gz) => gz * S;
@@ -60,60 +67,88 @@ function box(w, h, d, color, x, y, z, opts = {}) {
   return m;
 }
 
+// 3D用の室内パレット。2D版の bg（暗い青灰）は2Dの記号としてそのまま残し、
+// 3Dは実際の執務室の見た目（白い天井・明るいキャビネット・濃いグレーの床・
+// 青いパーティション・緑のデスクマット）に寄せる。
+const ROOM = {
+  // 執務室（60号7階Cゾーン）: 白い天井と直管蛍光灯、明るいキャビネット、
+  // 濃いグレーのタイルカーペット、青いパーティション、緑のデスクマット。
+  office_win: {
+    ceiling: '#f3f6f8', wall: '#e6eaed', cabinet: '#dde2e6', cabinetLine: '#b9c0c6',
+    floor: '#474c52', partition: '#4a7ab0', mat: '#2f9e68', desk: '#eef1f4',
+    chair: '#3a5fa8', sky: '#bcd6ea', frame: '#aeb6bd',
+  },
+  // 食堂: 光沢のある明るい木目の床、白い天井、白天板のテーブルにピンクのパイプ椅子、
+  // ベージュの配膳カウンターとステンレス、白いブラインドの窓。※ステージ未使用（素材として用意）
+  shokudo: {
+    ceiling: '#f4f5f2', wall: '#ece7de', cabinet: '#e0c9b8', cabinetLine: '#c4a894',
+    floor: '#c08a42', partition: '#e0c9b8', mat: '#f2f3f0', desk: '#f2f3f0',
+    chair: '#d8b3ae', sky: '#dfe6ea', frame: '#c9ccc8', steel: '#b9bcc0',
+  },
+};
+
 function buildScenery(data) {
   const bg = data.bg;
+  const R = ROOM[bg.scene] || ROOM.office_win;
   const W = data.width * S;
-  const halfD = (FLOOR_BOTTOM - FLOOR_TOP) * S / 2 + 2;
+  const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;   // 歩ける帯の半分 ≒ 28
+  const BACK = -(halfD + 36);                            // 奥の壁。帯の外に部屋を作る
+  const FRONT = halfD + 70;                              // 手前の端
 
-  scene.background = hex(bg.wall);
-  if (Q.get('nofog') !== '1') scene.fog = new THREE.Fog(hex(bg.wall), 150, 520);
+  scene.background = hex(R.wall);
+  // 霧は奥の壁より遠くから効かせる（近いと室内が白く飛ぶ）
+  scene.fog = new THREE.Fog(hex(R.wall), 320, 900);
 
-  // 床。カメラ側（手前）に大きく伸ばして画面下端まで床で埋める
-  box(W + 60, 2, 150, bg.floor, W / 2, -1, 40);
-  // 歩行帯のライン（奥行きの手がかり。ベルトスクロールの"足場"を示す）
-  box(W + 60, 0.08, 0.5, bg.accent, W / 2, 0.02, halfD);
-  // 奥の壁
-  box(W + 60, 56, 2, bg.wall, W / 2, 28, -halfD - 1);
-  // 巾木
-  box(W + 60, 1.4, 1.2, bg.accent, W / 2, 0.7, -halfD - 0.1);
-  // 手前のローパーティション。前景に物を置くと一気に奥行きが出る（歩行帯の外に配置）
-  // 高さは足元ラインより下に収める（キャラの足と影が隠れると奥行きが読めなくなる）
-  for (let x = -10; x < W + 20; x += 34) {
-    box(30, 4, 1.6, bg.detail, x, 2, halfD + 26);
-    box(30, 0.6, 2.2, bg.accent, x, 4.2, halfD + 26);
-  }
-  // 天井（空間を閉じると一気に"部屋"に見える）
-  box(W + 60, 2, 60, bg.detail, W / 2, 45, -halfD + 24);
+  // 床（濃いグレーのタイルカーペット）
+  box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
+  // 歩行帯の端を示す薄いライン
+  box(W + 80, 0.08, 0.4, '#6b7178', W / 2, 0.02, halfD);
+  box(W + 80, 0.08, 0.4, '#6b7178', W / 2, 0.02, -halfD);
 
-  // 窓（office_win）: 外光が入る明るい面＋遠景ビル
-  if (bg.scene === 'office_win') {
-    for (let x = 10; x < W; x += 44) {
-      box(30, 24, 0.6, '#9fc4e0', x, 20, -halfD - 0.2, { emissive: '#3f5f7a' });
-      box(32, 1.2, 1.2, bg.detail, x, 32.5, -halfD - 0.4);
-      box(1.2, 24, 1.2, bg.detail, x, 20, -halfD - 0.4);
+  // 奥の壁・天井
+  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+
+  // 直管蛍光灯。奥行き方向に何列も並べると実物の事務所らしくなる
+  for (let x = 6; x < W; x += 44) {
+    for (let dz = BACK + 14; dz < FRONT - 10; dz += 30) {
+      box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#cfe0ee', receive: false });
     }
-  } else {
-    for (let x = 10; x < W; x += 36) box(8, 30, 1.6, bg.detail, x, 15, -halfD - 0.4);
   }
 
-  // 天井の蛍光灯（光源の見た目。実際の照明は DirectionalLight）
-  for (let x = 16; x < W; x += 30) {
-    box(16, 0.7, 3, '#eef4f8', x, 43.4, -halfD + 10, { emissive: '#9fb8cc', receive: false });
+  // 奥の壁ぎわ: 明るいグレーのキャビネット列
+  for (let x = -14; x < W + 24; x += 24) {
+    box(22, 13, 5, R.cabinet, x, 6.5, BACK + 3.5, { cast: true });
+    for (let i = 0; i < 3; i++) box(20, 0.35, 0.4, R.cabinetLine, x, 2.4 + i * 4.2, BACK + 6.1, { receive: false });
+  }
+  // 窓（キャビネットの上の採光面）
+  for (let x = 18; x < W; x += 62) {
+    box(34, 18, 0.5, R.sky, x, 25, BACK - 0.3, { emissive: '#93b4ce' });
+    box(36, 1, 1, R.frame, x, 35, BACK - 0.6);
   }
 
-  // デスク列（奥）
-  for (let x = 14; x < W; x += 26) {
-    box(16, 1.2, 7, '#6a5a44', x, 7.5, -halfD + 6, { cast: true });
-    box(1.4, 7.5, 1.4, '#4a3f30', x - 6.5, 3.7, -halfD + 6);
-    box(1.4, 7.5, 1.4, '#4a3f30', x + 6.5, 3.7, -halfD + 6);
-    box(5, 4, 0.8, '#2b3a46', x, 10.6, -halfD + 4.2, { emissive: '#17313f', cast: true });
+  // 島デスク（歩行帯の"奥側"。帯には食い込ませない）
+  const deskZ = -halfD - 9;
+  for (let x = 6; x < W; x += 30) {
+    box(24, 1.1, 12, R.desk, x, 8.4, deskZ, { cast: true });
+    box(20, 0.25, 8, R.mat, x, 9.05, deskZ, { receive: false });
+    box(24, 7, 0.9, R.partition, x, 12.5, deskZ - 6.6, { cast: true });
+    box(5, 4.2, 0.7, '#20262c', x + 6, 11.6, deskZ - 3, { emissive: '#14303f', cast: true });
+    box(4.4, 5.5, 4.4, R.chair, x - 6, 2.7, deskZ + 9, { cast: true });
+  }
+
+  // 手前の島デスク（前景。足元ラインより低く抑えて視界を塞がない）
+  for (let x = -6; x < W + 24; x += 30) {
+    box(26, 1.1, 12, R.desk, x, 3.4, halfD + 24, { cast: true });
+    box(21, 0.25, 8, R.mat, x, 4.05, halfD + 24, { receive: false });
+    box(26, 2.2, 0.8, R.partition, x, 5.6, halfD + 17.8);
   }
 }
 
 // ===== ライト =====
-const hemi = new THREE.HemisphereLight(0xd6e6f4, 0x2a3440, 1.5);
+const hemi = new THREE.HemisphereLight(0xeef5fa, 0x8a9198, 2.1);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff4e2, 1.9);
+const sun = new THREE.DirectionalLight(0xfdfeff, 0.95);
 sun.position.set(-30, 70, 40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -123,6 +158,11 @@ sun.shadow.camera.top = 110; sun.shadow.camera.bottom = -60;
 sun.shadow.camera.far = 420;
 scene.add(sun);
 scene.add(sun.target);
+// フィルライト: 太陽が上方からなので、カメラを向いた面(法線+Z)に光が当たらず
+// 作業着の色が沈む。正面から弱く当てて色が読めるようにする（影は落とさない）。
+const fill = new THREE.DirectionalLight(0xeaf2fa, 0.75);
+scene.add(fill);
+scene.add(fill.target);
 
 // ===== ゲーム本体（ロジックは2D版そのまま）=====
 const game = {
@@ -168,7 +208,9 @@ function syncEntities() {
 // ===== カメラ =====
 // dist は「2D版と同じ範囲を映す」値。2Dは論理480x270=横160/縦90ワールドユニットを映すので、
 // 水平fov 44.6° で横160になる実距離194.9 → 高さ差31を引いて dist_z=192。
-const CAM = { dist: 192, height: 44, lookY: 13 };
+// height を上げると俯角が付いて奥行きが読めるようになる。
+// dist は「横160ワールドユニット＝2D版と同じ範囲」を保つ値（実距離194.9から高さ差を引く）。
+const CAM = { dist: 188, height: 62, lookY: 13 };
 const camPos = new THREE.Vector3(wx(stageStartX()), CAM.height, CAM.dist);
 const camLook = new THREE.Vector3(wx(stageStartX()), CAM.lookY, -3);
 function stageStartX() { return 60; }
@@ -186,6 +228,8 @@ function updateCamera(dt) {
   camera.lookAt(camLook);
   sun.target.position.set(camLook.x, 0, camLook.z);
   sun.position.set(camLook.x - 60, 120, camLook.z + 80);
+  fill.target.position.set(camLook.x, 8, camLook.z);
+  fill.position.set(camLook.x + 20, 34, camLook.z + 120);
 }
 
 // ===== HUD（案A: 高解像度レイヤー / 案B: 社内システムの語彙）=====
@@ -275,6 +319,28 @@ function loop(now) {
   } catch (e) { window.__dbg && window.__dbg('LOOP: ' + (e.stack || e.message)); throw e; }
 }
 requestAnimationFrame(loop);
+
+// ?cast=1 … 主要キャラを一列に並べて見るビュー（作業着・帽子など見た目の確認用）
+if (new URLSearchParams(location.search).get('cast') === '1') {
+  const { defFor2 } = await import('../../game2/src/stages2.js');
+  const { registerPalettes, registerTypeMeta } = await import('../../game/src/sprites.js');
+  const g2 = await import('../../game2/src/stages2.js');
+  registerPalettes(g2.PALETTES2); registerTypeMeta(g2.LABELS2, g2.COLORS2);
+  for (const e of [...stage.entities]) if (e !== stage.player) e.alive = false;
+  stage.sweepDead();
+  const cast = [
+    ['1', 'ally'], ['1', 'buka'], ['1', 'senpai'], ['1', 'staff'], ['1', 'dr'],
+    ['2', 'douki_sekkei'], ['2', 'douki_genba'], ['2', 'douki_hinsho'],
+    ['2', 'gr_seizo'], ['2', 'm_gisou'], ['1', 'kyaku'],
+  ];
+  const baseX = stage.player.x + 46;
+  cast.forEach(([which, type], i) => {
+    const def = which === '1' ? defFor(type) : defFor2(type);
+    const c = new Char(baseX + i * 34, playMid(), { ...def, team: 'mob', passive: true });
+    stage.entities.push(c);
+  });
+  stage.currentWave = 99; stage.lockX = stage.width - 40;
+}
 
 // ?demo=N … 指定x地点まで進めて波を出す（スクリーンショット確認用）
 {

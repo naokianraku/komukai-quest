@@ -1,6 +1,6 @@
 // エンティティ: 基底 / プレイヤー(小向戦士) / AIキャラ(敵・味方・ボス) / 投擲物
 import {
-  GRAVITY, FLOOR_TOP, FLOOR_BOTTOM, DEPTH_TOL, VIEW_W, CHAR_SCALE,
+  GRAVITY, VIEW_W, CHAR_SCALE, PLAY,
   clamp, sign, nextId,
 } from './config.js';
 import { drawSprite, SPRITE_W, SPRITE_H, TYPE_LABEL, TYPE_COLOR } from './sprites.js';
@@ -130,7 +130,7 @@ export class Entity {
       if (this.z <= 0) { this.z = 0; this.vz = 0; }
     }
     // クランプ
-    this.y = clamp(this.y, FLOOR_TOP, FLOOR_BOTTOM);
+    this.y = clamp(this.y, PLAY.top, PLAY.bottom); // 歩ける奥行き帯（3Dでは広げる）
     this.x = clamp(this.x, 8, this.maxX);
     // タイマー
     this.invuln = Math.max(0, this.invuln - dt);
@@ -323,11 +323,11 @@ export class Char extends Entity {
     // faceLock: こちらを向かない（なめている）段階。向きを固定したまま攻撃してくる。
     if (this.faceLock == null) this.facing = sign(dx) || this.facing;
     else this.facing = this.faceLock;
-    const inRange = Math.abs(dx) <= this.atkReach * 0.9 && Math.abs(dy) <= DEPTH_TOL;
+    const inRange = Math.abs(dx) <= this.atkReach * 0.9 && Math.abs(dy) <= PLAY.depthTol;
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
-    const aligned = this.projKind === 'missile' || Math.abs(dy) < DEPTH_TOL + 5; // ミサイルは誘導なので奥行きズレOK
+    const aligned = this.projKind === 'missile' || Math.abs(dy) < PLAY.depthTol + 5; // ミサイルは誘導なので奥行きズレOK
     if (this.thrower && !this.passive && this.team === 'enemy' && !inRange && aligned &&
         Math.abs(dx) < this.projRange && this.throwT <= 0) {
       stage.spawnProjectile(this, target);
@@ -337,7 +337,7 @@ export class Char extends Entity {
 
     // passive（攻撃しない壁役）は攻撃間合いではなく“殴られる至近距離”まで詰めて立ち止まる
     // （攻撃間合い≈リーチ70pxで止まると、進行ロック中のプレイヤーが届かず詰む）
-    const passiveClose = this.passive && Math.abs(dx) <= 22 && Math.abs(dy) <= DEPTH_TOL;
+    const passiveClose = this.passive && Math.abs(dx) <= 22 && Math.abs(dy) <= PLAY.depthTol;
     if (inRange && !this.passive) {
       this.startAttack();
     } else if (passiveClose) {

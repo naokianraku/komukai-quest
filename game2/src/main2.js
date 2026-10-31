@@ -2,7 +2,7 @@
 //
 // エンジン（Stage の波/カメラ/背景描画、entities、combat、sprites、input、audio）は1から継承・共有する。
 // 1のブートは canvas#game を見て起動するので、こちらは canvas#game2 を使い二重起動を避けている。
-import { VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, clamp } from '../../game/src/config.js';
+import { VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, PLAY, clamp } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { buildSprites, registerPalettes, registerTypeMeta } from '../../game/src/sprites.js';
 import { Char } from '../../game/src/entities.js';
@@ -68,12 +68,12 @@ class Stage2 extends Stage {
       const reps = (hell && !d.boss && !d.midboss && !d.elite) ? g.count * 2 : g.count;
       for (let k = 0; k < reps; k++) list.push(g.type);
     }
-    const band = FLOOR_BOTTOM - FLOOR_TOP - 12;
+    const band = PLAY.bottom - PLAY.top - 12;
     for (let n = 0; n < list.length; n++) {
       const fromBehind = list.length > 3 && n % 4 === 3;
       let x = fromBehind ? this.player.x - 72 - (n % 3) * 38 : this.player.x + 78 + n * 58 + ((n % 2) ? 26 : 0);
       x = clamp(x, 12, this.width - 24);
-      const y = FLOOR_TOP + 6 + Math.round(band * ((n * 0.618 + 0.13) % 1));
+      const y = PLAY.top + 6 + Math.round(band * ((n * 0.618 + 0.13) % 1));
       this.entities.push(new Char(x, y, defFor2(list[n])));
     }
   }

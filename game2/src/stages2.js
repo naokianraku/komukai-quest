@@ -14,7 +14,7 @@ export const PALETTES2 = {
 
   // 同期3人（配属先の色）
   douki_sekkei: { map: 'worker', h: '#4a7ad0' }, // 設計: 青
-  douki_genba:  { map: 'worker', h: '#e0c040' }, // 現場: 黄
+  douki_genba:  { map: 'cap',    h: '#44507a' }, // 現場: 製造なのでキャップ（紺）
   douki_hinsho: { map: 'worker', h: '#9a6ad0' }, // 品証: 紫
   shutantou:    { map: 'worker', h: '#40b0a8' }, // 主担当（支援章のみ）: 青緑
 
@@ -33,7 +33,7 @@ export const PALETTES2 = {
   kyoiku: { map: 'suit',   b: '#2c3348', p: '#242a3c', t: '#a03030', h: '#1a1410' },
 
   // 第2章 M菱重工（機体メーカー）— 機体側は白〜銀系
-  m_gisou:  { map: 'worker', h: '#c8ccd2' },
+  m_gisou:  { map: 'cap',    h: '#8a9099' }, // 艤装は現場仕事なのでキャップ
   m_denso:  { map: 'worker', h: '#a8b4c0' },
   m_sekkei: { map: 'worker', h: '#8e9aa8' },
   m_pm:     { map: 'suit',   b: '#3a4250', p: '#303643', t: '#b0b8c2', h: '#1e1a14' },
@@ -41,7 +41,7 @@ export const PALETTES2 = {
   // 第3章 GR社 — 古い工場。褪せた黄土
   gr_chotatsu: { map: 'worker', h: '#b09040' },
   gr_gijutsu:  { map: 'worker', h: '#967a38' },
-  gr_seizo:    { map: 'worker', h: '#7e6630' },
+  gr_seizo:    { map: 'cap',    h: '#6b5a2c' }, // GR社 製造: キャップ
   gr_pm:       { map: 'suit',   b: '#5a4a2e', p: '#4a3d26', t: '#9a8a5a', h: '#3a2a18' },
 
   // 第4章 L社 — 藍。閉じている
@@ -52,7 +52,7 @@ export const PALETTES2 = {
   // 第5章 LM社 — 巨大。濃紺と金
   lm_keiyaku: { map: 'suit',   b: '#2a3050', p: '#232842', t: '#c0a040', h: '#1a1410' },
   lm_cr:      { map: 'worker', h: '#5a6480' },
-  lm_shiken:  { map: 'worker', h: '#46506a' },
+  lm_shiken:  { map: 'cap',    h: '#3b4458' }, // 試験は現場仕事なのでキャップ
   lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109' },
   lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c' },
 

@@ -3,7 +3,7 @@
 // 2Dの sprites.js と同じ WORKER_MAP / SUIT_MAP / CHAR_PALETTES をそのまま使うので、
 // キャラを描き直す必要がない。2形状 × パレット差し替えで全キャラが3D化できる。
 // three.js には依存せず、素の配列（positions/normals/colors/indices）を返す。
-import { WORKER_MAP, SUIT_MAP, WORKER_BASE, SUIT_BASE, CHAR_PALETTES } from './sprites.js';
+import { WORKER_MAP, WORKER_CAP_MAP, SUIT_MAP, WORKER_BASE, SUIT_BASE, CHAR_PALETTES } from './sprites.js';
 
 export const DEPTH = 4; // 奥行き（ボクセル数）。薄い板にならない程度
 
@@ -83,7 +83,7 @@ export function buildVoxelForType(key) {
   if (!ov) return null;
   const { map, ...colors } = ov;
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
-  const srcMap = map === 'suit' ? SUIT_MAP : WORKER_MAP;
+  const srcMap = map === 'suit' ? SUIT_MAP : map === 'cap' ? WORKER_CAP_MAP : WORKER_MAP;
   return buildVoxel(srcMap, { ...base, ...colors });
 }
 

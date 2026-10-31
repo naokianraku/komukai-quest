@@ -13,6 +13,16 @@ export const CHAR_SCALE = 3.0;      // キャラ全体の表示倍率（約2倍�
 // 出世ランク（小向戦士 → 小隊長(主務級) → 大隊長(EX級) → 司令官(課長級)）
 export const RANKS = ['小向戦士', '小向小隊長', '小向大隊長', '小向司令官'];
 
+// プレイ空間の調整値。既定は上の定数と同じなので、設定しなければ2D版の挙動は一切変わらない。
+// 3Dビルドだけ奥行きを広げたいので可変にしてある（2Dは背景の描画位置と帯が一致している必要があるため既定のまま）。
+export const PLAY = { top: FLOOR_TOP, bottom: FLOOR_BOTTOM, depthTol: DEPTH_TOL };
+export function setPlay({ top, bottom, depthTol }) {
+  if (top != null) PLAY.top = top;
+  if (bottom != null) PLAY.bottom = bottom;
+  if (depthTol != null) PLAY.depthTol = depthTol;
+}
+export const playMid = () => (PLAY.top + PLAY.bottom) / 2;
+
 export const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 export const sign = (v) => (v > 0 ? 1 : v < 0 ? -1 : 0);
 export const dist2 = (ax, ay, bx, by) => {

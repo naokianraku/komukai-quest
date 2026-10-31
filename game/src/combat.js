@@ -1,5 +1,5 @@
 // 戦闘解決（2.5Dの当たり判定）とエフェクト
-import { DEPTH_TOL, Z_TOL } from './config.js';
+import { Z_TOL, PLAY } from './config.js';
 import { SPRITE_H } from './sprites.js';
 import { Audio } from './audio.js';
 
@@ -42,7 +42,7 @@ export function resolveMelee(entities, fx) {
       if (t.invuln > 0) continue;
       const half = t.w / 2;
       if (t.x + half < minX || t.x - half > maxX) continue;  // x重なり
-      if (Math.abs(a.y - t.y) > DEPTH_TOL) continue;          // 奥行き近接
+      if (Math.abs(a.y - t.y) > PLAY.depthTol) continue;          // 奥行き近接
       if (Math.abs(a.z - t.z) > Z_TOL) continue;             // 高さ重なり
       hitSet.add(t.id);
       applyHit(t, a.facing, dmg, kb, fx);
@@ -59,7 +59,7 @@ export function resolveProjectiles(projectiles, entities, fx) {
       if (!targetable(t)) continue;
       if (sameSide(p, t)) continue;
       if (Math.abs(p.x - t.x) > t.w / 2 + 3) continue;
-      if (Math.abs(p.y - t.y) > DEPTH_TOL) continue;
+      if (Math.abs(p.y - t.y) > PLAY.depthTol) continue;
       if (Math.abs((p.z || 0) - t.z) > Z_TOL) continue; // ジャンプで頭上を通せる
       applyHit(t, Math.sign(p.vx) || 1, p.dmg, p.kb || 70, fx);
       if (p.kind === 'missile') fx.boom(p.x, p.y - 10);

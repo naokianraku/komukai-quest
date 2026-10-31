@@ -8,11 +8,12 @@
 
 export const WORKER_BASE = {
   '.': null, 'k': '#0d1118', 's': '#f1c79b', 'e': '#0d1118',
-  'h': '#8fd0e0',   // ヘルメット（種別で上書き）
-  'b': '#8fd0e0',   // 作業着（水色・全員共通）
-  'p': '#79bccd',   // 作業ズボン（やや濃い水色）
-  't': '#8fd0e0',   // workerはネクタイ無し（bと同色で潰す）
-  'f': '#0c0c0e',   // 黒の安全靴
+  'h': '#8fd0e0',   // ヘルメット / キャップ（種別で上書き）
+  'b': '#a8c4de',   // 上衣：はっきりした空色
+  'a': '#2f4f9e',   // 肩パネル：濃紺（実物の肩〜胸の切替）
+  'p': '#6d80c6',   // 作業ズボン：青紫。上衣より濃く、やや紫寄り
+  't': '#a8c4de',   // workerはネクタイ無し（bと同色で潰す）
+  'f': '#23262e',   // 安全靴
 };
 
 export const SUIT_BASE = {
@@ -33,9 +34,32 @@ export const WORKER_MAP = [
   '...ksesek...',
   '...kssssk...',
   '....kkkk....',
-  '..kbbbbbbk..',
+  '..kaaaaaak..',
+  '.kaabbbbaak.',
+  '.kabbbbbbak.',
+  '.ksbbbbbbsk.',
   '.kbbbbbbbbk.',
   '.kbbbbbbbbk.',
+  '..kppppppk..',
+  '..kpp..ppk..',
+  '..kpp..ppk..',
+  '..fff..fff..',
+  '.ffff..ffff.',
+];
+
+// 作業着＋キャップ (12 x 18)。製造・現場の人はヘルメットではなく つば付きの帽子。
+// 前方（facing方向）へ2px張り出させて、つばに見せる。
+export const WORKER_CAP_MAP = [
+  '....kkkk....',
+  '...khhhhk...',
+  '...khhhhhhk.',
+  '...kssssk...',
+  '...ksesek...',
+  '...kssssk...',
+  '....kkkk....',
+  '..kaaaaaak..',
+  '.kaabbbbaak.',
+  '.kabbbbbbak.',
   '.ksbbbbbbsk.',
   '.kbbbbbbbbk.',
   '.kbbbbbbbbk.',
@@ -155,7 +179,7 @@ function bake(map, base, overrides) {
 
 const REGISTRY = {};
 export function buildSprites() {
-  for (const m of [WORKER_MAP, SUIT_MAP]) {
+  for (const m of [WORKER_MAP, WORKER_CAP_MAP, SUIT_MAP]) {
     for (const row of m) {
       if (row.length !== SPRITE_W) throw new Error(`sprite row length mismatch: "${row}"`);
     }
@@ -163,7 +187,7 @@ export function buildSprites() {
   for (const [key, ov] of Object.entries(CHAR_PALETTES)) {
     const { map, ...colors } = ov;
     const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
-    const baseMap = map === 'suit' ? SUIT_MAP : WORKER_MAP;
+    const baseMap = map === 'suit' ? SUIT_MAP : map === 'cap' ? WORKER_CAP_MAP : WORKER_MAP;
     REGISTRY[key] = bake(baseMap, base, colors);
   }
 }
