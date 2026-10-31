@@ -128,6 +128,10 @@ export const STAGES = [
       { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss3', x: 1650 },
+    // 3D版でボス戦の場面が切り替わる（工場の守り神の前で、工場の長と戦う）。
+    // 2D版はこのキーを見ないので挙動は変わらない。
+    bossScene: 'shrine',
+    bossLocation: '構内 稲荷社',
     coBoss: 'seisan', // 工場長と一緒に生産部長も出現
   },
   {

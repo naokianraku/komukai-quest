@@ -88,3 +88,128 @@ export function buildVoxelForType(key) {
 }
 
 export function allTypeKeys() { return Object.keys(CHAR_PALETTES); }
+
+// ===== 3D専用の高解像度キャラ =====
+//
+// 2Dのドット絵(12x18)をそのまま押し出すと、3Dでは解像度が足りず輪郭線も重い。
+// こちらは 20x30x12 のグリッドに立体として組み直したもの。パレットのキーは
+// 2Dと共通なので、既存の30種のパレットがそのまま使える。
+// 3Dでは陰影と影で形が出るため、黒の輪郭線('k')は使わない（暗く潰れるのを防ぐ）。
+export const C3 = { W: 40, H: 60, D: 24, SCALE: 0.3 }; // SCALE: 2D版と同じ見た目サイズにする係数
+
+// [x0,x1, y0,y1, z0,z1, キー] の直方体リスト。x=左右 / y=下から上 / z=奥から手前(23が正面)
+//
+// 比率は元のドット絵(12x18)に合わせる。あちらは 頭+かぶりもの が全高の約39%あり、
+// その頭身がキャラの可愛げを作っている。等身を上げると途端に寸胴に見えるので、
+// 解像度だけ上げて比率は変えない。
+//   靴 0-10% / ズボン 10-28% / 胴 28-62% / 頭 62-85% / かぶりもの 85-100%
+function charParts({ cap = false, suit = false }) {
+  const P = [];
+  const add = (x0, x1, y0, y1, z0, z1, k) => P.push([x0, x1, y0, y1, z0, z1, k]);
+
+  // --- 脚まわり ---
+  for (const [lx0, lx1] of [[11, 18], [21, 28]]) {
+    add(lx0, lx1, 0, 5, 5, 20, 'f');          // 安全靴（前に長い）
+    add(lx0, lx1, 6, 18, 7, 17, 'p');         // ズボン
+  }
+  add(11, 28, 15, 19, 7, 17, 'p');            // 腰
+  add(11, 28, 18, 19, 6, 18, 'f');            // ベルト
+
+  // --- 胴（袖は胴より浅くして段差で腕を分ける）---
+  add(11, 28, 19, 37, 5, 19, 'b');            // 上衣（腰幅に合わせて寸胴に見せない）
+  // 袖は胴より奥行きを浅くする。段差ができて腕が胴に溶けない。
+  add(6, 10, 22, 35, 8, 16, 'b');             // 左袖
+  add(29, 33, 22, 35, 8, 16, 'b');            // 右袖
+  add(6, 10, 18, 21, 8, 16, 's');             // 左手
+  add(29, 33, 18, 21, 8, 16, 's');            // 右手
+
+  if (suit) {
+    add(19, 20, 20, 36, 19, 19, 't');         // ネクタイ
+    add(15, 18, 35, 37, 5, 19, 'b');          // 襟（スーツ）
+    add(21, 24, 35, 37, 5, 19, 'b');
+  } else {
+    add(9, 30, 33, 37, 5, 19, 'a');           // 肩ヨーク
+    add(6, 10, 32, 35, 8, 16, 'a');           // 袖の肩側
+    add(29, 33, 32, 35, 8, 16, 'a');
+    add(6, 10, 22, 23, 8, 16, 'a');           // 袖口
+    add(29, 33, 22, 23, 8, 16, 'a');
+    add(19, 20, 20, 34, 19, 19, 'a');         // 前立て
+    for (const by of [23, 27, 31]) add(19, 20, by, by, 20, 20, 'b'); // ボタン
+    add(12, 17, 26, 30, 19, 19, 'a');         // 胸ポケット
+    add(12, 17, 30, 31, 19, 20, 'a');         // ポケットのフラップ
+    add(15, 24, 37, 39, 5, 19, 'a');          // 襟
+  }
+
+  // --- 首・頭（ここを大きく取るのが要点）---
+  add(17, 22, 36, 40, 9, 15, 's');            // 首（襟から少し覗かせる）
+  add(12, 27, 40, 52, 6, 18, 's');            // 頭（胴より少し細く）
+  add(11, 11, 43, 47, 9, 14, 's');            // 左耳
+  add(28, 28, 43, 47, 9, 14, 's');            // 右耳
+  // 目は「窪み」にする。面一だと照明次第で肌に溶け、1ボクセル出すと側面が影になって
+  // 括弧のように見える。2ボクセル彫り込むと光が入らず、どの角度でも目として読める。
+  add(14, 17, 44, 47, 16, 18, 'e');
+  add(22, 25, 44, 47, 16, 18, 'e');
+
+  // --- かぶりもの（頭から張り出しすぎないこと）---
+  if (cap) {
+    add(13, 26, 51, 58, 7, 17, 'h');          // キャップ本体
+    add(12, 27, 51, 52, 18, 22, 'h');         // つば（前へ）
+  } else {
+    add(11, 28, 51, 59, 5, 19, 'h');          // ヘルメット
+    add(12, 27, 51, 52, 19, 21, 'h');         // 前びさし（顔に影を落としすぎない程度）
+  }
+  return P;
+}
+
+export function buildChar3D(palette, opts = {}) {
+  const { W, H, D } = C3;
+  const grid = new Array(W * H * D).fill(null);
+  const at = (x, y, z) => x + y * W + z * W * H;
+  for (const [x0, x1, y0, y1, z0, z1, k] of charParts(opts)) {
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) {
+      if (x < 0 || x >= W || y < 0 || y >= H || z < 0 || z >= D) continue;
+      grid[at(x, y, z)] = k;
+    }
+  }
+  const solid = (x, y, z) => {
+    if (x < 0 || x >= W || y < 0 || y >= H || z < 0 || z >= D) return false;
+    const k = grid[at(x, y, z)];
+    return k != null && palette[k] != null;
+  };
+
+  const positions = [], normals = [], colors = [], indices = [];
+  let vi = 0;
+  const ox = -W / 2, oz = -D / 2;
+  for (let z = 0; z < D; z++) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const k = grid[at(x, y, z)];
+    if (k == null) continue;
+    const hexv = palette[k];
+    if (hexv == null) continue;
+    const rgb = toLinear(hexv);
+    for (const f of FACES) {
+      if (solid(x + f.d[0], y + f.d[1], z + f.d[2])) continue;
+      for (const v of f.v) {
+        positions.push(ox + x + v[0], y + v[1], oz + z + v[2]);
+        normals.push(f.n[0], f.n[1], f.n[2]);
+        colors.push(rgb[0], rgb[1], rgb[2]);
+      }
+      indices.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3);
+      vi += 4;
+    }
+  }
+  return {
+    positions: new Float32Array(positions), normals: new Float32Array(normals),
+    colors: new Float32Array(colors), indices: new Uint32Array(indices),
+    width: W, height: H, depth: D,
+  };
+}
+
+/** CHAR_PALETTES のキーから 3D用モデルを作る（輪郭線なし・高解像度） */
+export function buildChar3DForType(key) {
+  const ov = CHAR_PALETTES[key] || CHAR_PALETTES.buka;
+  const { map, ...colors } = ov;
+  const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
+  const pal = { ...base, ...colors };
+  delete pal.k;                                   // 3Dでは黒の輪郭線を使わない
+  return buildChar3D(pal, { cap: map === 'cap', suit: map === 'suit' });
+}
