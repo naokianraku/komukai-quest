@@ -10,7 +10,7 @@ import { Stage } from '../../game/src/main.js';
 import { STAGES, defFor } from '../../game/src/stages.js';
 
 import { buildChar3DForType, C3 } from '../../game/src/voxel.js';
-import { TYPE_LABEL } from '../../game/src/sprites.js';
+import { TYPE_LABEL, TYPE_COLOR } from '../../game/src/sprites.js';
 import { Audio } from '../../game/src/audio.js';
 
 // 歩ける奥行きを2Dの2倍に広げる。2Dは帯76px(=25ワールドユニット≒キャラ2人分)で、
@@ -414,6 +414,9 @@ buildScenery(STAGES[0]);
 let hitstop = 0, shake = 0, bossSceneApplied = false;
 const origHit = stage.fx.hit.bind(stage.fx);
 stage.fx.hit = (x, y, color) => { origHit(x, y, color); hitstop = 0.06; shake = 1.1; };
+// ダメージ数字は2D用のテキストではなく、投影したDOMで出す
+const origText = stage.fx.text.bind(stage.fx);
+stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, y, 0, str, color); };
 
 // ===== エンティティ ↔ メッシュ =====
 const meshes = new Map();
@@ -441,6 +444,96 @@ function syncEntities() {
   for (const [id, m] of meshes) {
     if (seen.has(id)) continue;
     scene.remove(m); meshes.delete(id);
+  }
+}
+
+// ===== 画面に重ねる文字（吹き出し / 役職ラベル / ダメージ数字）=====
+//
+// 3Dの中に文字を置くとボケるので、キャラの位置をスクリーン座標に投影して
+// DOM要素を頭上に置く。2D版の吹き出し・頭上ラベル・ダメージ数字をそのまま再現する。
+const layer = document.getElementById('labels');
+const projV = new THREE.Vector3();
+
+function project(wxp, wyp, wzp) {
+  projV.set(wxp, wyp, wzp).project(camera);
+  if (projV.z > 1) return null;                       // カメラの後ろ
+  const box = document.getElementById('stage');
+  return {
+    x: (projV.x * 0.5 + 0.5) * box.clientWidth,
+    y: (-projV.y * 0.5 + 0.5) * box.clientHeight,
+  };
+}
+
+const tagEls = new Map();   // entity.id → {tag, bubble}
+function elFor(id) {
+  let r = tagEls.get(id);
+  if (!r) {
+    const tag = document.createElement('div'); tag.className = 'tag';
+    const bubble = document.createElement('div'); bubble.className = 'bubble';
+    layer.appendChild(tag); layer.appendChild(bubble);
+    r = { tag, bubble }; tagEls.set(id, r);
+  }
+  return r;
+}
+
+function syncLabels() {
+  const seen = new Set();
+  for (const e of stage.entities) {
+    if (!e.alive) continue;
+    seen.add(e.id);
+    const { tag, bubble } = elFor(e.id);
+    const headY = wy(e.z) + 19 * ((e.scale || 3) / 3);     // 頭のすぐ上
+    const p = project(wx(e.x), headY, wz(e.y));
+    if (!p) { tag.style.display = bubble.style.display = 'none'; continue; }
+
+    // 頭上の役職ラベル（ボスとプレイヤーは出さない。2D版と同じ）
+    const label = e === stage.player ? null
+      : e.betrayed ? '裏切り者'
+      : (e.isBoss ? null : TYPE_LABEL[e.spriteKey]);
+    if (label) {
+      tag.textContent = label;
+      tag.style.color = e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de');
+      tag.style.display = 'block';
+      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
+    } else if (e === stage.player) {
+      tag.textContent = '▼';
+      tag.style.color = '#ff7f0e';
+      tag.style.display = 'block';
+      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
+    } else tag.style.display = 'none';
+
+    // セリフの吹き出し
+    if (e.taunt && e.tauntT > 0) {
+      bubble.textContent = e.taunt;
+      bubble.classList.toggle('ally', e.team === 'ally');
+      bubble.style.display = 'block';
+      bubble.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y - 20}px)`;
+    } else bubble.style.display = 'none';
+  }
+  for (const [id, r] of tagEls) {
+    if (seen.has(id)) continue;
+    r.tag.remove(); r.bubble.remove(); tagEls.delete(id);
+  }
+}
+
+// ダメージ数字など、浮かんで消える文字
+const floats = [];
+function addFloat(gx, gy, gz, text, color) {
+  const el = document.createElement('div');
+  el.className = 'float'; el.textContent = text; el.style.color = color || '#ffe39a';
+  layer.appendChild(el);
+  floats.push({ el, gx, gy, gz, t: 0 });
+}
+function updateFloats(dt) {
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i];
+    f.t += dt;
+    if (f.t > 0.8) { f.el.remove(); floats.splice(i, 1); continue; }
+    const p = project(wx(f.gx), wy(0) + 13 + f.t * 14, wz(f.gy));
+    if (!p) { f.el.style.display = 'none'; continue; }
+    f.el.style.display = 'block';
+    f.el.style.opacity = String(1 - f.t / 0.8);
+    f.el.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
   }
 }
 
@@ -563,6 +656,8 @@ function loop(now) {
   updateCamera(frame);
   updateHUD(frame);
   renderer.render(scene, camera);
+  syncLabels();
+  updateFloats(frame);
   if (!window.__once && Q.get('dbg') === '1') { window.__once = 1; window.__dbg && window.__dbg(
     'OK frame1 / meshes=' + meshes.size + ' / children=' + scene.children.length +
     ' / cam=' + camera.position.toArray().map(n=>n.toFixed(1)).join(',') +

@@ -25,6 +25,25 @@
   #c3d{width:100%;height:100%;display:block}
   #hint{flex:0 0 auto;font-size:13px;color:#8b9097;text-align:center}
 
+  /* 吹き出し・頭上ラベル・ダメージ数字。3Dの中に文字を置くとボケるので、
+     キャラの位置を投影してDOMで重ねる */
+  #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
+    font:700 11px/1 system-ui,sans-serif;
+    text-shadow:0 1px 3px rgba(0,0,0,.95), 0 0 2px rgba(0,0,0,.9)}
+  #labels .bubble{position:absolute;left:0;top:0;white-space:nowrap;
+    background:rgba(250,250,252,.97);color:#15171a;border-radius:10px;
+    padding:5px 11px;font:700 12px/1.2 system-ui,sans-serif;
+    box-shadow:0 5px 16px rgba(0,0,0,.5)}
+  #labels .bubble::after{content:'';position:absolute;left:50%;bottom:-5px;
+    transform:translateX(-50%);border:5px solid transparent;
+    border-top-color:rgba(250,250,252,.97);border-bottom:0}
+  #labels .bubble.ally{background:rgba(216,242,224,.97)}
+  #labels .bubble.ally::after{border-top-color:rgba(216,242,224,.97)}
+  #labels .float{position:absolute;left:0;top:0;
+    font:700 13px/1 ui-monospace,monospace;
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+
   /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
   #hud{position:absolute;inset:0;pointer-events:none;
     padding:12px 14px;
@@ -123,6 +142,7 @@
           </div>
         </div>
       </div>
+      <div id="labels"></div>
       <div id="banner"></div>
     </div>
     <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　決定: Enter / Space</p>
