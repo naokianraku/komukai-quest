@@ -102,6 +102,12 @@ export const STAGES = [
       { type: 'ally', x: 230, betrayer: false },
     ],
     boss: { type: 'boss2', x: 1600 },
+    // 3D版だけ、ステージの途中で場面が変わる（中ボスは昼の食堂で捕まる）。
+    // 2D版はこのキーを見ないので背景も挙動も変わらない。
+    scenes3d: [
+      { x: 880, scene: 'shokudo', label: '構内食堂' },
+      { x: 1130, scene: 'office', label: '60号7階Dゾーン（技術管理部）' },
+    ],
     coBoss: 'gijutsukanri', // 技師長と一緒に技術管理部長も出現
   },
   {
@@ -130,6 +136,8 @@ export const STAGES = [
     boss: { type: 'boss3', x: 1650 },
     // 3D版でボス戦の場面が切り替わる（工場の守り神の前で、工場の長と戦う）。
     // 2D版はこのキーを見ないので挙動は変わらない。
+    // PMR審査会を抜けると建屋を出て、構内道路を通って稲荷社へ向かう
+    scenes3d: [{ x: 1380, scene: 'yard', label: '構内道路' }],
     bossScene: 'shrine',
     bossLocation: '構内 稲荷社',
     coBoss: 'seisan', // 工場長と一緒に生産部長も出現
@@ -167,6 +175,8 @@ export const SHUKKOU_STAGE = {
   intro: '「出向」の扉に触れた——関連会社へ出向となった。\n社員と出向先上長、そして“顔が怖い”関連会社社長を倒し、本社へ戻れ。',
   width: 1500,
   bg: { scene: 'office', wall: '#2e3640', floor: '#48525e', detail: '#1f262e', accent: '#7a8a9a' },
+  // 3D版だけ、本社と同じ造りで色だけ古い関連会社の執務室にする
+  scenes3d: [{ x: 0, scene: 'kanren' }],
   waves: [
     { x: 360, enemies: [{ type: 'kanren', count: 3 }] },
     { x: 780, label: '出向先上長 登場', enemies: [{ type: 'kanren', count: 2 }, { type: 'shukkou', count: 1 }] },

@@ -7,7 +7,7 @@ import { PLAY, setPlay, playMid } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { Char } from '../../game/src/entities.js';
 import { Stage } from '../../game/src/main.js';
-import { STAGES, defFor } from '../../game/src/stages.js';
+import { STAGES, SHUKKOU_STAGE, URA_STAGE, defFor } from '../../game/src/stages.js';
 
 import { buildChar3DForType, C3 } from '../../game/src/voxel.js';
 import { TYPE_LABEL, TYPE_COLOR } from '../../game/src/sprites.js';
@@ -175,11 +175,51 @@ const ROOM = {
     floor: '#c08a42', partition: '#e0c9b8', mat: '#f2f3f0', desk: '#f2f3f0',
     chair: '#d8b3ae', sky: '#dfe6ea', frame: '#c9ccc8', steel: '#b9bcc0',
   },
+  // 内側のゾーン（技術管理部・関連会社）。窓がなく、壁一面が書類棚。
+  // 窓のあるCゾーンより古くて色が沈んでいる。
+  office: {
+    ceiling: '#eceeec', wall: '#d9d5cc', cabinet: '#cdc8bd', cabinetLine: '#a9a496',
+    floor: '#4a4f55', partition: '#6a7f94', mat: '#2f6f9e', desk: '#e4e1d9',
+    chair: '#55606c', frame: '#a9a496', steel: '#b2b6ba',
+    binder: ['#8f3a2e', '#2f5a8f', '#4a7a3e', '#8a7a2e', '#6a3a6a', '#3a6a6a'],
+  },
+  // 出向先の関連会社。同じ造りだが、もっと古くて色が沈んでいる。
+  kanren: {
+    ceiling: '#e2e0d6', wall: '#c6bda9', cabinet: '#b8ae99', cabinetLine: '#908771',
+    floor: '#5a5244', partition: '#7a7256', mat: '#4a6a4a', desk: '#d6d0c0',
+    chair: '#6a6252', frame: '#908771', steel: '#a8a89e',
+    binder: ['#7a3a2a', '#2e4a72', '#44663a', '#7a6a2a', '#5a3a5a', '#36605e'],
+  },
+  // 会議フロア（60号5階）。白板とスクリーン、長机と積み重ね椅子。
+  meeting: {
+    ceiling: '#eef0ec', wall: '#b9c2b6', cabinet: '#aab4a6', cabinetLine: '#7d877a',
+    floor: '#4e544e', partition: '#5f7a66', mat: '#2f6f5a', desk: '#ebeee6',
+    chair: '#48604f', frame: '#4a5248', screen: '#fbfcf8', steel: '#b2b6ba',
+  },
+  // 本社の役員フロア。木目の腰壁・厚い絨毯・光る長机。金の額縁だけが明るい。
+  boardroom: {
+    ceiling: '#342f3c', wall: '#3d3442', wood: '#6a4a34', woodDark: '#483324',
+    floor: '#4a3d52', cabinet: '#4a3a2c', cabinetLine: '#7a5e44', desk: '#3a2c22',
+    deskTop: '#6a4e38', chair: '#241e2c', gold: '#e0b254', frame: '#a8822e',
+    glass: '#2a3e52',
+  },
+  // 裏ステージ。Aゾーンが燃えている。執務室と同じ骨格を炭化させて残り火を入れる。
+  hellfire: {
+    ceiling: '#1a1210', wall: '#2a1a14', cabinet: '#30201a', cabinetLine: '#50302080',
+    floor: '#241612', partition: '#3a201a', mat: '#401c10', desk: '#2e1d16',
+    chair: '#241612', frame: '#4a2a1e', ember: '#ff6a1e', emberHot: '#ffc24a',
+    smoke: '#1a0e0a',
+  },
 };
 
 // ===== 場面（シーン）=====
 // どの場面も「歩行帯(±halfD)の外に奥ゾーンと手前ゾーンを作る」構成で統一する。
 // 帯の中に物を置くとキャラと重なって奥行きが読めなくなるため。
+//
+// 画面に入る高さの目安（CAM: dist 188 / height 62 / lookY 13 / fov 26°）:
+// カメラは天井(y=47)より上にあるので、画面の上1/3は天井スラブの上面で埋まる。
+// 奥の壁で実際に見えるのは おおよそ y=0〜22 の帯で、さらに奥ゾーンの家具が
+// 下から 10 くらいを隠す。壁に貼るものは y=10〜22 に置かないと見えない。
 
 function zones(halfD, backDepth, frontDepth) {
   return { BACK: -(halfD + backDepth), FRONT: halfD + frontDepth };
@@ -364,18 +404,21 @@ function buildShokudo(W, halfD) {
     }
   }
 
-  // 配膳カウンター（奥）: ベージュの腰壁 ＋ ステンレス天板 ＋ ガラスケース
-  const cz = -halfD - 11;
+  // 配膳カウンター（奥）: ベージュの腰壁 ＋ ステンレス天板 ＋ ガラスケース。
+  // 壁ぎわまで下げて、手前にテーブルの列を通す
+  const cz = -halfD - 30;
   box(W + 40, 11, 12, R.cabinet, W / 2, 5.5, cz, { cast: true });
   box(W + 40, 0.8, 13, R.steel, W / 2, 11.4, cz, { receive: false });
   box(W + 40, 7, 0.4, '#dfe9ee', W / 2, 15.4, cz - 5.6, { receive: false });   // ガラス
   for (let x = -10; x < W + 20; x += 9) box(0.5, 7, 0.5, R.steel, x, 15.4, cz - 5.6);
 
-  // メニューの色札（実物は赤・青・緑・オレンジが並ぶ）
+  // メニューの色札（実物は赤・青・緑・オレンジが並ぶ）。
+  // カウンターより上、かつ画面に入る高さ（y=13〜21）に吊る
   const tag = ['#d8483c', '#3f7fc0', '#49a35c', '#e08a2e', '#d8483c'];
   for (let i = 0, x = 24; x < W; x += 34, i++) {
-    box(0.3, 9, 0.3, '#c9ccc8', x, 31, cz - 7);
-    box(11, 6, 0.5, tag[i % tag.length], x, 25, cz - 7, { receive: false });
+    box(0.3, 7, 0.3, '#c9ccc8', x, 24, cz + 6.5);
+    box(11, 7, 0.5, tag[i % tag.length], x, 17, cz + 6.5, { receive: false });
+    box(8, 0.6, 0.6, '#f6f7f4', x, 18.4, cz + 6.9, { receive: false });
   }
 
   // 壁の白いブラインド窓
@@ -397,7 +440,12 @@ function buildShokudo(W, halfD) {
       }
     }
   };
-  for (let x = 10; x < W; x += 34) { table(x, -halfD - 26); table(x, halfD + 26); }
+  for (let x = 10; x < W; x += 34) { table(x, -halfD - 13); table(x, halfD + 26); }
+  // 返却口のワゴンと、床に置かれた番重（奥ゾーンの隙間を埋める）
+  for (let x = 26; x < W; x += 68) {
+    box(13, 7, 9, R.steel, x, 3.5, -halfD - 24, { cast: true });
+    for (let i = 0; i < 3; i++) box(11, 1.1, 7, '#cfd4d8', x, 7.8 + i * 1.3, -halfD - 24, { receive: false });
+  }
 }
 
 // --- 構内道路 ---
@@ -415,10 +463,15 @@ function buildYard(W, halfD) {
   // 両側の白い建屋（水平連窓）
   for (const sz of [BACK - 8, FRONT + 6]) {
     const far = sz < 0;
+    // 手前側は低くする。背の高い建屋を置くと画面の下半分が無地の灰色で埋まる
     for (let x = -30; x < W + 50; x += 90) {
-      box(84, far ? 52 : 26, 16, R.bldg, x, far ? 26 : 13, sz, { cast: true });
-      for (let f = 0; f < (far ? 5 : 2); f++) {
-        box(76, 3.2, 1.0, R.bldgWin, x, 9 + f * 9, sz + (far ? 8.5 : -8.5), { receive: false });
+      box(84, far ? 52 : 19, 16, R.bldg, x, far ? 26 : 9.5, sz, { cast: true });
+      for (let f = 0; f < (far ? 5 : 1); f++) {
+        box(76, 3.2, 1.0, R.bldgWin, x, far ? 9 + f * 9 : 15, sz + (far ? 8.5 : -8.5), { receive: false });
+      }
+      if (!far) {
+        box(84, 2.0, 1.2, '#9aa0a6', x, 18.4, sz - 8.2, { receive: false });      // 庇
+        box(12, 11, 1.0, '#6e747a', x - 24, 5.5, sz - 8.3, { receive: false });   // シャッター
       }
     }
   }
@@ -451,7 +504,272 @@ function buildYard(W, halfD) {
   }
 }
 
-const SCENES = { office_win: buildOffice, shrine: buildShrine, shokudo: buildShokudo, yard: buildYard };
+// --- 執務室（内側のゾーン／関連会社）---
+// 窓がないぶん、壁一面の書類棚で埋める。実際この手のフロアは棚で視界が切れている。
+function buildOfficeInner(W, halfD, R = ROOM.office) {
+  const { BACK, FRONT } = zones(halfD, 36, 70);
+  setLighting(false);
+  scene.background = hex(R.wall);
+  scene.fog = new THREE.Fog(hex(R.wall), 320, 900);
+
+  box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
+  box(W + 80, 0.08, 0.4, '#5f646a', W / 2, 0.02, halfD);
+  box(W + 80, 0.08, 0.4, '#5f646a', W / 2, 0.02, -halfD);
+  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+
+  for (let x = 6; x < W; x += 44) {
+    for (let dz = BACK + 14; dz < FRONT - 10; dz += 30) {
+      box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#d5dde2', receive: false });
+    }
+  }
+  box(W + 80, 1.2, 2.2, '#cdc8bd', W / 2, 44.2, BACK + 8);
+
+  // 壁一面の書類棚。背表紙の色が並ぶだけで一気に事務所になる
+  for (let x = -12; x < W + 24; x += 26) {
+    box(24, 34, 6, R.cabinet, x, 17, BACK + 4, { cast: true });
+    for (let f = 0; f < 5; f++) {
+      box(23, 0.5, 0.6, R.cabinetLine, x, 2.5 + f * 6.6, BACK + 7.2, { receive: false });
+      for (let i = 0; i < 9; i++) {
+        const c = R.binder[Math.abs(x * 3 + f * 5 + i) % R.binder.length];
+        box(1.9, 5.0, 0.7, c, x - 10 + i * 2.5, 5.6 + f * 6.6, BACK + 7.1, { receive: false });
+      }
+    }
+  }
+
+  // 棚の上の段ボール箱と、天井から下がるゾーン札
+  for (let x = 8; x < W; x += 52) box(11, 7, 5, '#b89a72', x, 37.5, BACK + 4, { cast: true });
+  for (let x = 40; x < W; x += 150) {
+    box(0.3, 6, 0.3, '#a9a496', x, 41.5, BACK + 26);
+    box(13, 5, 0.6, '#f0f1ee', x, 36, BACK + 26, { receive: false });
+    box(9, 0.9, 0.8, R.partition, x, 36, BACK + 25.6, { receive: false });
+  }
+
+  // 島デスク。窓側フロアと違って向かい合わせの2列組
+  const DT = 8.4, PH = DT - 1.4;
+  const island = (x, z, chairSide) => {
+    box(24, 1.1, 12, R.desk, x, DT, z, { cast: true });
+    box(20, 0.25, 8, R.mat, x, DT + 0.65, z, { receive: false });
+    box(1.2, PH, 11, R.cabinet, x - 11.4, PH / 2, z, { cast: true });
+    box(1.2, PH, 11, R.cabinet, x + 11.4, PH / 2, z, { cast: true });
+    box(22.6, PH, 1.2, R.cabinet, x, PH / 2, z - 5.4 * chairSide, { cast: true });  // 幕板は椅子と反対側
+    box(23, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, z, { receive: false });
+    box(5, 4.2, 0.7, '#20262c', x + 6, DT + 3.2, z - 3 * chairSide, { emissive: '#14303f', cast: true });
+    box(7, 5, 5, '#e6e3db', x - 7, DT + 3.0, z, { cast: true });                    // 書類の山
+    chair(x - 6, z + 10 * chairSide, R.chair);
+  };
+  const bz = -halfD - 12;
+  for (let x = 6; x < W; x += 30) {
+    island(x, bz, 1);
+    box(24, 7, 0.9, R.partition, x, DT + 4.1, bz - 6.6, { cast: true });
+    island(x, bz - 24, -1);                       // 背中合わせのもう1列
+  }
+  const fz = halfD + 26;
+  for (let x = -6; x < W + 24; x += 30) {
+    island(x, fz, -1);
+    box(26, 6, 0.9, R.partition, x, DT + 3.6, fz + 6.6);
+  }
+}
+
+// --- 会議フロア（60号5階 生産管理・生産企画）---
+function buildMeeting(W, halfD) {
+  const R = ROOM.meeting;
+  const { BACK, FRONT } = zones(halfD, 38, 70);
+  setLighting(false);
+  scene.background = hex(R.wall);
+  scene.fog = new THREE.Fog(hex(R.wall), 330, 920);
+
+  box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
+  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+  for (let x = 6; x < W; x += 44) {
+    for (let dz = BACK + 16; dz < FRONT - 10; dz += 30) {
+      box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#dde3dc', receive: false });
+    }
+  }
+
+  // 壁は白板とスクリーンの連続。審査会で詰められる場所という見た目にする。
+  // 壁と白板が同系色だと溶けるので、濃い枠で縁取る。
+  for (let x = 14; x < W; x += 120) {
+    box(58, 18, 0.9, R.frame, x, 17, BACK + 0.5, { receive: false });                // 濃い枠
+    box(55, 15, 0.5, '#fbfcfa', x, 17.5, BACK + 1.1, { receive: false });            // ホワイトボード
+    box(57, 1.4, 1.6, R.frame, x, 9.2, BACK + 1.4);                                  // ペン受け
+    box(10, 0.9, 1.0, '#d8483c', x - 18, 9.8, BACK + 1.9, { receive: false });        // 赤ペン
+    for (let i = 0; i < 4; i++) {                                                     // 書き殴りの線
+      box(14 + (i % 3) * 9, 0.7, 0.3, ['#3a4a5a', '#8f3a2e', '#2f5a8f'][i % 3],
+          x - 13 + (i % 2) * 13, 22 - i * 3, BACK + 1.5, { receive: false });
+    }
+  }
+  for (let x = 74; x < W; x += 120) {
+    box(44, 20, 0.9, R.frame, x, 18, BACK + 0.5, { receive: false });
+    box(40, 17, 0.5, R.screen, x, 18, BACK + 1.1, { emissive: '#aeb8b2', receive: false }); // スクリーン
+    box(28, 8, 0.3, '#5a7fa8', x, 19, BACK + 1.6, { emissive: '#2e4a68', receive: false }); // 投影中の資料
+    box(44, 1.6, 1.4, '#6a7268', x, 28.6, BACK + 1.2);
+    box(7, 4, 9, '#2e3430', x, 41, BACK + 30, { cast: true });                        // 天吊りプロジェクタ
+    box(1.0, 4, 1.0, '#8a9088', x, 44.6, BACK + 30);
+  }
+
+  // 長机の列（奥）。審査会の「ひな壇」側
+  const longTable = (x, z, back) => {
+    box(46, 1.0, 13, R.desk, x, 8.2, z, { cast: true });
+    box(44, 0.25, 9, R.mat, x, 8.8, z, { receive: false });
+    box(46, 6.6, 0.9, R.cabinet, x, 4.4, z + 6.0 * back, { cast: true });             // 前幕板
+    for (const dx of [-21, 21]) box(0.9, 7.2, 11, R.cabinet, x + dx, 3.8, z, { cast: true });
+    for (const dx of [-15, -5, 5, 15]) chair(x + dx, z - 9 * back, R.chair);
+    for (const dx of [-16, 0, 16]) {                                                   // 書類とペットボトル
+      box(6, 0.3, 4, '#f6f7f4', x + dx, 8.9, z, { receive: false });
+      box(1.6, 4.0, 1.6, '#cfe0e8', x + dx + 4, 10.7, z + 2, { cast: true });
+    }
+  };
+  for (let x = 24; x < W; x += 58) longTable(x, -halfD - 9, 1);
+  for (let x = 10; x < W; x += 58) longTable(x, halfD + 26, -1);
+
+  // 壁ぎわの積み重ね椅子とフリップチャート
+  for (let x = 40; x < W; x += 140) {    // 積み重ねた椅子（壁ぎわ。白板を隠さない高さに留める）
+    for (let i = 0; i < 5; i++) box(5.2, 0.6, 5.2, R.chair, x, 1.2 + i * 1.4, BACK + 13, { cast: true });
+    box(5.6, 7.5, 5.6, R.chair, x, 4.2, BACK + 13);
+  }
+  for (let x = 100; x < W; x += 140) {
+    box(0.6, 20, 0.6, '#9aa096', x - 5, 10, halfD + 12);
+    box(0.6, 20, 0.6, '#9aa096', x + 5, 10, halfD + 12);
+    box(13, 16, 0.4, '#fbfcfa', x, 22, halfD + 12, { receive: false });
+  }
+}
+
+// --- 本社 役員フロア ---
+function buildBoardroom(W, halfD) {
+  const R = ROOM.boardroom;
+  const { BACK, FRONT } = zones(halfD, 40, 70);
+  setLighting(false);
+  // 役員フロアだけは蛍光灯の白ではなく、暗く落とした間接照明にする
+  hemi.color.set(0x6a6074); hemi.groundColor.set(0x322a38); hemi.intensity = 1.5;
+  sun.color.set(0xffe2a8); sun.intensity = 1.05; fill.intensity = 0.8;
+  scene.background = hex(R.wall);
+  scene.fog = new THREE.Fog(hex(R.wall), 250, 760);
+
+  box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);   // 厚い絨毯
+  for (let z = BACK + 6; z < FRONT; z += 24) {
+    box(W + 80, 0.06, 0.5, '#4a3d50', W / 2, 0.03, z, { receive: false });
+  }
+  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+
+  // 腰壁と縦の木目パネル（格を見せる要素）。見える帯に収める
+  box(W + 80, 11, 1.6, R.wood, W / 2, 5.5, BACK + 0.4);
+  box(W + 80, 1.2, 2.2, R.woodDark, W / 2, 11.6, BACK + 0.8);
+  for (let x = -10; x < W + 20; x += 14) {
+    box(2.0, 14, 1.0, R.woodDark, x, 19, BACK + 0.7);
+  }
+
+  // 金の額縁（歴代の事業部長）と社章。暗い部屋で唯一明るいもの
+  for (let x = 30; x < W; x += 72) {
+    box(13, 13, 0.9, R.frame, x, 18, BACK + 1.1, { emissive: '#4a3a10', receive: false });
+    box(10, 10, 0.4, '#5a4a52', x, 18, BACK + 1.7, { receive: false });
+    box(5.5, 5.5, 0.3, '#8a7a74', x, 20, BACK + 2.0, { receive: false });   // 顔のあたり
+  }
+  for (let x = 96; x < W; x += 216) {
+    box(12, 12, 0.6, R.gold, x, 19, BACK + 1.2, { emissive: '#4a3614', receive: false });
+    box(7.5, 7.5, 0.5, R.wall, x, 19, BACK + 1.6, { receive: false });
+  }
+
+  // ペンダント照明。長机の上に低く吊るす（高いと天井に隠れて見えない）
+  for (let x = 20; x < W; x += 38) {
+    box(0.5, 26, 0.5, R.gold, x, 33, -halfD - 8);
+    box(13, 2.4, 7, R.gold, x, 19.0, -halfD - 8, { emissive: '#7a5a1e', receive: false });
+    box(11, 0.8, 5.5, '#ffe6b0', x, 17.6, -halfD - 8, { emissive: '#ffdca0', receive: false });
+  }
+
+  // 磨き上げた長机と背の高い革椅子
+  const boardTable = (x, z, back) => {
+    box(54, 1.3, 16, R.deskTop, x, 9.0, z, { cast: true });
+    box(50, 0.3, 12, '#5c4430', x, 9.7, z, { receive: false });                       // 艶のある天板
+    box(50, 7.5, 10, R.desk, x, 4.8, z, { cast: true });                              // 台輪
+    // 椅子は必ず歩行帯側（手前）に置く。机の向こうに置くと壁を隠してしまう
+    for (const dx of [-19, -6, 7, 20]) {
+      box(7.5, 1.0, 7.5, R.chair, x + dx, 6.2, z + 11 * back, { cast: true });        // 座面
+      box(7.5, 13, 1.2, R.chair, x + dx, 12.7, z + 14 * back, { cast: true });        // 高い背もたれ
+      box(1.4, 5.4, 1.4, '#6a6270', x + dx, 3.0, z + 11 * back);
+      box(7.0, 0.6, 7.0, '#6a6270', x + dx, 0.5, z + 11 * back);
+    }
+    for (const dx of [-18, 0, 18]) {
+      box(7, 0.3, 5, '#e8e4dc', x + dx, 9.9, z, { receive: false });                  // 資料
+      box(3.2, 3.6, 3.2, R.glass, x + dx + 6, 11.4, z + 3, { emissive: '#0e1a26', cast: true });
+    }
+  };
+  for (let x = 30; x < W; x += 66) boardTable(x, -halfD - 22, 1);
+  for (let x = 10; x < W; x += 66) boardTable(x, halfD + 30, -1);
+}
+
+// --- 裏ステージ: 業火の60号7階Aゾーン ---
+// 執務室と同じ骨格を炭にして、残り火と非常灯だけが光る状態にする。
+function buildHellfire(W, halfD) {
+  const R = ROOM.hellfire;
+  const { BACK, FRONT } = zones(halfD, 36, 70);
+  setLighting(false);
+  hemi.color.set(0x5a2a16); hemi.groundColor.set(0x1a0c08); hemi.intensity = 1.0;
+  sun.color.set(0xff8a3a); sun.intensity = 1.1; fill.intensity = 0.4;
+  scene.background = hex(R.smoke);
+  scene.fog = new THREE.Fog(hex(R.smoke), 180, 620);          // 煙で奥が見えない
+
+  box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
+  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+
+  // 天井は落ちている。残った野縁と、垂れ下がった蛍光灯だけ
+  for (let x = -10; x < W + 20; x += 9) {
+    if (Math.abs((x * 7) % 29) < 11) continue;                           // 抜け落ちた区画
+    box(8, 1.2, FRONT - BACK, R.ceiling, x, 47, (FRONT + BACK) / 2);
+  }
+  for (let x = 16; x < W; x += 76) {                           // 垂れ下がった照明器具
+    box(0.4, 26, 0.4, '#3a2a22', x, 33, -halfD - 8);
+    const t = box(26, 0.8, 2.0, '#4a3a30', x, 20.4, -halfD - 8, { receive: false });
+    t.rotation.z = 0.35;                                       // 片側が外れて斜めに垂れる
+  }
+
+  // 床の残り火。手前と奥のゾーンにだけ置いて歩行帯は空けておく。
+  // 同じ箱を等間隔に並べると燃えている物ではなく荷物に見えるので、
+  // 幅を変えながら3段に細らせ、位置も間隔もずらす。
+  const rnd = (n) => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  let seed = 0;
+  for (let x = -6; x < W + 20; x += 11 + rnd(seed++) * 9) {
+    for (const z0 of [-halfD - 22, -halfD - 7, halfD + 9, halfD + 28]) {
+      const r = rnd(seed++);
+      if (r < 0.3) continue;                                     // 抜け（炎の列が揃わないように）
+      const z = z0 + (rnd(seed++) - 0.5) * 7;
+      const w = 3.2 + r * 3.4, h = 3.0 + rnd(seed++) * 6;
+      box(w + 1.6, 0.6, w + 1.6, '#120a08', x, 0.3, z, { receive: false });            // 焦げた跡
+      box(w, h * 0.5, w * 0.9, '#c2340c', x, h * 0.25, z, { emissive: '#c2340c', receive: false });
+      box(w * 0.68, h * 0.4, w * 0.6, R.ember, x, h * 0.62, z, { emissive: R.ember, receive: false });
+      box(w * 0.34, h * 0.34, w * 0.3, R.emberHot, x, h * 0.9, z, { emissive: R.emberHot, receive: false });
+    }
+  }
+
+  // 焼け残った壁ぎわのキャビネットと、倒れた机
+  for (let x = -14; x < W + 24; x += 24) {
+    const hgt = 6 + Math.abs((x * 11) % 7);
+    box(22, hgt, 5, R.cabinet, x, hgt / 2, BACK + 3.5, { cast: true });
+    box(21, 0.5, 0.6, R.ember, x, hgt - 0.4, BACK + 6.1, { emissive: R.ember, receive: false });
+  }
+  for (let x = 8; x < W; x += 34) {
+    const d = box(24, 1.1, 12, R.desk, x, 3.2, -halfD - 12, { cast: true });
+    d.rotation.z = Math.abs((x * 5) % 7) * 0.09 - 0.27;                // ひっくり返っている
+    box(22, 7, 0.9, R.partition, x, 2.0, -halfD - 18, { cast: true }).rotation.x = 1.2;
+    const f = box(24, 1.1, 12, R.desk, x + 12, 3.0, halfD + 26, { cast: true });
+    f.rotation.z = 0.22;
+  }
+
+  // 非常灯（緑）と、壁に残った誘導標識
+  for (let x = 34; x < W; x += 112) {                          // 非常灯（煙の中で唯一の緑）
+    box(7, 3.4, 0.8, '#1e4a2a', x, 18, BACK + 1.0, { receive: false });
+    box(5.4, 2.2, 0.4, '#3ad46a', x, 18, BACK + 1.5, { emissive: '#3ad46a', receive: false });
+  }
+}
+
+const SCENES = {
+  office_win: buildOffice, office: buildOfficeInner, meeting: buildMeeting,
+  kanren: (W, halfD) => buildOfficeInner(W, halfD, ROOM.kanren),
+  boardroom: buildBoardroom, hellfire: buildHellfire,
+  shrine: buildShrine, shokudo: buildShokudo, yard: buildYard,
+};
 
 function applyScene(key, data) {
   clearScenery();
@@ -460,9 +778,20 @@ function applyScene(key, data) {
   (SCENES[key] || buildOffice)(W, halfD);
 }
 
+// ステージ内で場面が変わる区間。data.scenes3d は 3D専用のキーで、
+// 「このx以降はこの場面」という切り替え点だけを並べる（手前は bg.scene）。
+// 2D版はこのキーを見ないので、2Dの背景は変わらない。
+function sceneAt(data, x) {
+  let cur = { scene: data.bg.scene, label: null };
+  for (const seg of data.scenes3d || []) if (x >= seg.x) cur = seg;
+  return cur;
+}
+
+let curScene = null;
 function buildScenery(data) {
   const forced = new URLSearchParams(location.search).get('scene');
-  applyScene(forced || data.bg.scene, data);
+  curScene = forced || sceneAt(data, stage ? stage.player.x : 0).scene;
+  applyScene(curScene, data);
 }
 
 // ===== ゲーム本体（ロジックは2D版そのまま）=====
@@ -498,17 +827,53 @@ function clearStageObjects() {
   floats.length = 0;
 }
 
-function loadStage(i) {
+// 本編・出向・裏ステージで共通のロード処理。fx のフックを張り直すのを忘れると
+// 打撃の手応えと数字が出なくなるので、必ずここを通す。
+function attachStage(st, data) {
   clearStageObjects();
   bossSceneApplied = false;
-  stage = new Stage(STAGES[i], game);
+  stage = st;
   const origHit2 = stage.fx.hit.bind(stage.fx);
   stage.fx.hit = (x, y, color) => { origHit2(x, y, color); hitstop = 0.06; shake = 1.1; burst(x, y, color); };
   const origText2 = stage.fx.text.bind(stage.fx);
   stage.fx.text = (x, y, str, color) => { origText2(x, y, str, color); addFloat(x, y, 0, str, color); };
-  buildScenery(STAGES[i]);
+  stage.player.ranged = (game.difficulty === 'easy');   // 2D版の applyDifficulty と同じ
+  buildScenery(data);
   camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
   camLook.set(wx(stage.player.x), CAM.lookY, wz(stage.player.y) - 3);
+}
+
+function loadStage(i) { attachStage(new Stage(STAGES[i], game), STAGES[i]); }
+
+// 「出向」の扉 → 関連会社サブステージ。クリアで本社（Stage3）へ帰還する。
+let savedStage = null;
+function enterDetour() {
+  const hp = stage.player.hp;
+  savedStage = stage;
+  const st = new Stage(SHUKKOU_STAGE, game);
+  st.isDetour = true;
+  attachStage(st, SHUKKOU_STAGE);
+  stage.player.hp = Math.max(5, Math.min(hp, stage.player.maxhp));   // HPを引き継ぐ
+  game.state = 'intro'; game.screenT = 0; renderScreen();
+}
+function returnFromDetour() {
+  const hp = stage.player.hp;
+  const back = savedStage; savedStage = null;
+  back.player.hp = Math.max(5, hp);
+  back.player.x = back.door.x + 34;      // 扉の先へ
+  back.player.invuln = 1.4;
+  back.detourRequested = false;
+  attachStage(back, back.data);
+  back.banner = '出向先を制圧！' + (back.data.location || '本社') + 'へ帰還';
+  back.bannerColor = 'rgba(22,42,74,0.92)'; back.bannerT = 2.6;
+  game.state = 'playing'; hideScreen();
+}
+// 事業部長を倒した“その先”——業火の裏ステージへ（帰還なし。クリアでエンディング）
+function enterTrueFinal() {
+  const st = new Stage(URA_STAGE, game);
+  attachStage(st, URA_STAGE);
+  stage.player.hp = stage.player.maxhp;  // 真の最終決戦は全快で
+  game.state = 'intro'; game.screenT = 0; renderScreen();
 }
 
 // ===== エンティティ ↔ メッシュ =====
@@ -919,7 +1284,8 @@ function hideScreen() { screenEl.style.display = 'none'; }
 
 const hint = (t) => `<p class="k">${t}</p>`;
 function renderScreen() {
-  const ch = STAGES[game.stageIndex];
+  // 出向・裏ステージは STAGES に入っていないので、今読み込んでいるステージのデータを使う
+  const ch = (stage && stage.data) || STAGES[game.stageIndex];
   switch (game.state) {
     case 'title':
       showScreen(`<div class="sheet title">
@@ -999,12 +1365,17 @@ addEventListener('keydown', () => Audio.resume(), { once: true });
 addEventListener('pointerdown', () => Audio.resume(), { once: true });
 
 const STEP = 1 / 60;
+// ?shot=秒 … その秒数ぶんまとめて進めて1枚だけ描き、ループを止める。
+// 描き続けているとヘッドレスブラウザの仮想時間が終わらずスクリーンショットが撮れない。
+const SHOT = parseFloat(new URLSearchParams(location.search).get('shot') || '0');
+let shotDone = false;
 let acc = 0, last = performance.now();
 function loop(now) {
-  requestAnimationFrame(loop);
+  if (!shotDone) requestAnimationFrame(loop);
   let frame = (now - last) / 1000; last = now;
   if (!(frame > 0)) frame = 0;        // 負 / NaN を潰す（補間の発散を防ぐ）
   if (frame > 0.25) frame = 0.25;     // スパイラル防止
+  if (SHOT > 0) frame = shotDone ? 0 : Math.min(SHOT, 30);
   acc += frame;
   try {
   while (acc >= STEP) {
@@ -1031,9 +1402,17 @@ function loop(now) {
         // ?atk=1 … 攻撃の見た目を確認するために攻撃状態を固定する（開発用）
         // 開発用。向きは固定しない（固定すると左へ攻撃できなくなる）
         if (Q.get('atk') === '1') stage.player.attackActive = true;
-        if (stage.cleared) {
-          game.state = game.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
-          game.screenT = 0; renderScreen();
+        if (stage.detourRequested && !stage.isDetour) {
+          enterDetour();                         // 「出向」の扉に触れた → 関連会社へ
+        } else if (stage.cleared) {
+          if (stage.isDetour) {
+            returnFromDetour();                  // 関連会社を制圧 → 本社(Stage3)へ帰還
+          } else if (stage.data.trueFinal) {
+            enterTrueFinal();                    // 事業部長撃破 → 業火の裏ステージへ
+          } else {
+            game.state = game.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
+            game.screenT = 0; renderScreen();
+          }
         }
         break;
       case 'clear':
@@ -1050,13 +1429,32 @@ function loop(now) {
     Input.endFrame();
     acc -= STEP;
   }
+  // 区間で場面が変わるステージ（執務室→食堂→執務室 / 会議フロア→構内道路）。
+  // ボス場面に入ったあとは戻さない。
+  if (!bossSceneApplied && stage.data.scenes3d && !Q.get('scene')) {
+    const seg = sceneAt(stage.data, stage.player.x);
+    if (Q.get('dbg') === '1' && !window.__segdbg) { window.__segdbg = 1; window.__dbg &&
+      window.__dbg('SEG x=' + stage.player.x.toFixed(0) + ' cur=' + curScene + ' -> ' + seg.scene +
+                   ' segs=' + JSON.stringify(stage.data.scenes3d)); }
+    if (seg.scene !== curScene) {
+      curScene = seg.scene;
+      applyScene(curScene, stage.data);
+      if (seg.label) {
+        stage.banner = seg.label;
+        stage.bannerColor = 'rgba(28,58,86,0.92)';
+        stage.bannerT = 2.4;
+      }
+    }
+  }
+
   // ボス戦で場面が変わるステージ（工場長＝構内の稲荷社）。
   // Stage は本編のものをそのまま使っているため startBoss は書き換えず、
   // ここで bossStarted の立ち上がりを拾って背景だけ差し替える。
   if (stage.bossStarted && !bossSceneApplied && stage.data.bossScene
       && !new URLSearchParams(location.search).get('scene')) {
     bossSceneApplied = true;
-    applyScene(stage.data.bossScene, stage.data);
+    curScene = stage.data.bossScene;
+    applyScene(curScene, stage.data);
     stage.banner = stage.data.bossLocation || '';
     stage.bannerColor = 'rgba(150,40,20,0.92)';
     stage.bannerT = 3.0;
@@ -1077,6 +1475,9 @@ function loop(now) {
     ' / cam=' + camera.position.toArray().map(n=>n.toFixed(1)).join(',') +
     ' / look=' + camLook.toArray().map(n=>n.toFixed(1)).join(',')); }
   } catch (e) { window.__dbg && window.__dbg('LOOP: ' + (e.stack || e.message)); throw e; }
+  // 武器や投擲物は render の後に同期しているので、1フレーム目には写らない。
+  // ?shot では2フレーム目まで描いてから止める。
+  if (SHOT > 0) { if (window.__shot1) shotDone = true; window.__shot1 = 1; }
 }
 renderScreen();
 requestAnimationFrame(loop);
@@ -1117,6 +1518,14 @@ if (new URLSearchParams(location.search).get('looks') === '1') {
   });
   stage.currentWave = 99; stage.lockX = stage.width - 40;
   game.state = 'playing'; hideScreen();
+}
+
+// ?stage=N … 第Nステージから始める（場面の確認用）
+{
+  const sg = new URLSearchParams(location.search).get('stage') || '';
+  if (sg === 'shukkou') { const st = new Stage(SHUKKOU_STAGE, game); st.isDetour = true; attachStage(st, SHUKKOU_STAGE); }
+  else if (sg === 'ura') attachStage(new Stage(URA_STAGE, game), URA_STAGE);
+  else if (+sg >= 1 && +sg <= STAGES.length) { game.stageIndex = +sg - 1; loadStage(+sg - 1); }
 }
 
 // ?demo=N … 指定x地点まで進めて波を出す（スクリーンショット確認用）
