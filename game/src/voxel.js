@@ -105,7 +105,12 @@ export const C3 = { W: 40, H: 60, D: 24, SCALE: 0.3 }; // SCALE: 2D版と同じ�
 // その頭身がキャラの可愛げを作っている。等身を上げると途端に寸胴に見えるので、
 // 解像度だけ上げて比率は変えない。
 //   靴 0-10% / ズボン 10-28% / 胴 28-62% / 頭 62-85% / かぶりもの 85-100%
-function charParts({ cap = false, suit = false, hair = 0, glasses = false }) {
+function charParts({ cap = false, suit = false, hair = 0, glasses = 0, beard = 0, build = 1 }) {
+  // build: 0=細身 / 1=標準 / 2=がっしり / 3=小柄で太め。
+  // メッシュを拡大縮小するだけでは差が出ないので、肩幅・胴まわり・腹の出方をモデル側で変える。
+  // 胸ポケットやボタンなど胴の前面につくものは、bd と一緒に前へ出さないと腹に埋まる。
+  const bw = [-1, 0, 1, 3][build] || 0;          // 胴の左右への張り出し
+  const bd = [-1, 0, 1, 3][build] || 0;          // 胴の前後への厚み（腹）
   const P = [];
   const add = (x0, x1, y0, y1, z0, z1, k) => P.push([x0, x1, y0, y1, z0, z1, k]);
 
@@ -114,32 +119,33 @@ function charParts({ cap = false, suit = false, hair = 0, glasses = false }) {
     add(lx0, lx1, 0, 5, 5, 20, 'f');          // 安全靴（前に長い）
     add(lx0, lx1, 6, 18, 7, 17, 'p');         // ズボン
   }
-  add(11, 28, 15, 19, 7, 17, 'p');            // 腰
-  add(11, 28, 18, 19, 6, 18, 'f');            // ベルト
+  add(11 - bw, 28 + bw, 15, 19, 7 - bd, 17 + bd, 'p');   // 腰
+  add(11 - bw, 28 + bw, 18, 19, 6 - bd, 18 + bd, 'f');   // ベルト
 
   // --- 胴（袖は胴より浅くして段差で腕を分ける）---
-  add(11, 28, 19, 37, 5, 19, 'b');            // 上衣（腰幅に合わせて寸胴に見せない）
+  add(11 - bw, 28 + bw, 19, 37, 5 - bd, 19 + bd, 'b');   // 上衣
   // 袖は胴より奥行きを浅くする。段差ができて腕が胴に溶けない。
-  add(6, 10, 22, 35, 8, 16, 'b');             // 左袖
-  add(29, 33, 22, 35, 8, 16, 'b');            // 右袖
-  add(6, 10, 18, 21, 8, 16, 's');             // 左手
-  add(29, 33, 18, 21, 8, 16, 's');            // 右手
+  add(6 - bw, 10 - bw, 22, 35, 8, 16, 'b');   // 左袖
+  add(29 + bw, 33 + bw, 22, 35, 8, 16, 'b');  // 右袖
+  add(6 - bw, 10 - bw, 18, 21, 8, 16, 's');   // 左手
+  add(29 + bw, 33 + bw, 18, 21, 8, 16, 's');  // 右手
 
   if (suit) {
-    add(19, 20, 20, 36, 19, 19, 't');         // ネクタイ
-    add(15, 18, 35, 37, 5, 19, 'b');          // 襟（スーツ）
-    add(21, 24, 35, 37, 5, 19, 'b');
+    add(19, 20, 20, 36, 19 + bd, 19 + bd, 't');            // ネクタイ
+    add(15, 18, 35, 37, 5 - bd, 19 + bd, 'b');             // 襟（スーツ）
+    add(21, 24, 35, 37, 5 - bd, 19 + bd, 'b');
   } else {
-    add(9, 30, 33, 37, 5, 19, 'a');           // 肩ヨーク
-    add(6, 10, 32, 35, 8, 16, 'a');           // 袖の肩側
-    add(29, 33, 32, 35, 8, 16, 'a');
-    add(6, 10, 22, 23, 8, 16, 'a');           // 袖口
-    add(29, 33, 22, 23, 8, 16, 'a');
-    add(19, 20, 20, 34, 19, 19, 'a');         // 前立て
-    for (const by of [23, 27, 31]) add(19, 20, by, by, 20, 20, 'b'); // ボタン
-    add(12, 17, 26, 30, 19, 19, 'a');         // 胸ポケット
-    add(12, 17, 30, 31, 19, 20, 'a');         // ポケットのフラップ
-    add(15, 24, 37, 39, 5, 19, 'a');          // 襟
+    add(9 - bw, 30 + bw, 33, 37, 5 - bd, 19 + bd, 'a');   // 肩ヨーク
+    add(6 - bw, 10 - bw, 32, 35, 8, 16, 'a'); // 袖の肩側
+    add(29 + bw, 33 + bw, 32, 35, 8, 16, 'a');
+    add(6 - bw, 10 - bw, 22, 23, 8, 16, 'a'); // 袖口
+    add(29 + bw, 33 + bw, 22, 23, 8, 16, 'a');
+    add(19, 20, 20, 34, 19 + bd, 19 + bd, 'a'); // 前立て
+    if (build >= 2) add(13, 26, 21, 30, 20 + bd, 21 + bd, 'b');  // 腹が前に出る
+    for (const by of [23, 27, 31]) add(19, 20, by, by, 20 + bd, 20 + bd, 'b'); // ボタン
+    add(12, 17, 26, 30, 19 + bd, 19 + bd, 'a');            // 胸ポケット
+    add(12, 17, 30, 31, 19 + bd, 20 + bd, 'a');            // ポケットのフラップ
+    add(15, 24, 37, 39, 5 - bd, 19 + bd, 'a');             // 襟
   }
 
   // --- 首・頭（ここを大きく取るのが要点）---
@@ -151,21 +157,31 @@ function charParts({ cap = false, suit = false, hair = 0, glasses = false }) {
   add(14, 25, 51, 51, 8, 16, 's');
   add(12, 12, 45, 48, 10, 14, 's');           // 左耳
   add(27, 27, 45, 48, 10, 14, 's');           // 右耳
-  if (glasses) {
-    // 眼鏡。事務所らしさと個体差の両方に効く
-    add(13, 26, 48, 48, 17, 18, 'e');         // フレーム上辺
-    add(14, 18, 45, 45, 17, 18, 'e');         // 左レンズ下辺
-    add(21, 25, 45, 45, 17, 18, 'e');         // 右レンズ下辺
-    add(19, 20, 47, 47, 17, 18, 'e');         // ブリッジ
-    add(13, 13, 46, 48, 14, 17, 'e');         // 左つる
-    add(26, 26, 46, 48, 14, 17, 'e');         // 右つる
+  // 髭。顔の前面は y>=44 が z=17 なので、1ボクセル手前に出して影で見せる
+  const beardKey = suit ? 'h' : 'r';           // スーツ型は 'h' が髪色（SUIT_BASE の規約）
+  if (beard === 1) {                           // 口髭。厚みを持たせないと線に見える
+    add(17, 22, 44, 44, 18, 18, beardKey);
+    add(17, 22, 43, 43, 17, 17, beardKey);
+  } else if (beard === 2) {                    // 無精髭。顎の縁だけに留める（面で塗ると付け髭になる）
+    add(14, 25, 43, 43, 17, 17, beardKey);
+    add(14, 15, 44, 44, 18, 18, beardKey);
+    add(24, 25, 44, 44, 18, 18, beardKey);
   }
 
-  // 目は「窪み」にする。面一だと照明次第で肌に溶け、1ボクセル出すと側面が影になって
-  // 括弧のように見える。2ボクセル彫り込むと光が入らず、どの角度でも目として読める。
-  // 前髪が上から影を落とすので、目はやや下げて大きめに取る（小さいと影に沈んで消える）
-  add(15, 17, 46, 47, 15, 17, 'e');
-  add(23, 25, 46, 47, 15, 17, 'e');
+  if (glasses) {
+    // 眼鏡。1=黒縁（下辺まである）/ 2=銀縁（下が開いたハーフリム）。
+    // 左右を1本の横棒でつなぐとサングラスのバイザーに見えるので、レンズごとに囲む。
+    const fr = glasses === 2 ? 'g' : 'e';
+    for (const [a, b] of [[14, 18], [22, 26]]) {
+      add(a, b, 48, 48, 17, 18, fr);          // レンズ上辺
+      add(a, a, 46, 48, 17, 18, fr);          // 外側の縦枠
+      add(b, b, 46, 48, 17, 18, fr);          // 鼻側の縦枠
+      if (glasses === 1) add(a, b, 45, 45, 17, 18, fr);   // 黒縁だけ下辺がある
+    }
+    add(19, 21, 47, 47, 17, 18, fr);          // ブリッジ（上辺より1段下げて左右を分ける）
+    add(13, 13, 46, 48, 14, 17, fr);          // 左つる
+    add(26, 26, 46, 48, 14, 17, fr);          // 右つる
+  }
 
   // --- 髪 / かぶりもの ---
   // 事務・技術の人はヘルメットをかぶらない（実物の執務室の写真どおり）。
@@ -185,7 +201,18 @@ function charParts({ cap = false, suit = false, hair = 0, glasses = false }) {
     add(15, 24, 52, 52, 9, 15, hairKey);
     add(17, 22, 53, 53, 11, 14, hairKey);     // てっぺん
     add(14, 25, 45, 51, 8, 10, hairKey);      // 後ろ髪
-    if (hair === 1) {                          // 短髪・刈り上げ
+    if (hair === 4) {                          // 襟足が長め
+      add(13, 13, 46, 50, 8, 15, hairKey);
+      add(26, 26, 46, 50, 8, 15, hairKey);
+      add(14, 25, 41, 46, 7, 10, hairKey);     // 襟足
+      add(14, 25, 50, 50, 16, 17, hairKey);
+      add(14, 19, 49, 50, 16, 17, hairKey);
+    } else if (hair === 5) {                   // オールバック（前髪を立てる）
+      add(13, 13, 48, 50, 8, 14, hairKey);
+      add(26, 26, 48, 50, 8, 14, hairKey);
+      add(14, 25, 51, 52, 15, 17, hairKey);    // 前が盛り上がる
+      add(15, 24, 53, 54, 12, 16, hairKey);
+    } else if (hair === 1) {                   // 短髪・刈り上げ
       add(13, 13, 49, 50, 8, 13, hairKey);
       add(26, 26, 49, 50, 8, 13, hairKey);
       add(15, 24, 51, 51, 15, 17, hairKey);
@@ -270,8 +297,11 @@ export function buildChar3D(palette, opts = {}) {
 
 /** CHAR_PALETTES のキーから 3D用モデルを作る（輪郭線なし・高解像度） */
 // 個体差のための色。全員同じ顔だと不自然なので、肌と髪に少し幅を持たせる
-export const SKINS = ['#f1c79b', '#e6b88b', '#f7d7b2', '#d9a877'];
-export const HAIRS = ['#241c14', '#1a1512', '#3a2a1c', '#4a4038'];
+export const SKINS = ['#f1c79b', '#e6b88b', '#f7d7b2', '#d9a877', '#ecc296'];
+export const HAIRS = [
+  '#241c14', '#1a1512', '#3a2a1c', '#4a4038',   // 黒〜茶
+  '#6a635c', '#9a958e', '#c8c4bf',              // ごま塩〜白髪（年齢差）
+];
 
 export function buildChar3DForType(key, v = {}) {
   const ov = CHAR_PALETTES[key] || CHAR_PALETTES.buka;
@@ -279,10 +309,13 @@ export function buildChar3DForType(key, v = {}) {
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
   const pal = { ...base, ...colors };
   delete pal.k;                                   // 3Dでは黒の輪郭線を使わない
+  pal.g = '#b9bec4';                              // 銀縁メガネ
   if (v.skin != null) pal.s = SKINS[v.skin % SKINS.length];
-  if (v.hairColor != null && map !== 'suit') pal.r = HAIRS[v.hairColor % HAIRS.length];
+  // 髪色のキーは作業着が 'r'、スーツが 'h'（SUIT_BASE の規約）
+  if (v.hairColor != null) pal[map === 'suit' ? 'h' : 'r'] = HAIRS[v.hairColor % HAIRS.length];
   return buildChar3D(pal, {
     cap: map === 'cap', suit: map === 'suit',
-    hair: v.hair || 0, glasses: !!v.glasses,
+    hair: v.hair || 0, glasses: v.glasses || 0, beard: v.beard || 0,
+    build: v.build == null ? 1 : v.build,
   });
 }

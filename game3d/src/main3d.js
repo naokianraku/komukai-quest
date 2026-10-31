@@ -37,20 +37,36 @@ const camera = new THREE.PerspectiveCamera(26, 16 / 9, 1, 3000);
 // ===== ジオメトリのキャッシュ（パレットキーごとに1つ。全キャラで共有）=====
 // 個体差。全員が同じ顔・同じ体型だと不自然なので、髪型・眼鏡・肌と髪の色・体格に幅を持たせる。
 // エンティティIDから決めるので、同じキャラは画面にいる間ずっと同じ見た目になる。
-const BUILDS = [{ w: 0.94, h: 1.00 }, { w: 1.00, h: 1.00 }, { w: 1.08, h: 0.95 }];
-const HAIR_MIX = [0, 0, 1, 2, 0, 3, 1, 2];   // 標準が多めになるよう重みをつける
+const BUILDS = [            // 身長と横幅。bw/bd（胴の厚み）はボクセル側で効かせる
+  { w: 0.96, h: 1.08 },     // 0 細身で背が高い
+  { w: 1.00, h: 1.00 },     // 1 標準
+  { w: 1.03, h: 1.04 },     // 2 背が高くてがっしり
+  { w: 1.04, h: 0.90 },     // 3 小柄で太め
+];
+
+// 見た目のプリセット20種。[髪型, 眼鏡, 髭, 肌, 髪色, 体格]
+// 1軸だけ変えるとパッと見で同じ人に見えるので、1体ごとに複数軸をまとめて変える。
+const APPEARANCES = [
+  [0, 0, 0, 0, 0, 1], [1, 1, 0, 1, 1, 0], [2, 0, 0, 2, 2, 2], [3, 2, 1, 3, 4, 3],
+  [4, 0, 0, 0, 0, 0], [5, 1, 0, 1, 0, 2], [0, 0, 2, 4, 2, 1], [1, 2, 0, 2, 5, 3],
+  [2, 1, 1, 0, 1, 1], [3, 0, 0, 3, 6, 2], [4, 1, 0, 2, 3, 1], [5, 0, 2, 1, 2, 0],
+  [0, 2, 0, 3, 1, 2], [1, 0, 1, 4, 0, 1], [2, 0, 0, 1, 5, 0], [3, 1, 2, 0, 4, 1],
+  [4, 2, 0, 4, 2, 2], [5, 0, 0, 3, 3, 3], [0, 1, 1, 2, 6, 3], [2, 2, 2, 4, 4, 0],
+];
+// ボスは小柄だと貫禄が出ないので、体格は標準以上に寄せた別表にする
+const BOSS_APPEARANCES = [
+  [2, 1, 0, 1, 5, 2], [3, 2, 1, 2, 6, 2], [5, 0, 2, 0, 1, 2],
+  [1, 1, 0, 3, 4, 1], [0, 2, 0, 2, 6, 2], [2, 0, 1, 4, 5, 2],
+];
+const PLAYER_APPEARANCE = [0, 0, 0, 0, 0, 1];
+
 function variantOf(e) {
-  if (e === stage.player) return { hair: 0, glasses: false, skin: 0, hairColor: 0, build: 1 };
-  const n = e.id;
-  return {
-    hair: HAIR_MIX[n % HAIR_MIX.length],
-    glasses: (n * 5) % 3 === 0,
-    skin: (n * 3) % 4,
-    hairColor: (n * 7) % 4,
-    build: e.isBoss ? 1 : n % 3,
-  };
+  const t = e === stage.player ? PLAYER_APPEARANCE
+    : e.isBoss ? BOSS_APPEARANCES[e.id % BOSS_APPEARANCES.length]
+    : APPEARANCES[e.id % APPEARANCES.length];
+  return { hair: t[0], glasses: t[1], beard: t[2], skin: t[3], hairColor: t[4], build: t[5] };
 }
-const variantKey = (v) => `${v.hair}${v.glasses ? 1 : 0}${v.skin}${v.hairColor}`;
+const variantKey = (v) => `${v.hair}${v.glasses}${v.beard}${v.skin}${v.hairColor}${v.build}`;
 
 const geoCache = new Map();
 function geoFor(key, vari) {
@@ -504,7 +520,7 @@ function syncEntities() {
     seen.add(e.id);
     let m = meshes.get(e.id);
     if (!m) {
-      e._v = variantOf(e);
+      e._v = e._v || variantOf(e);   // _v が先に入っていればそれを使う（?looks=1 の確認用）
       m = new THREE.Mesh(geoFor(e.spriteKey, e._v), charMat);
       m.castShadow = true; m.receiveShadow = false;
       scene.add(m);
@@ -512,7 +528,7 @@ function syncEntities() {
     }
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
-    const bd = BUILDS[(e._v && e._v.build) || 0];
+    const bd = BUILDS[(e._v && e._v.build) ?? 1];
     m.scale.set(sc * bd.w, sc * bd.h, sc * bd.w);   // 体格の差
     // 攻撃中は前に踏み込む。棒立ちで当たり判定だけ出るのを避ける（手応えの演出）
     const lunge = e.attackActive ? 3.2 * sc : (e.state === 'attack' ? 1.4 * sc : 0);
@@ -1082,6 +1098,21 @@ if (new URLSearchParams(location.search).get('cast') === '1') {
   cast.forEach(([which, type], i) => {
     const def = which === '1' ? defFor(type) : defFor2(type);
     const c = new Char(baseX + i * 34, playMid(), { ...def, team: 'mob', passive: true });
+    stage.entities.push(c);
+  });
+  stage.currentWave = 99; stage.lockX = stage.width - 40;
+  game.state = 'playing'; hideScreen();
+}
+
+// ?looks=1 … 同じ役職の20体を並べて、個体差だけを見るビュー
+if (new URLSearchParams(location.search).get('looks') === '1') {
+  for (const e of [...stage.entities]) if (e !== stage.player) e.alive = false;
+  stage.sweepDead();
+  const baseX = stage.player.x + 40;
+  APPEARANCES.forEach((t, i) => {
+    const row = i % 10, col = (i / 10) | 0;
+    const c = new Char(baseX + row * 30, PLAY.top + col * 70, { ...defFor('buka'), team: 'mob', passive: true });
+    c._v = { hair: t[0], glasses: t[1], beard: t[2], skin: t[3], hairColor: t[4], build: t[5] };
     stage.entities.push(c);
   });
   stage.currentWave = 99; stage.lockX = stage.width - 40;

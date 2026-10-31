@@ -1,0 +1,115 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>キャラ個体差 一覧</title>
+<!--
+  個体差（APPEARANCES）を一覧で確認するための開発用ページ。
+  ゲーム本体と違って毎フレーム描き直さないので、重い環境でも開ける。
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0f1216; color: #d8dde3;
+         font: 13px/1.5 system-ui, -apple-system, "Hiragino Sans", sans-serif; }
+  h1 { font-size: 15px; margin: 14px 16px 2px; }
+  p.note { margin: 0 16px 10px; color: #8a929c; }
+  .sheet { position: relative; margin: 0 16px 24px; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 10px; background: #171b21; }
+  .tags { position: absolute; inset: 0; display: grid; pointer-events: none; }
+  .tag { align-self: end; text-align: center; padding-bottom: 4px;
+         font-size: 11px; color: #aeb6c0; text-shadow: 0 1px 3px #000; }
+  .tag b { display: block; color: #ff9d3c; font-weight: 700; }
+</style>
+
+<h1>キャラ個体差 一覧</h1>
+<p class="note">髪型6種 × 眼鏡3種 × 髭3種 × 肌5色 × 髪色7色 × 体格4段階から、見分けがつく20通りを選んでいます。</p>
+
+<div class="sheet" id="s1"></div>
+<h1>ボス用（体格は標準以上に寄せる）</h1>
+<div class="sheet" id="s2"></div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { buildChar3DForType, C3 } from '../game/src/voxel.js';
+
+// main3d.js の APPEARANCES / BOSS_APPEARANCES と同じ並び
+const APPEARANCES = [
+  [0, 0, 0, 0, 0, 1], [1, 1, 0, 1, 1, 0], [2, 0, 0, 2, 2, 2], [3, 2, 1, 3, 4, 3],
+  [4, 0, 0, 0, 0, 0], [5, 1, 0, 1, 0, 2], [0, 0, 2, 4, 2, 1], [1, 2, 0, 2, 5, 3],
+  [2, 1, 1, 0, 1, 1], [3, 0, 0, 3, 6, 2], [4, 1, 0, 2, 3, 1], [5, 0, 2, 1, 2, 0],
+  [0, 2, 0, 3, 1, 2], [1, 0, 1, 4, 0, 1], [2, 0, 0, 1, 5, 0], [3, 1, 2, 0, 4, 1],
+  [4, 2, 0, 4, 2, 2], [5, 0, 0, 3, 3, 3], [0, 1, 1, 2, 6, 3], [2, 2, 2, 4, 4, 0],
+];
+const BOSS_APPEARANCES = [
+  [2, 1, 0, 1, 5, 2], [3, 2, 1, 2, 6, 2], [5, 0, 2, 0, 1, 2],
+  [1, 1, 0, 3, 4, 1], [0, 2, 0, 2, 6, 2], [2, 0, 1, 4, 5, 2],
+];
+const BUILDS = [{ w: 0.96, h: 1.08 }, { w: 1.00, h: 1.00 }, { w: 1.03, h: 1.04 }, { w: 1.04, h: 0.90 }];
+
+const HAIR_NAME = ['標準', '刈り上げ', '七三', '薄毛', '襟足長め', 'オールバック'];
+const GLASS_NAME = ['', '黒縁', '銀縁'];
+const BEARD_NAME = ['', '口髭', '無精髭'];
+const BUILD_NAME = ['細身', '標準', 'がっしり', '小柄太め'];
+const HAIRCOL_NAME = ['黒', '黒', '茶', '焦茶', '白混じり', 'ごま塩', '白髪'];
+
+function sheet(el, list, spriteKey, cols) {
+  const rows = Math.ceil(list.length / cols);
+  const CELL = 150, CH = 210;                 // 1体ぶんの描画領域（px）
+  const W = CELL * cols, H = CH * rows;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(W, H, false);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  el.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#171b21');
+  scene.add(new THREE.HemisphereLight('#cfe2f2', '#2a2f38', 2.0));
+  const key = new THREE.DirectionalLight('#fff4e2', 1.5);
+  key.position.set(-30, 50, 60); scene.add(key);
+  const fill = new THREE.DirectionalLight('#9fc4e8', 0.6);
+  fill.position.set(40, 20, -30); scene.add(fill);
+
+  // セル幅=18ワールド単位になる正射影。ゲーム本体と違いパースをつけない（比較しやすさ優先）
+  const unit = 18, halfW = unit * cols / 2, halfH = unit * (CH / CELL) * rows / 2;
+  const cam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, -500, 500);
+  cam.position.set(0, 0, 100);
+
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const tags = document.createElement('div');
+  tags.className = 'tags';
+  tags.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  tags.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+  list.forEach((t, i) => {
+    const v = { hair: t[0], glasses: t[1], beard: t[2], skin: t[3], hairColor: t[4], build: t[5] };
+    const g = buildChar3DForType(spriteKey, v);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(g.positions, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(g.normals, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(g.colors, 3));
+    geo.setIndex(new THREE.BufferAttribute(g.indices, 1));
+
+    const m = new THREE.Mesh(geo, mat);
+    const b = BUILDS[v.build];
+    const s = C3.SCALE;
+    m.scale.set(s * b.w, s * b.h, s * b.w);
+    m.rotation.y = 0.55;                      // ゲーム中と同じ、やや斜めの向き
+    const cx = (i % cols) - (cols - 1) / 2, cy = ((i / cols) | 0) - (rows - 1) / 2;
+    m.position.set(cx * unit, -cy * unit * (CH / CELL) - 7.5, 0);
+    scene.add(m);
+
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    const sub = [GLASS_NAME[v.glasses], BEARD_NAME[v.beard]].filter(Boolean).join('・');
+    tag.innerHTML = `<b>${String(i + 1).padStart(2, '0')}</b>${HAIR_NAME[v.hair]}／${BUILD_NAME[v.build]}`
+      + `<br>髪${HAIRCOL_NAME[v.hairColor]}${sub ? '／' + sub : ''}`;
+    tags.appendChild(tag);
+  });
+
+  renderer.render(scene, cam);                // 1回だけ。アニメーションループは持たない
+  el.appendChild(tags);
+}
+
+sheet(document.getElementById('s1'), APPEARANCES, 'buka', 5);
+sheet(document.getElementById('s2'), BOSS_APPEARANCES, 'vendor', 3);
+</script>
