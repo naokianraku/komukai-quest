@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>小向クエスト — ボクセル3D プロトタイプ</title>
+<style>
+  :root{
+    --bg:#15171a; --ink:#f0f3f5; --sub:#9aa0a8; --accent:#ff7f0e;
+    --ok:#389451; --warn:#c73333; --line:rgba(255,255,255,.10);
+    --pane:rgba(18,20,24,.72);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--ink)}
+  #c3d{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
+  #hud{position:fixed;inset:0;pointer-events:none;
+    padding:calc(env(safe-area-inset-top) + 14px) 18px calc(env(safe-area-inset-bottom) + 14px);
+    display:flex;flex-direction:column;gap:14px}
+
+  /* 社内システムのヘッダ（案B） */
+  .sysbar{display:flex;align-items:center;gap:12px;
+    background:var(--pane);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:12px;padding:8px 14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  .sysbar .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
+  .sysbar .name{font-size:12px;font-weight:700;letter-spacing:.04em}
+  .sysbar .ver{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .sysbar .spacer{flex:1}
+  .sysbar .loc{font-size:11px;color:var(--sub)}
+
+  .row{display:flex;gap:14px;align-items:flex-start}
+
+  .card{background:var(--pane);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
+
+  .badge{display:inline-block;background:var(--accent);color:#15171a;
+    font-size:12px;font-weight:700;border-radius:999px;padding:3px 12px;letter-spacing:.03em}
+
+  .label{font-size:10px;color:var(--sub);letter-spacing:.08em;margin-bottom:5px}
+  .meter{width:220px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .meter > i{display:block;height:100%;width:100%;background:var(--ok);
+    border-radius:999px;transition:background .25s ease}
+  .num{font:700 12px/1 ui-monospace,SFMono-Regular,monospace;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .pair{display:flex;align-items:center;gap:10px;margin-top:6px}
+
+  .dots{display:flex;gap:5px;margin-top:2px}
+  .dots i{width:9px;height:9px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .dots i.on{background:var(--accent)}
+
+  .right{margin-left:auto;text-align:right}
+  .right .num{font-size:19px}
+
+  /* ボスゲージ: 画面最上部の細いライン（案A） */
+  #bossWrap{position:fixed;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease}
+  #bossWrap.show{opacity:1}
+  #bossWrap .line{height:3px;background:rgba(0,0,0,.5)}
+  #bossWrap .line > i{display:block;height:100%;width:100%;
+    background:linear-gradient(90deg,#ff5a5a,#ff9d3c)}
+  #bossName{position:absolute;left:50%;transform:translateX(-50%);top:9px;
+    font-size:11px;font-weight:700;letter-spacing:.14em;color:#ffb5b5;
+    text-shadow:0 2px 8px rgba(0,0,0,.9)}
+
+  #banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-6px);
+    font-size:17px;font-weight:700;letter-spacing:.06em;
+    background:rgba(150,20,20,.92);border-radius:10px;padding:8px 20px;
+    opacity:0;transition:opacity .22s ease, transform .22s ease;
+    box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #banner.show{opacity:1;transform:translate(-50%,0)}
+
+  #help{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 10px);
+    text-align:center;font-size:11px;color:#7d848d}
+  #help b{color:var(--sub);font-weight:600}
+  @media (max-width:620px){ .meter{width:150px} #help{display:none} }
+</style>
+</head>
+<body>
+  <canvas id="c3d"></canvas>
+  <pre id="err" style="position:fixed;left:16px;bottom:120px;z-index:99;color:#ff8a8a;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70vw"></pre>
+  <script>
+    (function(){
+      const el=()=>document.getElementById('err');
+      const show=(m)=>{ const e=el(); if(e) e.textContent=(e.textContent+'\n'+m).trim().slice(0,1200); };
+      addEventListener('error',(ev)=>show('ERROR: '+(ev.error&&ev.error.stack||ev.message)));
+      addEventListener('unhandledrejection',(ev)=>show('REJECT: '+(ev.reason&&ev.reason.stack||ev.reason)));
+      window.__dbg=show;
+    })();
+  </script>
+
+  <div id="bossWrap"><div class="line"><i id="bossFill"></i></div><div id="bossName"></div></div>
+
+  <div id="hud">
+    <div class="sysbar">
+      <span class="dot"></span>
+      <span class="name">小向工場 業務支援システム</span>
+      <span class="ver">Ver 2.4</span>
+      <span class="spacer"></span>
+      <span class="loc" id="loc"></span>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <span class="badge" id="rank">小向戦士</span>
+        <div class="pair" style="margin-top:10px">
+          <div>
+            <div class="label">稼働率</div>
+            <div class="meter"><i id="hpFill"></i></div>
+          </div>
+          <div class="num" id="hpNum">12 / 12</div>
+        </div>
+        <div class="pair">
+          <div>
+            <div class="label">有休残</div>
+            <div class="dots" id="lives"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card right">
+        <div class="label">評価ポイント</div>
+        <div class="num" id="score">000000</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="banner"></div>
+  <div id="help">
+    移動 <b>←↑↓→ / WASD</b>　攻撃 <b>J / Z</b>　ジャンプ <b>K / X</b>　ボスへ <b>B</b>
+  </div>
+
+  <script type="module" src="src/main3d.js"></script>
+</body>
+</html>

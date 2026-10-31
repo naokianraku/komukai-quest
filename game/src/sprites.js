@@ -6,7 +6,7 @@
 //
 // パレットキー: . 透明 / k 輪郭 / s 肌 / e 目 / h 頭(ヘルメット or 髪) / b 上半身 / p 下半身 / t ネクタイ / f 靴
 
-const WORKER_BASE = {
+export const WORKER_BASE = {
   '.': null, 'k': '#0d1118', 's': '#f1c79b', 'e': '#0d1118',
   'h': '#8fd0e0',   // ヘルメット（種別で上書き）
   'b': '#8fd0e0',   // 作業着（水色・全員共通）
@@ -15,7 +15,7 @@ const WORKER_BASE = {
   'f': '#0c0c0e',   // 黒の安全靴
 };
 
-const SUIT_BASE = {
+export const SUIT_BASE = {
   '.': null, 'k': '#0d1118', 's': '#f1c79b', 'e': '#0d1118',
   'h': '#2a2018',   // 髪
   'b': '#37506e',   // スーツ上着（種別で上書き）
@@ -25,7 +25,7 @@ const SUIT_BASE = {
 };
 
 // 作業着＋ヘルメット (12 x 18)
-const WORKER_MAP = [
+export const WORKER_MAP = [
   '....kkkk....',
   '...khhhhk...',
   '...khhhhk...',
@@ -47,7 +47,7 @@ const WORKER_MAP = [
 ];
 
 // スーツ＋ネクタイ (12 x 18)
-const SUIT_MAP = [
+export const SUIT_MAP = [
   '...hhhhhh...',
   '..hhhhhhhh..',
   '..hksssskh..',
