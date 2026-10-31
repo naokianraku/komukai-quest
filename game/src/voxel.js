@@ -105,7 +105,7 @@ export const C3 = { W: 40, H: 60, D: 24, SCALE: 0.3 }; // SCALE: 2D版と同じ�
 // その頭身がキャラの可愛げを作っている。等身を上げると途端に寸胴に見えるので、
 // 解像度だけ上げて比率は変えない。
 //   靴 0-10% / ズボン 10-28% / 胴 28-62% / 頭 62-85% / かぶりもの 85-100%
-function charParts({ cap = false, suit = false }) {
+function charParts({ cap = false, suit = false, hair = 0, glasses = false }) {
   const P = [];
   const add = (x0, x1, y0, y1, z0, z1, k) => P.push([x0, x1, y0, y1, z0, z1, k]);
 
@@ -151,6 +151,16 @@ function charParts({ cap = false, suit = false }) {
   add(14, 25, 51, 51, 8, 16, 's');
   add(12, 12, 45, 48, 10, 14, 's');           // 左耳
   add(27, 27, 45, 48, 10, 14, 's');           // 右耳
+  if (glasses) {
+    // 眼鏡。事務所らしさと個体差の両方に効く
+    add(13, 26, 48, 48, 17, 18, 'e');         // フレーム上辺
+    add(14, 18, 45, 45, 17, 18, 'e');         // 左レンズ下辺
+    add(21, 25, 45, 45, 17, 18, 'e');         // 右レンズ下辺
+    add(19, 20, 47, 47, 17, 18, 'e');         // ブリッジ
+    add(13, 13, 46, 48, 14, 17, 'e');         // 左つる
+    add(26, 26, 46, 48, 14, 17, 'e');         // 右つる
+  }
+
   // 目は「窪み」にする。面一だと照明次第で肌に溶け、1ボクセル出すと側面が影になって
   // 括弧のように見える。2ボクセル彫り込むと光が入らず、どの角度でも目として読める。
   // 前髪が上から影を落とすので、目はやや下げて大きめに取る（小さいと影に沈んで消える）
@@ -169,16 +179,33 @@ function charParts({ cap = false, suit = false }) {
     add(14, 25, 48, 50, 8, 10, 'r');          // 後ろ髪が少し覗く
   } else {
     const hairKey = suit ? 'h' : 'r';         // スーツ組は従来どおり h が髪色
-    // 髪も頭の丸みに沿わせる（上へ行くほど細くする）
+    // 髪は頭の丸みに沿わせつつ、型を4種類用意して個体差を出す
     add(13, 26, 50, 50, 7, 17, hairKey);
     add(14, 25, 51, 51, 8, 16, hairKey);
     add(15, 24, 52, 52, 9, 15, hairKey);
     add(17, 22, 53, 53, 11, 14, hairKey);     // てっぺん
     add(14, 25, 45, 51, 8, 10, hairKey);      // 後ろ髪
-    add(13, 13, 47, 50, 8, 14, hairKey);      // 左の生え際
-    add(26, 26, 47, 50, 8, 14, hairKey);      // 右の生え際
-    add(14, 25, 50, 50, 16, 17, hairKey);     // 前髪
-    add(14, 18, 49, 50, 16, 17, hairKey);     // 前髪の流れ
+    if (hair === 1) {                          // 短髪・刈り上げ
+      add(13, 13, 49, 50, 8, 13, hairKey);
+      add(26, 26, 49, 50, 8, 13, hairKey);
+      add(15, 24, 51, 51, 15, 17, hairKey);
+    } else if (hair === 2) {                   // 七三分け
+      add(13, 13, 47, 50, 8, 14, hairKey);
+      add(26, 26, 47, 50, 8, 14, hairKey);
+      add(14, 25, 50, 50, 16, 17, hairKey);
+      add(14, 20, 48, 50, 16, 17, hairKey);   // 片側を長く
+      add(21, 22, 49, 50, 16, 17, hairKey);   // 分け目
+    } else if (hair === 3) {                   // 薄毛（頭頂が後退）
+      add(13, 13, 46, 50, 8, 14, hairKey);
+      add(26, 26, 46, 50, 8, 14, hairKey);
+      add(13, 26, 50, 50, 7, 11, hairKey);
+      add(14, 25, 45, 49, 8, 10, hairKey);
+    } else {                                   // 0: 標準（前髪あり）
+      add(13, 13, 47, 50, 8, 14, hairKey);
+      add(26, 26, 47, 50, 8, 14, hairKey);
+      add(14, 25, 50, 50, 16, 17, hairKey);
+      add(14, 18, 49, 50, 16, 17, hairKey);
+    }
   }
 
   // 社員証のネックストラップ（作業着の人の識別色。首から胸に下げる）
@@ -242,11 +269,20 @@ export function buildChar3D(palette, opts = {}) {
 }
 
 /** CHAR_PALETTES のキーから 3D用モデルを作る（輪郭線なし・高解像度） */
-export function buildChar3DForType(key) {
+// 個体差のための色。全員同じ顔だと不自然なので、肌と髪に少し幅を持たせる
+export const SKINS = ['#f1c79b', '#e6b88b', '#f7d7b2', '#d9a877'];
+export const HAIRS = ['#241c14', '#1a1512', '#3a2a1c', '#4a4038'];
+
+export function buildChar3DForType(key, v = {}) {
   const ov = CHAR_PALETTES[key] || CHAR_PALETTES.buka;
   const { map, ...colors } = ov;
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
   const pal = { ...base, ...colors };
   delete pal.k;                                   // 3Dでは黒の輪郭線を使わない
-  return buildChar3D(pal, { cap: map === 'cap', suit: map === 'suit' });
+  if (v.skin != null) pal.s = SKINS[v.skin % SKINS.length];
+  if (v.hairColor != null && map !== 'suit') pal.r = HAIRS[v.hairColor % HAIRS.length];
+  return buildChar3D(pal, {
+    cap: map === 'cap', suit: map === 'suit',
+    hair: v.hair || 0, glasses: !!v.glasses,
+  });
 }

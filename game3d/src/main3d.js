@@ -35,16 +35,34 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(26, 16 / 9, 1, 3000);
 
 // ===== ジオメトリのキャッシュ（パレットキーごとに1つ。全キャラで共有）=====
+// 個体差。全員が同じ顔・同じ体型だと不自然なので、髪型・眼鏡・肌と髪の色・体格に幅を持たせる。
+// エンティティIDから決めるので、同じキャラは画面にいる間ずっと同じ見た目になる。
+const BUILDS = [{ w: 0.94, h: 1.00 }, { w: 1.00, h: 1.00 }, { w: 1.08, h: 0.95 }];
+const HAIR_MIX = [0, 0, 1, 2, 0, 3, 1, 2];   // 標準が多めになるよう重みをつける
+function variantOf(e) {
+  if (e === stage.player) return { hair: 0, glasses: false, skin: 0, hairColor: 0, build: 1 };
+  const n = e.id;
+  return {
+    hair: HAIR_MIX[n % HAIR_MIX.length],
+    glasses: (n * 5) % 3 === 0,
+    skin: (n * 3) % 4,
+    hairColor: (n * 7) % 4,
+    build: e.isBoss ? 1 : n % 3,
+  };
+}
+const variantKey = (v) => `${v.hair}${v.glasses ? 1 : 0}${v.skin}${v.hairColor}`;
+
 const geoCache = new Map();
-function geoFor(key) {
-  if (geoCache.has(key)) return geoCache.get(key);
-  const v = buildChar3DForType(key);   // 3D専用の高解像度モデル（40x60x24・輪郭線なし）
+function geoFor(key, vari) {
+  const ck = key + '|' + variantKey(vari);
+  if (geoCache.has(ck)) return geoCache.get(ck);
+  const v = buildChar3DForType(key, vari);   // 3D専用の高解像度モデル（40x60x24・輪郭線なし）
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(v.positions, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(v.normals, 3));
   g.setAttribute('color', new THREE.BufferAttribute(v.colors, 3));
   g.setIndex(new THREE.BufferAttribute(v.indices, 1));
-  geoCache.set(key, g);
+  geoCache.set(ck, g);
   return g;
 }
 const charMat = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -486,14 +504,16 @@ function syncEntities() {
     seen.add(e.id);
     let m = meshes.get(e.id);
     if (!m) {
-      m = new THREE.Mesh(geoFor(e.spriteKey), charMat);
+      e._v = variantOf(e);
+      m = new THREE.Mesh(geoFor(e.spriteKey, e._v), charMat);
       m.castShadow = true; m.receiveShadow = false;
       scene.add(m);
       meshes.set(e.id, m);
     }
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
-    m.scale.setScalar(sc);
+    const bd = BUILDS[(e._v && e._v.build) || 0];
+    m.scale.set(sc * bd.w, sc * bd.h, sc * bd.w);   // 体格の差
     // 攻撃中は前に踏み込む。棒立ちで当たり判定だけ出るのを避ける（手応えの演出）
     const lunge = e.attackActive ? 3.2 * sc : (e.state === 'attack' ? 1.4 * sc : 0);
     m.position.set(wx(e.x) + lunge * (e.facing >= 0 ? 1 : -1), wy(e.z), wz(e.y));
@@ -993,7 +1013,8 @@ function loop(now) {
         if (hitstop > 0) hitstop -= STEP;        // 打撃の手応え（案D）
         else stage.update(STEP);
         // ?atk=1 … 攻撃の見た目を確認するために攻撃状態を固定する（開発用）
-        if (Q.get('atk') === '1') { stage.player.attackActive = true; stage.player.facing = 1; }
+        // 開発用。向きは固定しない（固定すると左へ攻撃できなくなる）
+        if (Q.get('atk') === '1') stage.player.attackActive = true;
         if (stage.cleared) {
           game.state = game.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
           game.screenT = 0; renderScreen();
