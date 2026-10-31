@@ -225,6 +225,16 @@ function zones(halfD, backDepth, frontDepth) {
   return { BACK: -(halfD + backDepth), FRONT: halfD + frontDepth };
 }
 
+// 天井。カメラ(y=62)は天井(y=47)より上にあるので、手前いっぱいまで張ると
+// 画面の上1/3が天井スラブの上面で埋まり、壁の連窓も白板も1つも見えなくなる。
+// 歩行帯の少し先で切って上を開けると、壁が y=38 あたりまで見えるようになる。
+// 実物の執務室も上部が抜けている。
+function ceilingSlab(W, halfD, BACK, color, y = 47) {
+  const front = halfD + 12;
+  box(W + 80, 2, front - BACK, color, W / 2, y, (front + BACK) / 2);
+  return front;
+}
+
 // --- 執務室（60号7階Cゾーン）---
 function buildOffice(W, halfD) {
   const R = ROOM.office_win;
@@ -238,16 +248,16 @@ function buildOffice(W, halfD) {
   box(W + 80, 0.08, 0.4, '#6b7178', W / 2, 0.02, -halfD);
 
   box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
-  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+  const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 47);
 
   // 天井まわり: 直管蛍光灯の列 ＋ 空調の吹き出し口 ＋ 配線ダクト
   for (let x = 6; x < W; x += 44) {
-    for (let dz = BACK + 14; dz < FRONT - 10; dz += 30) {
+    for (let dz = BACK + 14; dz < CEIL - 6; dz += 30) {
       box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#cfe0ee', receive: false });
     }
   }
   for (let x = 24; x < W; x += 88) {
-    for (const dz of [BACK + 28, BACK + 62]) box(9, 0.8, 9, '#c9ced3', x, 45.4, dz);  // 吹き出し口
+    for (const dz of [BACK + 28, BACK + 62]) if (dz < CEIL - 6) box(9, 0.8, 9, '#c9ced3', x, 45.4, dz);  // 吹き出し口
   }
   box(W + 80, 1.2, 2.2, '#d9dee2', W / 2, 44.2, BACK + 8);                            // 配線ダクト
 
@@ -397,9 +407,9 @@ function buildShokudo(W, halfD) {
   }
 
   box(W + 80, 60, 2, R.wall, W / 2, 30, BACK - 1);
-  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 45, (FRONT + BACK) / 2);
+  const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 45);
   for (let x = 6; x < W; x += 42) {
-    for (let dz = BACK + 14; dz < FRONT - 10; dz += 28) {
+    for (let dz = BACK + 14; dz < CEIL - 6; dz += 28) {
       box(30, 0.5, 2.0, '#ffffff', x, 43.6, dz, { emissive: '#dfe6ea', receive: false });
     }
   }
@@ -516,10 +526,10 @@ function buildOfficeInner(W, halfD, R = ROOM.office) {
   box(W + 80, 0.08, 0.4, '#5f646a', W / 2, 0.02, halfD);
   box(W + 80, 0.08, 0.4, '#5f646a', W / 2, 0.02, -halfD);
   box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
-  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+  const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 47);
 
   for (let x = 6; x < W; x += 44) {
-    for (let dz = BACK + 14; dz < FRONT - 10; dz += 30) {
+    for (let dz = BACK + 14; dz < CEIL - 6; dz += 30) {
       box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#d5dde2', receive: false });
     }
   }
@@ -581,9 +591,9 @@ function buildMeeting(W, halfD) {
 
   box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
   box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
-  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+  const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 47);
   for (let x = 6; x < W; x += 44) {
-    for (let dz = BACK + 16; dz < FRONT - 10; dz += 30) {
+    for (let dz = BACK + 16; dz < CEIL - 6; dz += 30) {
       box(32, 0.5, 2.0, '#ffffff', x, 45.6, dz, { emissive: '#dde3dc', receive: false });
     }
   }
@@ -652,7 +662,7 @@ function buildBoardroom(W, halfD) {
     box(W + 80, 0.06, 0.5, '#4a3d50', W / 2, 0.03, z, { receive: false });
   }
   box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
-  box(W + 80, 2, FRONT - BACK, R.ceiling, W / 2, 47, (FRONT + BACK) / 2);
+  const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 47);
 
   // 腰壁と縦の木目パネル（格を見せる要素）。見える帯に収める
   box(W + 80, 11, 1.6, R.wood, W / 2, 5.5, BACK + 0.4);
