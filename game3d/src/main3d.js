@@ -80,6 +80,18 @@ const ROOM = {
   },
   // 食堂: 光沢のある明るい木目の床、白い天井、白天板のテーブルにピンクのパイプ椅子、
   // ベージュの配膳カウンターとステンレス、白いブラインドの窓。※ステージ未使用（素材として用意）
+  // 構内の稲荷社（ボス戦用の屋外アリーナ）: 朱の鳥居、瓦屋根の社、玉垣、木立、
+  // 借景に工場の白い建屋。空が見えるので天井は作らない。
+  shrine: {
+    sky: '#9ec8e8', ground: '#b4a992', path: '#d6d2c6', torii: '#d9451f', toriiDark: '#241d18',
+    shrineWood: '#7d5f41', roof: '#3b4648', tree: '#2f5a35', treeDark: '#23462a',
+    bldg: '#e7eaec', bldgWin: '#8fa8bc', stone: '#9a978d',
+  },
+  // 構内道路: 頭上の配管ラック、灰色の柱、白い建屋。工場らしさが一番出る場所
+  yard: {
+    sky: '#9ec8e8', ground: '#5c5f63', path: '#6a6e73', pipe: '#b6bcc2', post: '#9aa0a6',
+    bldg: '#e3e6e8', bldgWin: '#8fa8bc', line: '#e8e8e4', tree: '#2f5a35',
+  },
   shokudo: {
     ceiling: '#f4f5f2', wall: '#ece7de', cabinet: '#e0c9b8', cabinetLine: '#c4a894',
     floor: '#c08a42', partition: '#e0c9b8', mat: '#f2f3f0', desk: '#f2f3f0',
@@ -87,11 +99,70 @@ const ROOM = {
   },
 };
 
+// 屋外アリーナ（構内の稲荷社）。boss戦の舞台として使う想定。
+function buildShrine(W, halfD) {
+  const R = ROOM.shrine;
+  const BACK = -(halfD + 40), FRONT = halfD + 70;
+  scene.background = hex(R.sky);
+  scene.fog = new THREE.Fog(hex(R.sky), 340, 980);
+
+  box(W + 80, 2, FRONT - BACK, R.ground, W / 2, -1, (FRONT + BACK) / 2);          // 地面（土）
+  box(W + 80, 0.3, halfD * 2, R.path, W / 2, 0.1, 0, { receive: true });          // 参道（石畳）
+
+  // 鳥居は「正面から見える」向きに置く。横移動のゲームで参道をまたぐ向きにすると
+  // 笠木が奥へ伸びて門に見えないため、参道を奥へ向かう配置にして背景として見せる。
+  const sx0 = W * 0.72;                      // 社の中心（ボス戦の突き当たり）
+  const torii = (cz, scale) => {
+    const half = 9 * scale, hP = 26 * scale;
+    for (const px of [sx0 - half, sx0 + half]) {
+      box(3.2 * scale, hP, 3.2 * scale, R.torii, px, hP / 2, cz, { cast: true });
+      box(4.6 * scale, 1.2, 4.6 * scale, R.toriiDark, px, 0.6, cz);        // 根元の黒い巻き
+    }
+    box(half * 2 + 10 * scale, 2.0 * scale, 3.6 * scale, R.toriiDark, sx0, hP + 1.4, cz, { cast: true }); // 笠木
+    box(half * 2 + 6 * scale,  1.4 * scale, 3.0 * scale, R.torii,     sx0, hP - 0.4, cz, { cast: true }); // 島木
+    box(half * 2 - 2 * scale,  1.2 * scale, 2.4 * scale, R.torii,     sx0, hP * 0.78, cz, { cast: true }); // 貫
+    box(2.4 * scale, 3.2 * scale, 1.0, '#d8cfa8', sx0, hP * 0.93, cz + 1.8);                               // 扁額
+  };
+  torii(-halfD - 8, 1.0);     // 一の鳥居（手前）
+  torii(BACK + 34, 0.82);     // 二の鳥居（奥）
+  box(16, 0.3, (-halfD - 8) - (BACK + 10), R.path, sx0, 0.12, ((-halfD - 8) + (BACK + 10)) / 2); // 参道
+
+  // 玉垣（低い朱の柵）を帯の外側に沿わせる
+  for (const sz of [-halfD - 6, halfD + 6]) {
+    for (let x = -10; x < W + 20; x += 7) {
+      box(1.1, 6, 1.1, R.torii, x, 3, sz);
+      box(7, 0.8, 1.0, R.torii, x, 6.2, sz);
+    }
+  }
+
+  // 社（奥の突き当たり）: 瓦屋根＋木の社殿＋階段
+  box(26, 16, 18, R.shrineWood, sx0, 8, BACK + 16, { cast: true });
+  box(34, 2.4, 26, R.roof, sx0, 17.4, BACK + 16, { cast: true });
+  box(28, 2.0, 20, R.roof, sx0, 19.6, BACK + 16, { cast: true });
+  for (let i = 0; i < 3; i++) box(18 - i * 2, 1.2, 3, R.stone, sx0, 0.6 + i * 1.2, BACK + 26 - i * 1.5);
+
+  // 木立（濃い緑の塊を不規則に）
+  for (let x = -20; x < W + 40; x += 17) {
+    const h = 26 + ((x * 7) % 18);
+    box(3, h * 0.45, 3, '#4a3a2a', x, h * 0.22, BACK + 2, { cast: true });
+    box(14, h * 0.6, 14, (x % 34 === 0) ? R.treeDark : R.tree, x, h * 0.72, BACK + 2, { cast: true });
+  }
+
+  // 借景: 工場の白い建屋（水平連窓）
+  for (let x = -40; x < W + 60; x += 120) {
+    box(110, 54, 10, R.bldg, x, 27, BACK - 26);
+    for (let f = 0; f < 5; f++) box(100, 3.4, 1.0, R.bldgWin, x, 10 + f * 9, BACK - 31);
+  }
+}
+
 function buildScenery(data) {
   const bg = data.bg;
-  const R = ROOM[bg.scene] || ROOM.office_win;
+  const forced = new URLSearchParams(location.search).get('scene');
+  const sceneKey = forced || bg.scene;
   const W = data.width * S;
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;   // 歩ける帯の半分 ≒ 28
+  if (sceneKey === 'shrine') { buildShrine(W, halfD); return; }
+  const R = ROOM[sceneKey] || ROOM.office_win;
   const BACK = -(halfD + 36);                            // 奥の壁。帯の外に部屋を作る
   const FRONT = halfD + 70;                              // 手前の端
 
@@ -146,9 +217,12 @@ function buildScenery(data) {
 }
 
 // ===== ライト =====
-const hemi = new THREE.HemisphereLight(0xeef5fa, 0x8a9198, 2.1);
+const OUTDOOR = new URLSearchParams(location.search).get('scene') === 'shrine';
+const hemi = OUTDOOR
+  ? new THREE.HemisphereLight(0xbcd9f2, 0x7a7259, 1.35)   // 屋外: 空の青 ＋ 地面の照り返し
+  : new THREE.HemisphereLight(0xeef5fa, 0x8a9198, 2.1);   // 室内: 蛍光灯で全体に明るく
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfdfeff, 0.95);
+const sun = new THREE.DirectionalLight(OUTDOOR ? 0xfff1d8 : 0xfdfeff, OUTDOOR ? 2.0 : 0.95);
 sun.position.set(-30, 70, 40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -345,7 +419,15 @@ if (new URLSearchParams(location.search).get('cast') === '1') {
 // ?demo=N … 指定x地点まで進めて波を出す（スクリーンショット確認用）
 {
   const d = parseFloat(new URLSearchParams(location.search).get('demo') || '0');
-  if (d > 0) { stage.player.x = d; stage.updateWaves(); camPos.x = wx(d); camLook.x = wx(d); }
+  if (d > 0) {
+    // 進行ロック(lockX)を外してから移動する。Player.update が maxX=lockX で引き戻すため、
+    // 外さないと指定した地点までカメラが行かない。
+    stage.currentWave = stage.data.waves.length;
+    stage.lockX = stage.width - 40;
+    stage.player.x = d;
+    stage.spawnWave(stage.data.waves[0]);   // 指定地点のまわりに敵を出す
+    camPos.x = wx(d); camLook.x = wx(d);
+  }
 }
 
 // デバッグ: ボスまで一気に進める
