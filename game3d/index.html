@@ -44,6 +44,27 @@
     font:700 13px/1 ui-monospace,monospace;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
 
+  /* 画面（タイトル/作業指示書/作業報告書/休職願/辞令）。社内システムの書類を模す */
+  #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(8,10,14,.74);backdrop-filter:blur(3px);padding:24px;z-index:20}
+  #screen .sheet{background:#f6f7f9;color:#1b1e23;border-radius:14px;
+    padding:26px 30px;min-width:min(560px,86vw);max-width:86vw;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);border-top:5px solid var(--accent)}
+  #screen .eyebrow{font-size:11px;letter-spacing:.32em;color:#6c737c;margin-bottom:12px}
+  #screen h1{font-size:clamp(26px,5vw,42px);color:var(--accent);letter-spacing:.02em;line-height:1}
+  #screen h2{font-size:22px;margin:4px 0 12px}
+  #screen h2.ok{color:#1f7a44} #screen h2.ng{color:#b3261e}
+  #screen .jp{font-size:14px;letter-spacing:.34em;margin-top:8px;color:#3a3f46}
+  #screen .lead{margin-top:12px;font-size:13px;color:#3a3f46;line-height:1.7}
+  #screen .diff{margin-top:16px;font-size:12px;color:#3a3f46}
+  #screen .form{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+  #screen .form th{width:7.5em;text-align:left;vertical-align:top;padding:7px 10px;
+    background:#e9ecef;border:1px solid #d3d8dd;color:#4a5058;font-weight:700}
+  #screen .form td{padding:7px 10px;border:1px solid #d3d8dd;line-height:1.6}
+  #screen .mono{font:700 14px ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  #screen .k{margin-top:18px;font-size:12px;color:#6c737c;text-align:center}
+  #screen .title{text-align:center}
+
   /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
   #hud{position:absolute;inset:0;pointer-events:none;
     padding:12px 14px;
@@ -143,6 +164,7 @@
         </div>
       </div>
       <div id="labels"></div>
+      <div id="screen"></div>
       <div id="banner"></div>
     </div>
     <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　決定: Enter / Space</p>

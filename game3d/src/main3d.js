@@ -404,19 +404,47 @@ function buildScenery(data) {
 
 // ===== ゲーム本体（ロジックは2D版そのまま）=====
 const game = {
-  difficulty: 'normal', score: 0, lives: 3, over: false,
-  toGameOver() { this.over = true; },
+  difficulty: 'normal', score: 0, lives: 4, over: false,
+  state: 'title', stageIndex: 0, screenT: 0,
+  toGameOver() { this.state = 'gameover'; this.screenT = 0; },
 };
-const stage = new Stage(STAGES[0], game);
+let stage = new Stage(STAGES[0], game);
 buildScenery(STAGES[0]);
 
 // 打撃フック: ヒットストップ＋カメラシェイク（案D）
 let hitstop = 0, shake = 0, bossSceneApplied = false;
 const origHit = stage.fx.hit.bind(stage.fx);
-stage.fx.hit = (x, y, color) => { origHit(x, y, color); hitstop = 0.06; shake = 1.1; };
+stage.fx.hit = (x, y, color) => { origHit(x, y, color); hitstop = 0.06; shake = 1.1; burst(x, y, color); };
 // ダメージ数字は2D用のテキストではなく、投影したDOMで出す
 const origText = stage.fx.text.bind(stage.fx);
 stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, y, 0, str, color); };
+
+// ===== ステージの読み込み =====
+function clearStageObjects() {
+  for (const [, m] of meshes) scene.remove(m);
+  meshes.clear();
+  for (const [, m] of projMeshes) scene.remove(m);
+  projMeshes.clear();
+  for (const p of parts) { p.m.visible = false; partPool.push(p.m); }
+  parts.length = 0;
+  for (const [, r] of tagEls) { r.tag.remove(); r.bubble.remove(); }
+  tagEls.clear();
+  for (const f of floats) f.el.remove();
+  floats.length = 0;
+}
+
+function loadStage(i) {
+  clearStageObjects();
+  bossSceneApplied = false;
+  stage = new Stage(STAGES[i], game);
+  const origHit2 = stage.fx.hit.bind(stage.fx);
+  stage.fx.hit = (x, y, color) => { origHit2(x, y, color); hitstop = 0.06; shake = 1.1; burst(x, y, color); };
+  const origText2 = stage.fx.text.bind(stage.fx);
+  stage.fx.text = (x, y, str, color) => { origText2(x, y, str, color); addFloat(x, y, 0, str, color); };
+  buildScenery(STAGES[i]);
+  camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
+  camLook.set(wx(stage.player.x), CAM.lookY, wz(stage.player.y) - 3);
+}
 
 // ===== エンティティ ↔ メッシュ =====
 const meshes = new Map();
@@ -444,6 +472,67 @@ function syncEntities() {
   for (const [id, m] of meshes) {
     if (seen.has(id)) continue;
     scene.remove(m); meshes.delete(id);
+  }
+}
+
+// ===== 飛び道具とヒットの粒子 =====
+// 2D版の Fx（粒子）と Projectile を3Dの小さな箱で表現する。使い回しのプール。
+const projGeo = new THREE.BoxGeometry(1.6, 1.2, 2.6);
+const projMat = {
+  paper:   new THREE.MeshLambertMaterial({ color: new THREE.Color('#f2f4f6') }),
+  missile: new THREE.MeshLambertMaterial({ color: new THREE.Color('#5a6a2e'), emissive: new THREE.Color('#2a1a08') }),
+};
+const projMeshes = new Map();
+function syncProjectiles() {
+  const seen = new Set();
+  for (const pr of stage.projectiles) {
+    if (!pr.alive) continue;
+    seen.add(pr.id);
+    let m = projMeshes.get(pr.id);
+    if (!m) {
+      m = new THREE.Mesh(projGeo, projMat[pr.kind] || projMat.paper);
+      m.castShadow = true;
+      scene.add(m); projMeshes.set(pr.id, m);
+    }
+    m.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
+    m.rotation.z += 0.35;                       // くるくる回る書類
+    if (pr.kind === 'missile') { m.rotation.z = 0; m.rotation.y = pr.vx > 0 ? 0 : Math.PI; }
+  }
+  for (const [id, m] of projMeshes) {
+    if (seen.has(id)) continue;
+    scene.remove(m); projMeshes.delete(id);
+  }
+}
+
+// 打撃の粒子
+const partGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+const partPool = [];
+const parts = [];
+function burst(gx, gy, color) {
+  const col = new THREE.Color(color || '#ffd24a');
+  for (let i = 0; i < 9; i++) {
+    let m = partPool.pop();
+    if (!m) { m = new THREE.Mesh(partGeo, new THREE.MeshLambertMaterial({ color: col })); scene.add(m); }
+    else { m.material.color.copy(col); m.visible = true; }
+    const a = (i / 9) * Math.PI * 2;
+    parts.push({
+      m, t: 0,
+      x: wx(gx), y: wy(0) + 10, z: wz(gy),
+      vx: Math.cos(a) * 16, vy: 10 + (i % 3) * 6, vz: Math.sin(a) * 10,
+    });
+    m.position.set(wx(gx), wy(0) + 10, wz(gy));
+  }
+}
+function updateParts(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.t += dt;
+    if (p.t > 0.42) { p.m.visible = false; partPool.push(p.m); parts.splice(i, 1); continue; }
+    p.vy -= 58 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    p.m.position.set(p.x, Math.max(0.4, p.y), p.z);
+    const k = 1 - p.t / 0.42;
+    p.m.scale.setScalar(0.5 + k);
   }
 }
 
@@ -607,6 +696,75 @@ function updateHUD(dt) {
   } else hud.banner.classList.remove('show');
 }
 
+// ===== 画面（案B: 社内システムの語彙で統一）=====
+const screenEl = document.getElementById('screen');
+function showScreen(html) { screenEl.innerHTML = html; screenEl.style.display = 'flex'; }
+function hideScreen() { screenEl.style.display = 'none'; }
+
+const hint = (t) => `<p class="k">${t}</p>`;
+function renderScreen() {
+  const ch = STAGES[game.stageIndex];
+  switch (game.state) {
+    case 'title':
+      showScreen(`<div class="sheet title">
+        <div class="eyebrow">小向工場 業務支援システム　Ver 2.4</div>
+        <h1>KOMUKAI QUEST</h1>
+        <div class="jp">小 向 ク エ ス ト</div>
+        <p class="lead">小向戦士となり、小向工場を生き残れ。</p>
+        <div class="diff">難易度　<b id="dname">ふつう</b>　<span class="k">1 / 2 / 3 キーで変更</span></div>
+        ${hint('Enter または画面タップで開始')}
+      </div>`);
+      break;
+    case 'intro':
+      showScreen(`<div class="sheet">
+        <div class="eyebrow">作 業 指 示 書</div>
+        <table class="form">
+          <tr><th>件名</th><td>${ch.name}</td></tr>
+          <tr><th>作業場所</th><td>${ch.location || ''}</td></tr>
+          <tr><th>等級</th><td>${ch.playerRank}</td></tr>
+          <tr><th>指示事項</th><td>${(ch.intro || '').replace(/\n/g, '<br>')}</td></tr>
+        </table>
+        ${hint('Enter で作業開始')}
+      </div>`);
+      break;
+    case 'clear':
+      showScreen(`<div class="sheet">
+        <div class="eyebrow">作 業 報 告 書</div>
+        <h2 class="ok">提出完了</h2>
+        <table class="form">
+          <tr><th>件名</th><td>${ch.name}</td></tr>
+          <tr><th>結果</th><td>所定の作業を完了した</td></tr>
+          <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
+        </table>
+        ${hint('Enter で次の作業へ')}
+      </div>`);
+      break;
+    case 'gameover':
+      showScreen(`<div class="sheet">
+        <div class="eyebrow">休 職 願</div>
+        <h2 class="ng">稼働率 0%</h2>
+        <table class="form">
+          <tr><th>事由</th><td>組織に敗れたため</td></tr>
+          <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
+        </table>
+        ${hint('Enter でタイトルへ')}
+      </div>`);
+      break;
+    case 'ending':
+      showScreen(`<div class="sheet">
+        <div class="eyebrow">辞 令</div>
+        <h2>小 向 司 令 官</h2>
+        <p class="lead">数々の困難と理不尽、そして裏切りを越え、小向の頂点に立った。</p>
+        <table class="form">
+          <tr><th>最終評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
+        </table>
+        ${hint('Enter でタイトルへ')}
+      </div>`);
+      break;
+    default: hideScreen();
+  }
+}
+
 // ===== ループ =====
 function resize() {
   const box = document.getElementById('stage');
@@ -634,8 +792,42 @@ function loop(now) {
   acc += frame;
   try {
   while (acc >= STEP) {
-    if (hitstop > 0) hitstop -= STEP;          // 打撃の手応え（案D）
-    else if (!game.over && !stage.cleared) stage.update(STEP);
+    game.screenT += STEP;
+    switch (game.state) {
+      case 'title':
+        if (Input.pressed('Digit1')) game.difficulty = 'easy';
+        if (Input.pressed('Digit2')) game.difficulty = 'normal';
+        if (Input.pressed('Digit3')) game.difficulty = 'hell';
+        if (Input.confirm) {
+          Audio.resume();
+          game.score = 0;
+          game.lives = game.difficulty === 'easy' ? 12 : game.difficulty === 'hell' ? 2 : 4;
+          game.stageIndex = 0; loadStage(0);
+          game.state = 'intro'; game.screenT = 0; renderScreen();
+        } else if (Input.pressed('Digit1', 'Digit2', 'Digit3')) renderScreen();
+        break;
+      case 'intro':
+        if (game.screenT > 0.4 && Input.confirm) { game.state = 'playing'; hideScreen(); }
+        break;
+      case 'playing':
+        if (hitstop > 0) hitstop -= STEP;        // 打撃の手応え（案D）
+        else stage.update(STEP);
+        if (stage.cleared) {
+          game.state = game.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
+          game.screenT = 0; renderScreen();
+        }
+        break;
+      case 'clear':
+        if (game.screenT > 0.5 && Input.confirm) {
+          game.stageIndex++; loadStage(game.stageIndex);
+          game.state = 'intro'; game.screenT = 0; renderScreen();
+        }
+        break;
+      case 'gameover':
+      case 'ending':
+        if (game.screenT > 0.6 && Input.confirm) { game.state = 'title'; game.screenT = 0; renderScreen(); }
+        break;
+    }
     Input.endFrame();
     acc -= STEP;
   }
@@ -656,6 +848,8 @@ function loop(now) {
   updateCamera(frame);
   updateHUD(frame);
   renderer.render(scene, camera);
+  syncProjectiles();
+  updateParts(frame);
   syncLabels();
   updateFloats(frame);
   if (!window.__once && Q.get('dbg') === '1') { window.__once = 1; window.__dbg && window.__dbg(
@@ -664,6 +858,7 @@ function loop(now) {
     ' / look=' + camLook.toArray().map(n=>n.toFixed(1)).join(',')); }
   } catch (e) { window.__dbg && window.__dbg('LOOP: ' + (e.stack || e.message)); throw e; }
 }
+renderScreen();
 requestAnimationFrame(loop);
 
 // ?cast=1 … 主要キャラを一列に並べて見るビュー（作業着・帽子など見た目の確認用）
@@ -686,12 +881,14 @@ if (new URLSearchParams(location.search).get('cast') === '1') {
     stage.entities.push(c);
   });
   stage.currentWave = 99; stage.lockX = stage.width - 40;
+  game.state = 'playing'; hideScreen();
 }
 
 // ?demo=N … 指定x地点まで進めて波を出す（スクリーンショット確認用）
 {
   const d = parseFloat(new URLSearchParams(location.search).get('demo') || '0');
   if (d > 0) {
+    game.state = 'playing'; hideScreen();
     // 進行ロック(lockX)を外してから移動する。Player.update が maxX=lockX で引き戻すため、
     // 外さないと指定した地点までカメラが行かない。
     stage.currentWave = stage.data.waves.length;
