@@ -166,7 +166,9 @@ function syncEntities() {
 }
 
 // ===== カメラ =====
-const CAM = { dist: 150, height: 44, lookY: 13 };
+// dist は「2D版と同じ範囲を映す」値。2Dは論理480x270=横160/縦90ワールドユニットを映すので、
+// 水平fov 44.6° で横160になる実距離194.9 → 高さ差31を引いて dist_z=192。
+const CAM = { dist: 192, height: 44, lookY: 13 };
 const camPos = new THREE.Vector3(wx(stageStartX()), CAM.height, CAM.dist);
 const camLook = new THREE.Vector3(wx(stageStartX()), CAM.lookY, -3);
 function stageStartX() { return 60; }
@@ -231,10 +233,11 @@ function updateHUD(dt) {
 
 // ===== ループ =====
 function resize() {
-  const w = innerWidth, h = innerHeight;
+  const box = document.getElementById('stage');
+  const w = Math.max(16, box.clientWidth), h = Math.max(9, box.clientHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+  camera.aspect = 16 / 9;   // 枠自体が16:9なので固定（2D版と画角を揃えるため）
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);

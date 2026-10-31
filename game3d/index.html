@@ -13,11 +13,21 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;overflow:hidden;background:var(--bg);
     font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--ink)}
-  #c3d{position:fixed;inset:0;width:100%;height:100%;display:block}
+  /* 2D版(game/style.css)と同じ枠。画面上の表示サイズを揃えて見比べられるようにする */
+  #frame{width:100%;height:100%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:8px}
+  #stage{position:relative;overflow:hidden;background:#000;
+    aspect-ratio:16/9;
+    width:min(100%, calc((100dvh - 1.8rem) * 16 / 9));
+    max-width:100%;max-height:calc(100% - 1.8rem);
+    border-radius:10px;border:1px solid #2a2e34;
+    box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  #c3d{width:100%;height:100%;display:block}
+  #hint{flex:0 0 auto;font-size:13px;color:#8b9097;text-align:center}
 
   /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
-  #hud{position:fixed;inset:0;pointer-events:none;
-    padding:calc(env(safe-area-inset-top) + 14px) 18px calc(env(safe-area-inset-bottom) + 14px);
+  #hud{position:absolute;inset:0;pointer-events:none;
+    padding:12px 14px;
     display:flex;flex-direction:column;gap:14px}
 
   /* 社内システムのヘッダ（案B） */
@@ -56,7 +66,7 @@
   .right .num{font-size:19px}
 
   /* ボスゲージ: 画面最上部の細いライン（案A） */
-  #bossWrap{position:fixed;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease}
+  #bossWrap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease}
   #bossWrap.show{opacity:1}
   #bossWrap .line{height:3px;background:rgba(0,0,0,.5)}
   #bossWrap .line > i{display:block;height:100%;width:100%;
@@ -65,22 +75,58 @@
     font-size:11px;font-weight:700;letter-spacing:.14em;color:#ffb5b5;
     text-shadow:0 2px 8px rgba(0,0,0,.9)}
 
-  #banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-6px);
+  #banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-6px);
     font-size:17px;font-weight:700;letter-spacing:.06em;
     background:rgba(150,20,20,.92);border-radius:10px;padding:8px 20px;
     opacity:0;transition:opacity .22s ease, transform .22s ease;
     box-shadow:0 8px 30px rgba(0,0,0,.5)}
   #banner.show{opacity:1;transform:translate(-50%,0)}
 
-  #help{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 10px);
-    text-align:center;font-size:11px;color:#7d848d}
-  #help b{color:var(--sub);font-weight:600}
-  @media (max-width:620px){ .meter{width:150px} #help{display:none} }
+  #hint b{color:var(--sub);font-weight:600}
+  @media (max-width:620px){ .meter{width:150px} #hint{display:none} }
 </style>
 </head>
 <body>
-  <canvas id="c3d"></canvas>
-  <pre id="err" style="position:fixed;left:16px;bottom:120px;z-index:99;color:#ff8a8a;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70vw"></pre>
+  <div id="frame">
+    <div id="stage">
+      <canvas id="c3d"></canvas>
+      <pre id="err" style="position:absolute;left:12px;bottom:12px;z-index:99;color:#ff8a8a;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70%"></pre>
+      <div id="bossWrap"><div class="line"><i id="bossFill"></i></div><div id="bossName"></div></div>
+      <div id="hud">
+        <div class="sysbar">
+          <span class="dot"></span>
+          <span class="name">小向工場 業務支援システム</span>
+          <span class="ver">Ver 2.4</span>
+          <span class="spacer"></span>
+          <span class="loc" id="loc"></span>
+        </div>
+        <div class="row">
+          <div class="card">
+            <span class="badge" id="rank">小向戦士</span>
+            <div class="pair" style="margin-top:10px">
+              <div>
+                <div class="label">稼働率</div>
+                <div class="meter"><i id="hpFill"></i></div>
+              </div>
+              <div class="num" id="hpNum">12 / 12</div>
+            </div>
+            <div class="pair">
+              <div>
+                <div class="label">有休残</div>
+                <div class="dots" id="lives"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card right">
+            <div class="label">評価ポイント</div>
+            <div class="num" id="score">000000</div>
+          </div>
+        </div>
+      </div>
+      <div id="banner"></div>
+    </div>
+    <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　決定: Enter / Space</p>
+  </div>
   <script>
     (function(){
       const el=()=>document.getElementById('err');
@@ -90,48 +136,6 @@
       window.__dbg=show;
     })();
   </script>
-
-  <div id="bossWrap"><div class="line"><i id="bossFill"></i></div><div id="bossName"></div></div>
-
-  <div id="hud">
-    <div class="sysbar">
-      <span class="dot"></span>
-      <span class="name">小向工場 業務支援システム</span>
-      <span class="ver">Ver 2.4</span>
-      <span class="spacer"></span>
-      <span class="loc" id="loc"></span>
-    </div>
-
-    <div class="row">
-      <div class="card">
-        <span class="badge" id="rank">小向戦士</span>
-        <div class="pair" style="margin-top:10px">
-          <div>
-            <div class="label">稼働率</div>
-            <div class="meter"><i id="hpFill"></i></div>
-          </div>
-          <div class="num" id="hpNum">12 / 12</div>
-        </div>
-        <div class="pair">
-          <div>
-            <div class="label">有休残</div>
-            <div class="dots" id="lives"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card right">
-        <div class="label">評価ポイント</div>
-        <div class="num" id="score">000000</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="banner"></div>
-  <div id="help">
-    移動 <b>←↑↓→ / WASD</b>　攻撃 <b>J / Z</b>　ジャンプ <b>K / X</b>　ボスへ <b>B</b>
-  </div>
-
   <script type="module" src="src/main3d.js"></script>
 </body>
 </html>
