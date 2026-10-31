@@ -49,6 +49,8 @@ function geoFor(key) {
 }
 const charMat = new THREE.MeshLambertMaterial({ vertexColors: true });
 const charMatHit = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x883311 });
+// 予備動作（telegraph）。2D版の「敵は予備動作のあとに攻撃してくる」を読めるようにする
+const charMatTele = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x241202 });
 
 // ===== ライト =====
 // 室内/屋外で setLighting() が色と強さを切り替える（宣言はここ、値はシーン適用時）
@@ -207,24 +209,46 @@ function buildOffice(W, halfD) {
     for (let i = 0; i < 3; i++) box(20, 0.35, 0.4, R.cabinetLine, x, 2.4 + i * 4.2, BACK + 6.1, { receive: false });
   }
 
-  // 島デスク（奥）: 白天板 + 緑マット + 青パーティション + アクリル板
-  const deskZ = -halfD - 9;
+  // 島デスク（奥）。天板だけだと宙に浮いて見えるので、脚・貫・椅子まで作る
+  const deskZ = -halfD - 10, DT = 8.4;
   for (let x = 6; x < W; x += 30) {
-    box(24, 1.1, 12, R.desk, x, 8.4, deskZ, { cast: true });
-    box(20, 0.25, 8, R.mat, x, 9.05, deskZ, { receive: false });
-    box(24, 7, 0.9, R.partition, x, 12.5, deskZ - 6.6, { cast: true });
-    box(24, 6, 0.3, '#dfeaf2', x, 19, deskZ - 6.6, { receive: false });               // アクリル板
-    box(0.5, 6, 0.5, '#aeb6bd', x - 11.6, 19, deskZ - 6.6);
-    box(0.5, 6, 0.5, '#aeb6bd', x + 11.6, 19, deskZ - 6.6);
-    box(5, 4.2, 0.7, '#20262c', x + 6, 11.6, deskZ - 3, { emissive: '#14303f', cast: true });
-    box(4.4, 5.5, 4.4, R.chair, x - 6, 2.7, deskZ + 9, { cast: true });
+    box(24, 1.1, 12, R.desk, x, DT, deskZ, { cast: true });
+    box(20, 0.25, 8, R.mat, x, DT + 0.65, deskZ, { receive: false });
+    for (const [dx, dz] of [[-10.5, -5], [10.5, -5], [-10.5, 5], [10.5, 5]]) {
+      box(1.0, DT, 1.0, '#c3c8cd', x + dx, DT / 2, deskZ + dz);              // 脚
+    }
+    box(22, 0.7, 1.0, '#c3c8cd', x, 2.2, deskZ);                             // 貫
+    box(24, 7, 0.9, R.partition, x, DT + 4.1, deskZ - 6.6, { cast: true });
+    box(24, 6, 0.3, '#dfeaf2', x, DT + 10.6, deskZ - 6.6, { receive: false }); // アクリル板
+    box(0.5, 6, 0.5, '#aeb6bd', x - 11.6, DT + 10.6, deskZ - 6.6);
+    box(0.5, 6, 0.5, '#aeb6bd', x + 11.6, DT + 10.6, deskZ - 6.6);
+    box(5, 4.2, 0.7, '#20262c', x + 6, DT + 3.2, deskZ - 3, { emissive: '#14303f', cast: true });
+    chair(x - 6, deskZ + 10, R.chair);
   }
 
-  // 手前の島デスク（前景。足元ラインより低く）
+  // 手前の島デスク（前景）。同じく脚と椅子をつける
+  const fz = halfD + 26;
   for (let x = -6; x < W + 24; x += 30) {
-    box(26, 1.1, 12, R.desk, x, 3.4, halfD + 24, { cast: true });
-    box(21, 0.25, 8, R.mat, x, 4.05, halfD + 24, { receive: false });
-    box(26, 2.2, 0.8, R.partition, x, 5.6, halfD + 17.8);
+    box(26, 1.1, 12, R.desk, x, DT, fz, { cast: true });
+    box(21, 0.25, 8, R.mat, x, DT + 0.65, fz, { receive: false });
+    for (const [dx, dz] of [[-11.5, -5], [11.5, -5], [-11.5, 5], [11.5, 5]]) {
+      box(1.0, DT, 1.0, '#c3c8cd', x + dx, DT / 2, fz + dz);
+    }
+    box(24, 0.7, 1.0, '#c3c8cd', x, 2.2, fz);
+    box(26, 6, 0.9, R.partition, x, DT + 3.6, fz + 6.6);
+    chair(x - 7, fz - 10, R.chair);
+  }
+}
+
+// 事務椅子: 座面・背もたれ・支柱・五本脚
+function chair(x, z, color) {
+  box(6.5, 0.9, 6.5, color, x, 5.4, z, { cast: true });           // 座面
+  box(6.5, 7.0, 0.8, color, x, 9.2, z - 3.0, { cast: true });     // 背もたれ
+  box(1.2, 4.8, 1.2, '#8f959b', x, 2.7, z);                       // 支柱
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + 0.3;
+    const leg = box(4.6, 0.5, 0.9, '#8f959b', x + Math.cos(a) * 2.3, 0.45, z + Math.sin(a) * 2.3);
+    leg.rotation.y = -a;
   }
 }
 
@@ -425,6 +449,8 @@ function clearStageObjects() {
   meshes.clear();
   for (const [, m] of projMeshes) scene.remove(m);
   projMeshes.clear();
+  for (const [, r] of weapons) { scene.remove(r.group); scene.remove(r.flash); }
+  weapons.clear();
   for (const p of parts) { p.m.visible = false; partPool.push(p.m); }
   parts.length = 0;
   for (const [, r] of tagEls) { r.tag.remove(); r.bubble.remove(); }
@@ -463,15 +489,96 @@ function syncEntities() {
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
     m.scale.setScalar(sc);
-    m.position.set(wx(e.x), wy(e.z), wz(e.y));
-    // 真横を向くと薄い板に見えるので、向きは浅い角度だけ付ける（顔はカメラ側に残す）
-    m.rotation.y = (e.facing >= 0 ? -1 : 1) * 0.42;
+    // 攻撃中は前に踏み込む。棒立ちで当たり判定だけ出るのを避ける（手応えの演出）
+    const lunge = e.attackActive ? 3.2 * sc : (e.state === 'attack' ? 1.4 * sc : 0);
+    m.position.set(wx(e.x) + lunge * (e.facing >= 0 ? 1 : -1), wy(e.z), wz(e.y));
+    // 進行方向へ向ける。真横(90°)まで回すと薄い板に見えるので浅めに留め、顔はカメラ側に残す。
+    // 符号に注意: Y軸回転 θ で正面(+Z)は x=sin(θ) へ向く。右(+X)を向かせるには θ>0。
+    m.rotation.y = (e.facing >= 0 ? 1 : -1) * 0.55;
+    // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
+    m.rotation.x = e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
     m.visible = !(e.invuln > 0 && Math.floor(performance.now() / 60) % 2 === 0);
-    m.material = e.hitstun > 0 ? charMatHit : charMat;
+    m.material = e.hitstun > 0 ? charMatHit : (e.state === 'telegraph' ? charMatTele : charMat);
   }
   for (const [id, m] of meshes) {
     if (seen.has(id)) continue;
     scene.remove(m); meshes.delete(id);
+  }
+}
+
+// ===== 攻撃の見た目 =====
+// プレイヤーは拳（2D版の drawFist と同じ）。敵は職種ごとの道具で殴る。
+const flashGeo = new THREE.SphereGeometry(4.2, 10, 8);
+const flashMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff0c0'), transparent: true, opacity: 0.85 });
+
+const mat = (c, opts = {}) => new THREE.MeshLambertMaterial({ color: new THREE.Color(c), ...opts });
+// 各武器は「主パーツ＋補助パーツ」の最大2つで形を作る
+const WEAPON_SPEC = {
+  fist:   { a: [new THREE.BoxGeometry(5, 5, 5), mat('#f1c79b'), [0, 0, 0]] },
+  roll:   { a: [new THREE.CylinderGeometry(1.7, 1.7, 12, 8), mat('#eceee8'), [0, 0, 0], [0, 0, Math.PI / 2]],
+            b: [new THREE.CylinderGeometry(1.8, 1.8, 1.2, 8), mat('#c8ccc4'), [-4, 0, 0], [0, 0, Math.PI / 2]] },
+  wrench: { a: [new THREE.BoxGeometry(13, 2.0, 2.0), mat('#b9bec4'), [0, 0, 0]],
+            b: [new THREE.BoxGeometry(4.5, 5.0, 2.2), mat('#9aa0a6'), [6, 0, 0]] },
+  binder: { a: [new THREE.BoxGeometry(2.0, 11, 9), mat('#2e4a7a'), [0, 0, 0]],
+            b: [new THREE.BoxGeometry(0.9, 10, 8), mat('#f2f4f6'), [1.2, 0, 0]] },
+  stamp:  { a: [new THREE.CylinderGeometry(2.2, 2.2, 6, 10), mat('#8a6a46'), [0, 0, 0], [0, 0, Math.PI / 2]],
+            b: [new THREE.CylinderGeometry(2.4, 2.4, 1.0, 10), mat('#c0352a'), [3.4, 0, 0], [0, 0, Math.PI / 2]] },
+};
+
+// 職種 → 武器。書類仕事は丸めた資料やバインダー、現場はレンチ、管理は判子。
+const WEAPON_OF = {
+  player: 'fist',
+  ally: 'roll', douki_sekkei: 'roll', douki_hinsho: 'binder', douki_genba: 'wrench', shutantou: 'binder',
+  buka: 'roll', senpai: 'roll', dr: 'roll', staff: 'binder', exctrl: 'stamp',
+  kyaku: 'binder', vendor: 'binder', missile: 'wrench', kanren: 'wrench', shukkou: 'binder',
+  pmr_seisan: 'binder', pmr_seizou: 'wrench', pmr_choutatsu: 'binder',
+  pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', seikikaku: 'roll', kanrik: 'stamp',
+};
+const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
+
+const weapons = new Map();   // entity.id → {group, flash, kind}
+function makeWeapon(kind) {
+  const spec = WEAPON_SPEC[kind] || WEAPON_SPEC.fist;
+  const g = new THREE.Group();
+  for (const key of ['a', 'b']) {
+    const part = spec[key];
+    if (!part) continue;
+    const [geo, material, pos, rot] = part;
+    const m = new THREE.Mesh(geo, material);
+    m.position.set(pos[0], pos[1], pos[2]);
+    if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+    m.castShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+
+function syncWeapons() {
+  const seen = new Set();
+  for (const e of stage.entities) {
+    if (!e.alive || !e.attackActive) continue;
+    seen.add(e.id);
+    const kind = weaponOf(e);
+    let r = weapons.get(e.id);
+    if (!r || r.kind !== kind) {
+      if (r) { scene.remove(r.group); scene.remove(r.flash); }
+      const group = makeWeapon(kind);
+      const flash = new THREE.Mesh(flashGeo, flashMat);
+      scene.add(group); scene.add(flash);
+      r = { group, flash, kind }; weapons.set(e.id, r);
+    }
+    const sc = (e.scale || 3) / 3;
+    const dir = e.facing >= 0 ? 1 : -1;
+    const px = wx(e.x) + 12 * sc * dir, py = wy(e.z) + 10 * sc, pz = wz(e.y);
+    r.group.position.set(px, py, pz);
+    r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
+    r.flash.position.set(px, py, pz + 1);
+    r.flash.scale.setScalar(sc * (0.8 + Math.random() * 0.5));
+    r.group.visible = r.flash.visible = true;
+  }
+  for (const [id, r] of weapons) {
+    if (seen.has(id)) continue;
+    scene.remove(r.group); scene.remove(r.flash); weapons.delete(id);
   }
 }
 
@@ -848,6 +955,7 @@ function loop(now) {
   updateCamera(frame);
   updateHUD(frame);
   renderer.render(scene, camera);
+  syncWeapons();
   syncProjectiles();
   updateParts(frame);
   syncLabels();
