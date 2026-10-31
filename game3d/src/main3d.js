@@ -214,9 +214,13 @@ function buildOffice(W, halfD) {
   for (let x = 6; x < W; x += 30) {
     box(24, 1.1, 12, R.desk, x, DT, deskZ, { cast: true });
     box(20, 0.25, 8, R.mat, x, DT + 0.65, deskZ, { receive: false });
-    // 脚ではなく脇板・幕板。実物は横や後ろから中が見えない型
-    box(22.6, DT - 1.4, 11, R.cabinet, x, (DT - 1.4) / 2, deskZ, { cast: true });
-    box(23, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, deskZ, { receive: false });
+    // 脚ではなく脇板＋幕板。ただし椅子のある側は足が入るので開けておく。
+    // この列は椅子が手前(+z)にあるので、幕板は奥(-z)側。
+    const PH = DT - 1.4;
+    box(1.2, PH, 11, R.cabinet, x - 11.4, PH / 2, deskZ, { cast: true });      // 左の脇板
+    box(1.2, PH, 11, R.cabinet, x + 11.4, PH / 2, deskZ, { cast: true });      // 右の脇板
+    box(22.6, PH, 1.2, R.cabinet, x, PH / 2, deskZ - 5.4, { cast: true });     // 幕板
+    box(23, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, deskZ, { receive: false }); // 天板下の見切り
     box(24, 7, 0.9, R.partition, x, DT + 4.1, deskZ - 6.6, { cast: true });
     box(24, 6, 0.3, '#dfeaf2', x, DT + 10.6, deskZ - 6.6, { receive: false }); // アクリル板
     box(0.5, 6, 0.5, '#aeb6bd', x - 11.6, DT + 10.6, deskZ - 6.6);
@@ -230,7 +234,11 @@ function buildOffice(W, halfD) {
   for (let x = -6; x < W + 24; x += 30) {
     box(26, 1.1, 12, R.desk, x, DT, fz, { cast: true });
     box(21, 0.25, 8, R.mat, x, DT + 0.65, fz, { receive: false });
-    box(24.6, DT - 1.4, 11, R.cabinet, x, (DT - 1.4) / 2, fz, { cast: true });
+    // この列は椅子が奥(-z)にあるので、幕板は手前(+z)側
+    const PH2 = DT - 1.4;
+    box(1.2, PH2, 11, R.cabinet, x - 12.4, PH2 / 2, fz, { cast: true });
+    box(1.2, PH2, 11, R.cabinet, x + 12.4, PH2 / 2, fz, { cast: true });
+    box(24.6, PH2, 1.2, R.cabinet, x, PH2 / 2, fz + 5.4, { cast: true });
     box(25, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, fz, { receive: false });
     box(26, 6, 0.9, R.partition, x, DT + 3.6, fz + 6.6);
     chair(x - 7, fz - 10, R.chair);
