@@ -106,7 +106,7 @@ function setLighting(outdoor) {
   hemi.intensity = outdoor ? 1.35 : 2.1;
   sun.color.set(outdoor ? 0xfff1d8 : 0xfdfeff);
   sun.intensity = outdoor ? 2.0 : 0.95;
-  fill.intensity = outdoor ? 0.45 : 0.75;
+  fill.intensity = outdoor ? 0.5 : 1.0;   // 顔が自分の髪の影で潰れないよう正面から補う
 }
 
 // 3D用の室内パレット。2D版の bg（暗い青灰）は2Dの記号としてそのまま残し、
