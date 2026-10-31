@@ -214,10 +214,9 @@ function buildOffice(W, halfD) {
   for (let x = 6; x < W; x += 30) {
     box(24, 1.1, 12, R.desk, x, DT, deskZ, { cast: true });
     box(20, 0.25, 8, R.mat, x, DT + 0.65, deskZ, { receive: false });
-    for (const [dx, dz] of [[-10.5, -5], [10.5, -5], [-10.5, 5], [10.5, 5]]) {
-      box(1.0, DT, 1.0, '#c3c8cd', x + dx, DT / 2, deskZ + dz);              // 脚
-    }
-    box(22, 0.7, 1.0, '#c3c8cd', x, 2.2, deskZ);                             // 貫
+    // 脚ではなく脇板・幕板。実物は横や後ろから中が見えない型
+    box(22.6, DT - 1.4, 11, R.cabinet, x, (DT - 1.4) / 2, deskZ, { cast: true });
+    box(23, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, deskZ, { receive: false });
     box(24, 7, 0.9, R.partition, x, DT + 4.1, deskZ - 6.6, { cast: true });
     box(24, 6, 0.3, '#dfeaf2', x, DT + 10.6, deskZ - 6.6, { receive: false }); // アクリル板
     box(0.5, 6, 0.5, '#aeb6bd', x - 11.6, DT + 10.6, deskZ - 6.6);
@@ -231,10 +230,8 @@ function buildOffice(W, halfD) {
   for (let x = -6; x < W + 24; x += 30) {
     box(26, 1.1, 12, R.desk, x, DT, fz, { cast: true });
     box(21, 0.25, 8, R.mat, x, DT + 0.65, fz, { receive: false });
-    for (const [dx, dz] of [[-11.5, -5], [11.5, -5], [-11.5, 5], [11.5, 5]]) {
-      box(1.0, DT, 1.0, '#c3c8cd', x + dx, DT / 2, fz + dz);
-    }
-    box(24, 0.7, 1.0, '#c3c8cd', x, 2.2, fz);
+    box(24.6, DT - 1.4, 11, R.cabinet, x, (DT - 1.4) / 2, fz, { cast: true });
+    box(25, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, fz, { receive: false });
     box(26, 6, 0.9, R.partition, x, DT + 3.6, fz + 6.6);
     chair(x - 7, fz - 10, R.chair);
   }
@@ -583,31 +580,72 @@ function syncWeapons() {
 }
 
 // ===== 飛び道具とヒットの粒子 =====
-// 2D版の Fx（粒子）と Projectile を3Dの小さな箱で表現する。使い回しのプール。
-const projGeo = new THREE.BoxGeometry(1.6, 1.2, 2.6);
-const projMat = {
-  paper:   new THREE.MeshLambertMaterial({ color: new THREE.Color('#f2f4f6') }),
-  missile: new THREE.MeshLambertMaterial({ color: new THREE.Color('#5a6a2e'), emissive: new THREE.Color('#2a1a08') }),
+// 2D版の Projectile を3Dの小物で表現する。
+// 当たり判定・ダメージは2D版のまま（kind は 'paper' か 'missile' の2種類）で、
+// 見た目だけ 書類 / マグカップ / キーボード から選んで変化をつける。
+// 2D版の描画には一切影響しない。
+const THROWN = {
+  paper: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.5, 4.2), mat('#f4f6f8')));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.12, 0.5), mat('#9aa6b2')));
+    return g;
+  },
+  mug: () => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 1.8, 4.4, 10), mat('#f2f4f6'));
+    g.add(body);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.45, 6, 10), mat('#f2f4f6'));
+    handle.position.set(2.4, 0, 0); handle.rotation.y = Math.PI / 2;
+    g.add(handle);
+    const coffee = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.75, 0.3, 10), mat('#5a3a22'));
+    coffee.position.y = 2.0; g.add(coffee);
+    return g;
+  },
+  keyboard: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(9.5, 1.1, 3.8), mat('#e4e7ea')));
+    const keys = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.5, 3.0), mat('#3c424a'));
+    keys.position.y = 0.7; g.add(keys);
+    return g;
+  },
+  missile: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(7, 1.8, 1.8), mat('#5a6a2e', { emissive: new THREE.Color('#2a1a08') })));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.4, 8), mat('#8a3a1a'));
+    tip.position.x = 4.2; tip.rotation.z = -Math.PI / 2; g.add(tip);
+    return g;
+  },
 };
+const LOOKS = ['paper', 'mug', 'keyboard'];
+
 const projMeshes = new Map();
 function syncProjectiles() {
   const seen = new Set();
   for (const pr of stage.projectiles) {
     if (!pr.alive) continue;
     seen.add(pr.id);
-    let m = projMeshes.get(pr.id);
-    if (!m) {
-      m = new THREE.Mesh(projGeo, projMat[pr.kind] || projMat.paper);
-      m.castShadow = true;
-      scene.add(m); projMeshes.set(pr.id, m);
+    let r = projMeshes.get(pr.id);
+    if (!r) {
+      // 同じ弾が毎フレーム見た目を変えないよう、IDから決める
+      const look = pr.kind === 'missile' ? 'missile' : LOOKS[pr.id % LOOKS.length];
+      const group = THROWN[look]();
+      group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      scene.add(group);
+      r = { group, look, spin: (pr.id % 2 ? 1 : -1) * 0.26 };
+      projMeshes.set(pr.id, r);
     }
-    m.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
-    m.rotation.z += 0.35;                       // くるくる回る書類
-    if (pr.kind === 'missile') { m.rotation.z = 0; m.rotation.y = pr.vx > 0 ? 0 : Math.PI; }
+    r.group.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
+    if (r.look === 'missile') {
+      r.group.rotation.set(0, pr.vx > 0 ? 0 : Math.PI, 0);       // 誘導弾は진行方向を向く
+    } else {
+      r.group.rotation.z += r.spin;                               // 投げ物はくるくる回る
+      r.group.rotation.x += r.spin * 0.6;
+    }
   }
-  for (const [id, m] of projMeshes) {
+  for (const [id, r] of projMeshes) {
     if (seen.has(id)) continue;
-    scene.remove(m); projMeshes.delete(id);
+    scene.remove(r.group); projMeshes.delete(id);
   }
 }
 
@@ -638,8 +676,7 @@ function updateParts(dt) {
     p.vy -= 58 * dt;
     p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     p.m.position.set(p.x, Math.max(0.4, p.y), p.z);
-    const k = 1 - p.t / 0.42;
-    p.m.scale.setScalar(0.5 + k);
+    p.m.scale.setScalar(0.5 + (1 - p.t / 0.42));
   }
 }
 
