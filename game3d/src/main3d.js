@@ -513,13 +513,29 @@ function syncEntities() {
 
 // ===== 攻撃の見た目 =====
 // プレイヤーは拳（2D版の drawFist と同じ）。敵は職種ごとの道具で殴る。
-const flashGeo = new THREE.SphereGeometry(4.2, 10, 8);
-const flashMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff0c0'), transparent: true, opacity: 0.85 });
+// インパクトの閃光。2D版は星形のバーストを描いていたので、3Dでも尖らせる。
+// 球にすると「大きな玉」に見えて拳と紛らわしかった。
+const flashSpikeGeo = new THREE.BoxGeometry(9.0, 1.3, 1.3);
+const flashCoreGeo = new THREE.BoxGeometry(2.6, 2.6, 2.6);
+const flashMat = new THREE.MeshBasicMaterial({
+  color: new THREE.Color('#ffd98a'), transparent: true, opacity: 0.62,
+  blending: THREE.AdditiveBlending, depthWrite: false,
+});
+function makeFlash() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.Mesh(flashSpikeGeo, flashMat);
+    m.rotation.z = (i / 4) * Math.PI;      // 45度ずつ交差させて星形にする
+    g.add(m);
+  }
+  g.add(new THREE.Mesh(flashCoreGeo, flashMat));
+  return g;
+}
 
 const mat = (c, opts = {}) => new THREE.MeshLambertMaterial({ color: new THREE.Color(c), ...opts });
 // 各武器は「主パーツ＋補助パーツ」の最大2つで形を作る
 const WEAPON_SPEC = {
-  fist:   { a: [new THREE.BoxGeometry(5, 5, 5), mat('#f1c79b'), [0, 0, 0]] },
+  fist:   { a: [new THREE.BoxGeometry(2.8, 2.8, 2.8), mat('#f1c79b'), [0, 0, 0]] },
   roll:   { a: [new THREE.CylinderGeometry(1.7, 1.7, 12, 8), mat('#eceee8'), [0, 0, 0], [0, 0, Math.PI / 2]],
             b: [new THREE.CylinderGeometry(1.8, 1.8, 1.2, 8), mat('#c8ccc4'), [-4, 0, 0], [0, 0, Math.PI / 2]] },
   wrench: { a: [new THREE.BoxGeometry(13, 2.0, 2.0), mat('#b9bec4'), [0, 0, 0]],
@@ -542,9 +558,19 @@ const WEAPON_OF = {
 const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
 
 const weapons = new Map();   // entity.id → {group, flash, kind}
+const armMat = mat('#a8c4de');   // 作業着の袖
+const wristMat = mat('#f1c79b');
+const armGeo = new THREE.BoxGeometry(7.0, 2.2, 2.2);
+const wristGeo = new THREE.BoxGeometry(1.4, 2.4, 2.4);
+
 function makeWeapon(kind) {
   const spec = WEAPON_SPEC[kind] || WEAPON_SPEC.fist;
   const g = new THREE.Group();
+  // 前腕。道具だけが宙に浮いて見えるのを防ぐため、必ず胴側へ伸ばす
+  const arm = new THREE.Mesh(armGeo, armMat);
+  arm.position.set(-5.0, 0, 0); arm.castShadow = true; g.add(arm);
+  const wrist = new THREE.Mesh(wristGeo, wristMat);
+  wrist.position.set(-1.6, 0, 0); wrist.castShadow = true; g.add(wrist);
   for (const key of ['a', 'b']) {
     const part = spec[key];
     if (!part) continue;
@@ -568,17 +594,19 @@ function syncWeapons() {
     if (!r || r.kind !== kind) {
       if (r) { scene.remove(r.group); scene.remove(r.flash); }
       const group = makeWeapon(kind);
-      const flash = new THREE.Mesh(flashGeo, flashMat);
+      const flash = makeFlash();
       scene.add(group); scene.add(flash);
       r = { group, flash, kind }; weapons.set(e.id, r);
     }
     const sc = (e.scale || 3) / 3;
     const dir = e.facing >= 0 ? 1 : -1;
-    const px = wx(e.x) + 12 * sc * dir, py = wy(e.z) + 10 * sc, pz = wz(e.y);
+    const px = wx(e.x) + 9.5 * sc * dir, py = wy(e.z) + 10 * sc, pz = wz(e.y);
     r.group.position.set(px, py, pz);
     r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
-    r.flash.position.set(px, py, pz + 1);
-    r.flash.scale.setScalar(sc * (0.8 + Math.random() * 0.5));
+    // 閃光は拳の少し手前・少し外側に。拳が埋もれないよう小さめにして回す
+    r.flash.position.set(px + 3.5 * sc * dir, py, pz + 3);
+    r.flash.rotation.z = Math.random() * Math.PI;
+    r.flash.scale.setScalar(sc * (0.34 + Math.random() * 0.14));
     r.group.visible = r.flash.visible = true;
   }
   for (const [id, r] of weapons) {
@@ -964,6 +992,8 @@ function loop(now) {
       case 'playing':
         if (hitstop > 0) hitstop -= STEP;        // 打撃の手応え（案D）
         else stage.update(STEP);
+        // ?atk=1 … 攻撃の見た目を確認するために攻撃状態を固定する（開発用）
+        if (Q.get('atk') === '1') { stage.player.attackActive = true; stage.player.facing = 1; }
         if (stage.cleared) {
           game.state = game.stageIndex >= STAGES.length - 1 ? 'ending' : 'clear';
           game.screenT = 0; renderScreen();
