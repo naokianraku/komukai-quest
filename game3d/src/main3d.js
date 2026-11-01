@@ -9,7 +9,7 @@ import { Char } from '../../game/src/entities.js';
 import { Stage } from '../../game/src/main.js';
 import { STAGES, SHUKKOU_STAGE, URA_STAGE, defFor } from '../../game/src/stages.js';
 
-import { buildChar3DForType, C3 } from '../../game/src/voxel.js';
+import { buildChar3DSplitForType, LEG, C3 } from '../../game/src/voxel.js';
 import { TYPE_LABEL, TYPE_COLOR } from '../../game/src/sprites.js';
 import { Audio } from '../../game/src/audio.js';
 
@@ -69,17 +69,25 @@ function variantOf(e) {
 const variantKey = (v) => `${v.hair}${v.glasses}${v.beard}${v.skin}${v.hairColor}${v.build}`;
 
 const geoCache = new Map();
-function geoFor(key, vari) {
-  const ck = key + '|' + variantKey(vari);
-  if (geoCache.has(ck)) return geoCache.get(ck);
-  const v = buildChar3DForType(key, vari);   // 3D専用の高解像度モデル（40x60x24・輪郭線なし）
+function toGeo(v) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(v.positions, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(v.normals, 3));
   g.setAttribute('color', new THREE.BufferAttribute(v.colors, 3));
   g.setIndex(new THREE.BufferAttribute(v.indices, 1));
-  geoCache.set(ck, g);
   return g;
+}
+// 胴 / 左脚 / 右脚 の3部品。脚は自分の股関節が原点に来るよう平行移動しておく
+// （親グループを回すだけで前後に振れる）。
+function partsFor(key, vari) {
+  const ck = key + '|' + variantKey(vari);
+  if (geoCache.has(ck)) return geoCache.get(ck);
+  const v = buildChar3DSplitForType(key, vari); // 3D専用の高解像度モデル（40x60x24・輪郭線なし）
+  const r = { body: toGeo(v.body), legA: toGeo(v.legA), legB: toGeo(v.legB) };
+  r.legA.translate(-LEG.cxA, -LEG.pivot, 0);
+  r.legB.translate(-LEG.cxB, -LEG.pivot, 0);
+  geoCache.set(ck, r);
+  return r;
 }
 const charMat = new THREE.MeshLambertMaterial({ vertexColors: true });
 const charMatHit = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x883311 });
@@ -118,7 +126,12 @@ scene.add(scenery);
 function box(w, h, d, color, x, y, z, opts = {}) {
   const m = new THREE.Mesh(
     new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshLambertMaterial({ color: hex(color), emissive: opts.emissive ? hex(opts.emissive) : 0x000000 }),
+    new THREE.MeshLambertMaterial({
+      color: hex(color), emissive: opts.emissive ? hex(opts.emissive) : 0x000000,
+      // 窓ガラスのような薄い面。depthWrite を切らないと、後ろの景色が消える
+      transparent: opts.opacity != null, opacity: opts.opacity ?? 1,
+      depthWrite: opts.opacity == null,
+    }),
   );
   m.position.set(x, y, z);
   m.castShadow = !!opts.cast;
@@ -247,7 +260,15 @@ function buildOffice(W, halfD) {
   box(W + 80, 0.08, 0.4, '#6b7178', W / 2, 0.02, halfD);
   box(W + 80, 0.08, 0.4, '#6b7178', W / 2, 0.02, -halfD);
 
-  box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
+  // 壁。連窓を本物の開口にするため、腰壁・垂れ壁・方立（窓と窓の間の壁）に分けて
+  // 隙間を作り、その奥に外の景色を置く。箱はくり抜けないので壁側を分割する。
+  const WIN_B = 19, WIN_T = 35, PITCH = 62, WINW = 34, X0 = 18;
+  box(W + 80, WIN_B, 2, R.wall, W / 2, WIN_B / 2, BACK - 1);                     // 腰壁
+  box(W + 80, 64 - WIN_T, 2, R.wall, W / 2, (64 + WIN_T) / 2, BACK - 1);         // 垂れ壁
+  for (let x = X0 - PITCH * 1.5; x < W + PITCH * 1.5; x += PITCH) {
+    box(PITCH - WINW, WIN_T - WIN_B, 2, R.wall, x, (WIN_B + WIN_T) / 2, BACK - 1);
+  }
+  outsideView(W, BACK);
   const CEIL = ceilingSlab(W, halfD, BACK, R.ceiling, 47);
 
   // 天井まわり: 直管蛍光灯の列 ＋ 空調の吹き出し口 ＋ 配線ダクト
@@ -268,23 +289,27 @@ function buildOffice(W, halfD) {
     box(9, 0.9, 0.8, '#3a5fa8', x, 36, BACK + 25.6, { receive: false });
   }
 
-  // 壁面: 上部の連窓、ホワイトボード、掲示板、時計
-  for (let x = 18; x < W; x += 62) {
-    box(34, 15, 0.5, R.sky, x, 27, BACK + 0.5, { emissive: '#93b4ce' });
-    box(36, 1, 1, R.frame, x, 35, BACK + 1.0);
-    box(36, 1, 1, R.frame, x, 19, BACK + 1.0);
+  // 連窓のサッシ。枠を少しだけ室内側に出すと、開口が「窓」に見える
+  const WINC = (WIN_B + WIN_T) / 2;
+  for (let x = X0; x < W + PITCH; x += PITCH) {
+    box(WINW + 2, 1.5, 1.8, R.frame, x, WIN_T - 0.4, BACK - 0.5);        // 上枠
+    box(WINW + 2, 1.5, 1.8, R.frame, x, WIN_B + 0.4, BACK - 0.5);        // 下枠
+    box(1.2, WIN_T - WIN_B, 1.8, R.frame, x, WINC, BACK - 0.5);          // 中央の方立
+    box(WINW, 1.0, 1.6, R.frame, x, WIN_B + 10.5, BACK - 0.5);           // 無目（中桟）
+    box(WINW + 4, 1.1, 3.0, '#cfd5da', x, WIN_B - 0.7, BACK + 0.6);      // 窓台
+    // ガラス。薄い映り込みだけ残す（不透明にすると外が見えない）
+    box(WINW, WIN_T - WIN_B - 1.6, 0.2, '#e8f4fd', x, WINC, BACK - 1.6,
+        { emissive: '#223a4c', receive: false, opacity: 0.11 });
   }
-  for (let x = 48; x < W; x += 124) {
-    box(30, 11, 0.6, '#fbfcfd', x, 20, BACK + 0.6, { receive: false });                // ホワイトボード
-    box(31, 1.0, 0.9, '#b9c0c6', x, 14.2, BACK + 0.9);
+  // 掲示板は窓の下、キャビネットの上の帯に収める
+  for (let x = 49; x < W; x += 124) {
+    box(18, 6, 0.6, '#dfe3e6', x, 16, BACK + 0.6);
+    for (let i = 0; i < 3; i++) box(4.4, 2.6, 0.4, ['#f2f3f0', '#eaf2d8', '#f6e3d8'][i], x - 5 + i * 5, 16, BACK + 1.0, { receive: false });
   }
-  for (let x = 96; x < W; x += 124) {
-    box(18, 9, 0.6, '#dfe3e6', x, 20, BACK + 0.6);                                     // 掲示板
-    for (let i = 0; i < 3; i++) box(4.4, 3, 0.4, ['#f2f3f0', '#eaf2d8', '#f6e3d8'][i], x - 5 + i * 5, 20, BACK + 1.0, { receive: false });
-  }
-  for (let x = 150; x < W; x += 300) {
-    box(5.5, 5.5, 0.7, '#f4f6f8', x, 31, BACK + 0.5);                                  // 時計
-    box(3.6, 3.6, 0.3, '#2a3038', x, 31, BACK + 1.1, { receive: false });
+  // 時計は窓の中に浮かせられないので、方立（窓と窓の間の壁）に掛ける
+  for (let x = X0 + PITCH / 2; x < W; x += PITCH * 5) {
+    box(5.5, 5.5, 0.7, '#f4f6f8', x, 28, BACK + 0.5);
+    box(3.6, 3.6, 0.3, '#2a3038', x, 28, BACK + 1.1, { receive: false });
   }
 
   // 壁ぎわのキャビネット列
@@ -326,6 +351,35 @@ function buildOffice(W, halfD) {
     box(25, 0.35, 11.3, R.cabinetLine, x, DT - 0.9, fz, { receive: false });
     box(26, 6, 0.9, R.partition, x, DT + 3.6, fz + 6.6);
     chair(x - 7, fz - 10, R.chair);
+  }
+}
+
+// 窓の外（60号7階Cゾーン）。カメラは窓より高い位置から見下ろしているので、
+// 窓の下半分には手前の建屋の陸屋根が入り、上半分に遠くの棟と空が見える。
+// 奥へ行くほど視線は下がるため、遠景ほど高く積まないと窓に入らない。
+function outsideView(W, BACK) {
+  const o = { receive: false, cast: false };
+  // 奥へ行くほど視線が下がるので、窓に入る高さは「奥ほど低い帯」になる。
+  // 空が窓の上半分を占めるよう、遠景の頭は y=26 あたりに抑える。
+  box(W + 400, 150, 2, '#74b2e2', W / 2, 44, BACK - 30, { emissive: '#18354c', ...o });   // 空
+  // 遠くの棟。幅と高さをばらして、同じ建物の繰り返しに見えないようにする
+  for (let i = 0, x = -70; x < W + 110; x += 44 + (i % 3) * 19, i++) {
+    const h = 15 + ((i * 7) % 5) * 2.0;
+    box(36 + (i % 2) * 16, h, 6, i % 2 ? '#8495a6' : '#78899a', x, h / 2 + 2, BACK - 22,
+        { emissive: '#131d27', ...o });
+  }
+  // 煙突。構内の工場らしさはこれで出る
+  for (let x = 130; x < W; x += 430) {
+    box(4.6, 24, 4.6, '#aab4bd', x, 14, BACK - 24, { emissive: '#131d27', ...o });
+    box(6.0, 1.8, 6.0, '#98a3ad', x, 26.6, BACK - 24, { emissive: '#131d27', ...o });
+  }
+  // 手前の建屋の陸屋根。見下ろしているので、窓の下寄りに屋上が入る
+  box(W + 400, 16, 12, '#6e767d', W / 2, 11, BACK - 12, { emissive: '#101619', ...o });
+  box(W + 400, 1.4, 1.6, '#9ba3a9', W / 2, 19.4, BACK - 6.3, { emissive: '#101619', ...o });
+  for (let i = 0, x = -30; x < W + 60; x += 74, i++) {
+    const dz = BACK - 13 - (i % 2) * 3;
+    box(11, 4.6, 7, '#8d959b', x, 21.3, dz, { emissive: '#101619', ...o });
+    box(7, 1.2, 5, '#757d84', x, 24.0, dz, { emissive: '#101619', ...o });
   }
 }
 
@@ -823,7 +877,7 @@ stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, 
 
 // ===== ステージの読み込み =====
 function clearStageObjects() {
-  for (const [, m] of meshes) scene.remove(m);
+  for (const [, r] of meshes) scene.remove(r.root);
   meshes.clear();
   for (const [, m] of projMeshes) scene.remove(m);
   projMeshes.clear();
@@ -831,7 +885,7 @@ function clearStageObjects() {
   weapons.clear();
   for (const p of parts) { p.m.visible = false; partPool.push(p.m); }
   parts.length = 0;
-  for (const [, r] of tagEls) { r.tag.remove(); r.bubble.remove(); }
+  for (const [, r] of tagEls) { r.tag.remove(); r.bubble.remove(); r.hp.remove(); }
   tagEls.clear();
   for (const f of floats) f.el.remove();
   floats.length = 0;
@@ -887,38 +941,99 @@ function enterTrueFinal() {
 }
 
 // ===== エンティティ ↔ メッシュ =====
-const meshes = new Map();
-function syncEntities() {
+// 1体を「胴 + 左脚 + 右脚」の3メッシュで組む。1枚のメッシュを平行移動するだけだと、
+// 脚が止まったまま床の上を流れていく（歩かずに滑って見える）。
+// 体格の拡縮は root ではなく末端のメッシュに掛ける。root に非等倍スケールを置くと、
+// その下で回した脚がせん断して潰れる。
+const WALK = {
+  // 1歩で進むワールド距離。振り幅 × 脚長 と釣り合っていると足裏が滑らない。
+  // ただしこのキャラは頭身が低く脚が短い（15ボクセル＝全高の1/4）ので、
+  // 完全に釣り合わせると歩幅のわりに振り幅が大股になりすぎる。
+  // 振り幅を見た目優先で決め、1割ほどの滑りは許している。
+  stride: 5.0,
+  swing: 0.50,   // 振り幅(rad)。前後に約7ボクセル出る
+  drop: 0.75,    // 脚を開いたとき腰を沈める量（1.0で足裏がぴったり床に残る）
+  twist: 0.09,   // 胴のひねり。腕は胴と一体なので、これで腕が振れて見える
+  air: 0.40,     // 跳躍中の開き
+};
+const meshes = new Map();   // entity.id → リグ
+// ?walk=<rad> … 歩行ポーズを固定する（脚の付き方・継ぎ目の確認用。開発用）
+const WALK_FIX = Q.get('walk') != null ? parseFloat(Q.get('walk')) : null;
+
+function makeRig(e) {
+  e._v = e._v || variantOf(e);   // _v が先に入っていればそれを使う（?looks=1 の確認用）
+  const g = partsFor(e.spriteKey, e._v);
+  const root = new THREE.Group();
+  const body = new THREE.Mesh(g.body, charMat);
+  const legA = new THREE.Mesh(g.legA, charMat);
+  const legB = new THREE.Mesh(g.legB, charMat);
+  const hipA = new THREE.Group(), hipB = new THREE.Group();
+  hipA.add(legA); hipB.add(legB);
+  root.add(body); root.add(hipA); root.add(hipB);
+  for (const m of [body, legA, legB]) { m.castShadow = true; m.receiveShadow = false; }
+  scene.add(root);
+  // 位相は個体ごとにずらす。全員が同じ足から踏み出すと行進に見える
+  const r = { root, body, legA, legB, hipA, hipB, ph: (e.id % 7) * 0.9, amp: 0, air: 0, px: e.x, py: e.y };
+  meshes.set(e.id, r);
+  return r;
+}
+
+function syncEntities(dt) {
   const seen = new Set();
   for (const e of stage.entities) {
     if (!e.alive) continue;
     seen.add(e.id);
-    let m = meshes.get(e.id);
-    if (!m) {
-      e._v = e._v || variantOf(e);   // _v が先に入っていればそれを使う（?looks=1 の確認用）
-      m = new THREE.Mesh(geoFor(e.spriteKey, e._v), charMat);
-      m.castShadow = true; m.receiveShadow = false;
-      scene.add(m);
-      meshes.set(e.id, m);
-    }
+    const r = meshes.get(e.id) || makeRig(e);
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
     const bd = BUILDS[(e._v && e._v.build) ?? 1];
-    m.scale.set(sc * bd.w, sc * bd.h, sc * bd.w);   // 体格の差
+    const sx = sc * bd.w, sy = sc * bd.h;   // 体格の差
+    const dir = e.facing >= 0 ? 1 : -1;
+
+    // --- 歩行の位相 ---
+    // 時間ではなく「実際に動いた距離」で進める。こうすると止まれば脚も止まり、
+    // 殴られて流されている間に歩き出すこともない。
+    const moved = Math.hypot(e.x - r.px, e.y - r.py);
+    r.px = e.x; r.py = e.y;
+    const walking = moved > 0.01 && e.z === 0 && e.hitstun <= 0 && !e.attackActive;
+    // ステージ読み込みの瞬間移動で位相が飛ばないよう、1フレームの歩進を抑える
+    if (walking) r.ph += (Math.min(moved, 12) * S / WALK.stride) * Math.PI;
+    r.amp += ((walking ? 1 : 0) - r.amp) * Math.min(1, dt * 11);   // 止まると脚を揃える
+    r.air += ((e.z > 0 ? 1 : 0) - r.air) * Math.min(1, dt * 14);
+    const sw = WALK_FIX != null ? WALK_FIX
+      : r.amp * WALK.swing * Math.sin(r.ph) * (1 - r.air) + WALK.air * r.air;
+
+    // 脚を開いたぶん腰を沈める。沈めないと歩くたび足が床に潜る。
+    // 1.0まで沈めると足が床に貼りついて重く見えるので、少しだけ浮かせる。
+    const drop = LEG.pivot * (1 - Math.cos(sw)) * sy * WALK.drop;
     // 攻撃中は前に踏み込む。棒立ちで当たり判定だけ出るのを避ける（手応えの演出）
     const lunge = e.attackActive ? 3.2 * sc : (e.state === 'attack' ? 1.4 * sc : 0);
-    m.position.set(wx(e.x) + lunge * (e.facing >= 0 ? 1 : -1), wy(e.z), wz(e.y));
+    r.root.position.set(wx(e.x) + lunge * dir, wy(e.z) - drop, wz(e.y));
+
+    r.hipA.position.set(LEG.cxA * sx, LEG.pivot * sy, 0);
+    r.hipB.position.set(LEG.cxB * sx, LEG.pivot * sy, 0);
+    r.hipA.rotation.z = sw;
+    r.hipB.rotation.z = -sw;
+
     // 進行方向へ向ける。真横(90°)まで回すと薄い板に見えるので浅めに留め、顔はカメラ側に残す。
     // 符号に注意: Y軸回転 θ で正面(+Z)は x=sin(θ) へ向く。右(+X)を向かせるには θ>0。
-    m.rotation.y = (e.facing >= 0 ? 1 : -1) * 0.55;
+    // 脚には ひねり を足さない（振りの軸をワールドのx方向＝進行方向に合わせるため）。
+    const face = dir * 0.55;
+    r.body.rotation.y = face + r.amp * WALK.twist * Math.sin(r.ph);
+    r.legA.rotation.y = r.legB.rotation.y = face;
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
-    m.rotation.x = e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
-    m.visible = !(e.invuln > 0 && Math.floor(performance.now() / 60) % 2 === 0);
-    m.material = e.hitstun > 0 ? charMatHit : (e.state === 'telegraph' ? charMatTele : charMat);
+    r.body.rotation.x = e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
+    r.body.scale.set(sx, sy, sx);
+    r.legA.scale.set(sx, sy, sx);
+    r.legB.scale.set(sx, sy, sx);
+
+    r.root.visible = !(e.invuln > 0 && Math.floor(performance.now() / 60) % 2 === 0);
+    const mt = e.hitstun > 0 ? charMatHit : (e.state === 'telegraph' ? charMatTele : charMat);
+    r.body.material = mt; r.legA.material = mt; r.legB.material = mt;
   }
-  for (const [id, m] of meshes) {
+  for (const [id, r] of meshes) {
     if (seen.has(id)) continue;
-    scene.remove(m); meshes.delete(id);
+    scene.remove(r.root); meshes.delete(id);
   }
 }
 
@@ -1014,11 +1129,18 @@ function syncWeapons() {
     const px = wx(e.x) + 9.5 * sc * dir, py = wy(e.z) + 10 * sc, pz = wz(e.y);
     r.group.position.set(px, py, pz);
     r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
-    // 閃光は拳の少し手前・少し外側に。拳が埋もれないよう小さめにして回す
-    r.flash.position.set(px + 3.5 * sc * dir, py, pz + 3);
-    r.flash.rotation.z = Math.random() * Math.PI;
-    r.flash.scale.setScalar(sc * (0.34 + Math.random() * 0.14));
-    r.group.visible = r.flash.visible = true;
+    r.group.visible = true;
+    // 閃光は「当たったとき」だけ出す。attackActive の間ずっと出していると、
+    // 空振りでも☆が出て当たったように見える。
+    // hitSet は 1回の攻撃で殴れた相手の集合（combat.js の resolveMelee が入れる）。
+    const landed = !!(e.attack && e.attack.hitSet && e.attack.hitSet.size > 0);
+    r.flash.visible = landed;
+    if (landed) {
+      // 閃光は拳の少し手前・少し外側に。拳が埋もれないよう小さめにして回す
+      r.flash.position.set(px + 3.5 * sc * dir, py, pz + 3);
+      r.flash.rotation.z = Math.random() * Math.PI;
+      r.flash.scale.setScalar(sc * (0.34 + Math.random() * 0.14));
+    }
   }
   for (const [id, r] of weapons) {
     if (seen.has(id)) continue;
@@ -1144,14 +1266,16 @@ function project(wxp, wyp, wzp) {
   };
 }
 
-const tagEls = new Map();   // entity.id → {tag, bubble}
+const tagEls = new Map();   // entity.id → {tag, bubble, hp}
 function elFor(id) {
   let r = tagEls.get(id);
   if (!r) {
     const tag = document.createElement('div'); tag.className = 'tag';
     const bubble = document.createElement('div'); bubble.className = 'bubble';
-    layer.appendChild(tag); layer.appendChild(bubble);
-    r = { tag, bubble }; tagEls.set(id, r);
+    const hp = document.createElement('div'); hp.className = 'ehp';
+    hp.appendChild(document.createElement('i'));
+    layer.appendChild(tag); layer.appendChild(bubble); layer.appendChild(hp);
+    r = { tag, bubble, hp }; tagEls.set(id, r);
   }
   return r;
 }
@@ -1161,10 +1285,24 @@ function syncLabels() {
   for (const e of stage.entities) {
     if (!e.alive) continue;
     seen.add(e.id);
-    const { tag, bubble } = elFor(e.id);
+    const { tag, bubble, hp } = elFor(e.id);
     const headY = wy(e.z) + 19 * ((e.scale || 3) / 3);     // 頭のすぐ上
     const p = project(wx(e.x), headY, wz(e.y));
-    if (!p) { tag.style.display = bubble.style.display = 'none'; continue; }
+    if (!p) { tag.style.display = bubble.style.display = hp.style.display = 'none'; continue; }
+
+    // 頭上のHPバー。2D版の drawHpBar と同じく、無傷のうちは出さない。
+    // 下のゲージに出している相手は二重になるので省く。
+    const showHp = e !== stage.player && !e.hideHpBar && !e.isBoss
+      && e !== gaugeTarget && e.hp < e.maxhp;
+    if (showHp) {
+      const t = Math.max(0, e.hp / e.maxhp);
+      hp.className = 'ehp' + (e.midboss ? ' mid' : '');
+      hp.firstChild.style.width = (t * 100).toFixed(0) + '%';
+      hp.firstChild.style.background = t < 0.3 ? '#d63b3b' : t < 0.6 ? '#dd9a2a' : '#49a862';
+      hp.style.display = 'block';
+      hp.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
+    } else hp.style.display = 'none';
+    const tagY = p.y - (showHp ? (e.midboss ? 10 : 8) : 0);   // バーのぶん名札を上げる
 
     // 頭上の役職ラベル（ボスとプレイヤーは出さない。2D版と同じ）
     const label = e === stage.player ? null
@@ -1174,12 +1312,12 @@ function syncLabels() {
       tag.textContent = label;
       tag.style.color = e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de');
       tag.style.display = 'block';
-      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
+      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
     } else if (e === stage.player) {
       tag.textContent = '▼';
       tag.style.color = '#ff7f0e';
       tag.style.display = 'block';
-      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
+      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
     } else tag.style.display = 'none';
 
     // セリフの吹き出し
@@ -1187,12 +1325,12 @@ function syncLabels() {
       bubble.textContent = e.taunt;
       bubble.classList.toggle('ally', e.team === 'ally');
       bubble.style.display = 'block';
-      bubble.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y - 20}px)`;
+      bubble.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY - 20}px)`;
     } else bubble.style.display = 'none';
   }
   for (const [id, r] of tagEls) {
     if (seen.has(id)) continue;
-    r.tag.remove(); r.bubble.remove(); tagEls.delete(id);
+    r.tag.remove(); r.bubble.remove(); r.hp.remove(); tagEls.delete(id);
   }
 }
 
@@ -1252,12 +1390,16 @@ const hud = {
   lives: document.getElementById('lives'),
   score: document.getElementById('score'),
   bossWrap: document.getElementById('bossWrap'),
+  bossKind: document.getElementById('bossKind'),
   bossName: document.getElementById('bossName'),
+  bossNum: document.getElementById('bossNum'),
   bossFill: document.getElementById('bossFill'),
   banner: document.getElementById('banner'),
   loc: document.getElementById('loc'),
 };
 let hpShown = 1, bossShown = 1, scoreShown = 0;
+// 下のゲージに出している相手。頭上バーと二重にしないため syncLabels から見る
+let gaugeTarget = null, bossRef = null;
 function updateHUD(dt) {
   const p = stage.player;
   hpShown += ((p.hp / p.maxhp) - hpShown) * Math.min(1, dt * 7);   // バーを補間（案D）
@@ -1270,15 +1412,24 @@ function updateHUD(dt) {
     `<i class="${i < game.lives ? 'on' : ''}"></i>`).join('');
   hud.score.textContent = String(Math.round(scoreShown)).padStart(6, '0');
 
-  const b = stage.boss;
-  if (b && b.alive) {
-    bossShown += ((b.hp / b.maxhp) - bossShown) * Math.min(1, dt * 7);
+  // ボスと中ボスのゲージ。中ボス（管理担当K・生産企画課長）は stage.boss ではないので、
+  // ここで拾わないと「ゲージが1本も出ない強敵」になる。
+  const b = (stage.bossStarted && stage.boss && stage.boss.alive) ? stage.boss
+    : stage.entities.find((e) => e.alive && e.midboss && e.team === 'enemy') || null;
+  gaugeTarget = b && !b.hideHpBar ? b : null;
+  if (gaugeTarget) {
+    const t = Math.max(0, b.hp / b.maxhp);
+    if (b !== bossRef) { bossRef = b; bossShown = t; }   // 相手が替わったら補間をやり直す
+    bossShown += (t - bossShown) * Math.min(1, dt * 7);
     hud.bossWrap.classList.add('show');
+    hud.bossWrap.classList.toggle('low', t <= 0.3);
+    hud.bossKind.textContent = b.isBoss ? 'ボス' : '中ボス';
     hud.bossName.textContent = b.typeName;
-    hud.bossFill.style.width = (bossShown * 100).toFixed(1) + '%';
+    hud.bossNum.textContent = Math.max(0, Math.round(b.hp)) + ' / ' + b.maxhp;
+    hud.bossFill.style.width = (Math.max(0, bossShown) * 100).toFixed(1) + '%';
   } else {
     hud.bossWrap.classList.remove('show');
-    bossShown = 1;
+    bossRef = null; bossShown = 1;
   }
   hud.loc.textContent = stage.data.location || '';
   if (stage.bannerT > 0 && stage.banner) {
@@ -1292,21 +1443,43 @@ const screenEl = document.getElementById('screen');
 function showScreen(html) { screenEl.innerHTML = html; screenEl.style.display = 'flex'; }
 function hideScreen() { screenEl.style.display = 'none'; }
 
+// 書類（#screen）は canvas の上に重なっているので、ここへのタップは Input に届かない。
+// スマホだと難易度も選べず開始もできないため、クリック/タップをここで拾う。
+let screenTap = false;
+const DIFFS = [
+  ['easy',   'かんたん', '1', '残機多め（有休 12）＋自分も飛び道具'],
+  ['normal', 'ふつう',   '2', '標準ルール（有休 4）'],
+  ['hell',   '地獄',     '3', '雑魚が2倍＋残機少なめ（有休 2）'],
+];
+screenEl.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-diff]');
+  if (b) { game.difficulty = b.dataset.diff; renderScreen(); return; }
+  screenTap = true;
+});
+const confirmed = () => Input.confirm || screenTap;
+
 const hint = (t) => `<p class="k">${t}</p>`;
 function renderScreen() {
   // 出向・裏ステージは STAGES に入っていないので、今読み込んでいるステージのデータを使う
   const ch = (stage && stage.data) || STAGES[game.stageIndex];
   switch (game.state) {
-    case 'title':
+    case 'title': {
+      const cur = DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1];
       showScreen(`<div class="sheet title">
         <div class="eyebrow">小向工場 業務支援システム　Ver 2.4</div>
         <h1>KOMUKAI QUEST</h1>
         <div class="jp">小 向 ク エ ス ト</div>
         <p class="lead">小向戦士となり、小向工場を生き残れ。</p>
-        <div class="diff">難易度　<b id="dname">ふつう</b>　<span class="k">1 / 2 / 3 キーで変更</span></div>
-        ${hint('Enter または画面タップで開始')}
+        <div class="diffwrap">
+          <div class="difflabel">難易度を選ぶ（押す／← → キー／1・2・3 キー）</div>
+          <div class="diffrow">${DIFFS.map(([k, name, key]) =>
+            `<button class="dbtn${k === cur[0] ? ' sel' : ''}" data-diff="${k}"><b>${name}</b><i>${key} キー</i></button>`).join('')}</div>
+          <p class="diffdesc${cur[0] === 'hell' ? ' hell' : ''}">${cur[1]}: ${cur[3]}</p>
+        </div>
+        ${hint('Enter キー、または上のボタン以外を押して開始')}
       </div>`);
       break;
+    }
     case 'intro':
       showScreen(`<div class="sheet">
         <div class="eyebrow">作 業 指 示 書</div>
@@ -1391,27 +1564,37 @@ function loop(now) {
   while (acc >= STEP) {
     game.screenT += STEP;
     switch (game.state) {
-      case 'title':
+      case 'title': {
+        const step = (Input.pressed('ArrowRight', 'KeyD') ? 1 : 0) - (Input.pressed('ArrowLeft', 'KeyA') ? 1 : 0);
+        if (step) {
+          const i = DIFFS.findIndex((d) => d[0] === game.difficulty);
+          game.difficulty = DIFFS[Math.min(DIFFS.length - 1, Math.max(0, (i < 0 ? 1 : i) + step))][0];
+        }
         if (Input.pressed('Digit1')) game.difficulty = 'easy';
         if (Input.pressed('Digit2')) game.difficulty = 'normal';
         if (Input.pressed('Digit3')) game.difficulty = 'hell';
-        if (Input.confirm) {
+        if (confirmed()) {
           Audio.resume();
           game.score = 0;
           game.lives = game.difficulty === 'easy' ? 12 : game.difficulty === 'hell' ? 2 : 4;
           game.stageIndex = 0; loadStage(0);
           game.state = 'intro'; game.screenT = 0; renderScreen();
-        } else if (Input.pressed('Digit1', 'Digit2', 'Digit3')) renderScreen();
+        } else if (step || Input.pressed('Digit1', 'Digit2', 'Digit3')) renderScreen();
         break;
+      }
       case 'intro':
-        if (game.screenT > 0.4 && Input.confirm) { game.state = 'playing'; hideScreen(); }
+        if (game.screenT > 0.4 && confirmed()) { game.state = 'playing'; hideScreen(); }
         break;
       case 'playing':
         if (hitstop > 0) hitstop -= STEP;        // 打撃の手応え（案D）
         else stage.update(STEP);
-        // ?atk=1 … 攻撃の見た目を確認するために攻撃状態を固定する（開発用）
-        // 開発用。向きは固定しない（固定すると左へ攻撃できなくなる）
-        if (Q.get('atk') === '1') stage.player.attackActive = true;
+        // ?atk=1 … 空振り / ?atk=2 … 命中の瞬間 を固定する（開発用）
+        // 向きは固定しない（固定すると左へ攻撃できなくなる）
+        if (Q.get('atk')) {
+          stage.player.attackActive = true;
+          // 閃光は hitSet が空でないときだけ出る。2 なら中身を入れて命中扱いにする
+          stage.player.attack = { reach: 0, dmg: 0, kb: 0, hitSet: new Set(Q.get('atk') === '2' ? [-1] : []) };
+        }
         if (stage.detourRequested && !stage.isDetour) {
           enterDetour();                         // 「出向」の扉に触れた → 関連会社へ
         } else if (stage.cleared) {
@@ -1426,17 +1609,17 @@ function loop(now) {
         }
         break;
       case 'clear':
-        if (game.screenT > 0.5 && Input.confirm) {
+        if (game.screenT > 0.5 && confirmed()) {
           game.stageIndex++; loadStage(game.stageIndex);
           game.state = 'intro'; game.screenT = 0; renderScreen();
         }
         break;
       case 'gameover':
       case 'ending':
-        if (game.screenT > 0.6 && Input.confirm) { game.state = 'title'; game.screenT = 0; renderScreen(); }
+        if (game.screenT > 0.6 && confirmed()) { game.state = 'title'; game.screenT = 0; renderScreen(); }
         break;
     }
-    Input.endFrame();
+    Input.endFrame(); screenTap = false;
     acc -= STEP;
   }
   // 区間で場面が変わるステージ（執務室→食堂→執務室 / 会議フロア→構内道路）。
@@ -1471,7 +1654,7 @@ function loop(now) {
   }
 
   shake = Math.max(0, shake - frame * 4.5);
-  syncEntities();
+  syncEntities(frame);
   updateCamera(frame);
   updateHUD(frame);
   renderer.render(scene, camera);
@@ -1548,9 +1731,22 @@ if (new URLSearchParams(location.search).get('looks') === '1') {
     stage.currentWave = stage.data.waves.length;
     stage.lockX = stage.width - 40;
     stage.player.x = d;
-    stage.spawnWave(stage.data.waves[0]);   // 指定地点のまわりに敵を出す
+    // 指定地点にいちばん近い波を出す。常に waves[0] だと中ボスの波が確認できない
+    let pick = stage.data.waves[0];
+    for (const w of stage.data.waves) if ((w.x || 0) <= d) pick = w;
+    stage.spawnWave(pick);
     camPos.x = wx(d); camLook.x = wx(d);
   }
+}
+
+// ?boss=1 … ボス戦をすぐ始める（ゲージと場面の確認用）
+if (Q.get('boss') === '1') {
+  game.state = 'playing'; hideScreen();
+  stage.currentWave = stage.data.waves.length;
+  stage.lockX = stage.width - 40;
+  stage.player.x = stage.width - 150;
+  stage.startBoss();
+  camPos.x = wx(stage.player.x); camLook.x = wx(stage.player.x);
 }
 
 // デバッグ: ボスまで一気に進める

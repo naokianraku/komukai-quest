@@ -259,6 +259,7 @@ export class Char extends Entity {
     this.projRange = def.projRange || 210;
     this.throwCooldown = def.throwCooldown || 1.6;
     this.isBoss = !!def.boss;
+    this.midboss = !!def.midboss;   // 道中の強敵。3D版のゲージ表示に使う（2D版は参照しない）
     this.score = def.score || 100;
     this.scale = (def.scale || 1) * CHAR_SCALE;
     this.w = 12 * this.scale;

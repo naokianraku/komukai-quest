@@ -43,6 +43,12 @@
   #labels .float{position:absolute;left:0;top:0;
     font:700 13px/1 ui-monospace,monospace;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  /* 頭上のHPバー（2D版の drawHpBar と同じ役割）。中ボスは .mid で一段大きくする */
+  #labels .ehp{position:absolute;left:0;top:0;width:32px;height:4px;
+    border-radius:999px;background:rgba(0,0,0,.6);overflow:hidden;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.6)}
+  #labels .ehp > i{display:block;height:100%;width:100%;background:#49a862;border-radius:999px}
+  #labels .ehp.mid{width:64px;height:7px;box-shadow:0 0 0 1px rgba(255,120,110,.5), 0 2px 6px rgba(0,0,0,.7)}
 
   /* 画面（タイトル/作業指示書/作業報告書/休職願/辞令）。社内システムの書類を模す */
   #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
@@ -63,6 +69,22 @@
   #screen .form td{padding:7px 10px;border:1px solid #d3d8dd;line-height:1.6}
   #screen .mono{font:700 14px ui-monospace,monospace;font-variant-numeric:tabular-nums}
   #screen .k{margin-top:18px;font-size:12px;color:#6c737c;text-align:center}
+  /* 難易度。キー操作の案内文だけだと気づかれないので、押せるボタンにする。
+     #screen は canvas を覆っているのでタップは canvas に届かない。ここで拾う。 */
+  #screen .diffwrap{margin-top:20px}
+  #screen .difflabel{font-size:11px;color:#6c737c;text-align:center;letter-spacing:.03em}
+  #screen .diffrow{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  #screen .dbtn{flex:1 1 0;min-width:0;cursor:pointer;font:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:#fff;color:#1b1e23;border:2px solid #d3d8dd;border-radius:10px;padding:9px 6px;
+    transition:background .12s ease, border-color .12s ease}
+  #screen .dbtn b{font-size:15px}
+  #screen .dbtn i{font-style:normal;font-size:10px;color:#8a9097}
+  #screen .dbtn:hover{border-color:var(--accent)}
+  #screen .dbtn.sel{background:var(--accent);border-color:var(--accent);color:#15171a}
+  #screen .dbtn.sel i{color:#15171a;opacity:.75}
+  #screen .diffdesc{margin-top:10px;font-size:12px;color:#3a3f46;text-align:center;min-height:1.4em}
+  #screen .diffdesc.hell{color:#b3261e;font-weight:700}
   #screen .title{text-align:center}
 
   /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
@@ -105,15 +127,36 @@
   .right{margin-left:auto;text-align:right}
   .right .num{font-size:19px}
 
-  /* ボスゲージ: 画面最上部の細いライン（案A） */
-  #bossWrap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease}
-  #bossWrap.show{opacity:1}
-  #bossWrap .line{height:3px;background:rgba(0,0,0,.5)}
-  #bossWrap .line > i{display:block;height:100%;width:100%;
-    background:linear-gradient(90deg,#ff5a5a,#ff9d3c)}
-  #bossName{position:absolute;left:50%;transform:translateX(-50%);top:9px;
-    font-size:11px;font-weight:700;letter-spacing:.14em;color:#ffb5b5;
+  /* ボスゲージ: 下中央のパネル。
+     画面最上部の3pxの線だと、足元を見て戦っている最中はまず目に入らない。
+     中ボスもここに出す（stage.boss ではないので、拾わないとゲージが1本も出ない）。 */
+  #bossWrap{position:absolute;left:50%;bottom:14px;width:min(540px,84%);
+    transform:translateX(-50%) translateY(10px);
+    background:rgba(16,12,14,.80);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,120,110,.36);border-radius:12px;padding:8px 12px 10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.55);
+    opacity:0;transition:opacity .28s ease, transform .28s ease}
+  #bossWrap.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #bossWrap .head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  #bossKind{flex:0 0 auto;background:#c02a22;color:#fff;font-size:10px;font-weight:700;
+    letter-spacing:.14em;border-radius:5px;padding:3px 8px}
+  #bossName{font-size:14px;font-weight:700;letter-spacing:.06em;color:#ffe4e0;
     text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  #bossNum{margin-left:auto;font:700 12px/1 ui-monospace,monospace;color:#ffc2bc;
+    font-variant-numeric:tabular-nums}
+  #bossWrap .line{position:relative;height:13px;border-radius:999px;
+    background:rgba(0,0,0,.6);overflow:hidden;
+    box-shadow:inset 0 1px 4px rgba(0,0,0,.7)}
+  #bossWrap .line > i{display:block;height:100%;width:100%;border-radius:999px;
+    background:linear-gradient(180deg,#ff9a6a,#e03a2a 58%,#ad1a0e);
+    transition:width .09s linear}
+  /* 10等分の目盛り。残りが読めると詰めどころが分かる */
+  #bossWrap .line::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,
+      transparent 0 calc(10% - 1px), rgba(0,0,0,.5) calc(10% - 1px), rgba(0,0,0,.5) 10%)}
+  #bossWrap.low{border-color:rgba(255,80,70,.7)}
+  #bossWrap.low .line > i{animation:bosslow .72s ease-in-out infinite}
+  @keyframes bosslow{50%{filter:brightness(1.6)}}
 
   #banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-6px);
     font-size:17px;font-weight:700;letter-spacing:.06em;
@@ -123,7 +166,11 @@
   #banner.show{opacity:1;transform:translate(-50%,0)}
 
   #hint b{color:var(--sub);font-weight:600}
-  @media (max-width:620px){ .meter{width:150px} #hint{display:none} }
+  @media (max-width:620px){
+    .meter{width:150px} #hint{display:none}
+    #bossWrap{width:92%;bottom:10px;padding:6px 10px 8px}
+    #bossName{font-size:12px} #bossWrap .line{height:11px}
+  }
 </style>
 </head>
 <body>
@@ -131,7 +178,14 @@
     <div id="stage">
       <canvas id="c3d"></canvas>
       <pre id="err" style="position:absolute;left:12px;bottom:12px;z-index:99;color:#ff8a8a;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70%"></pre>
-      <div id="bossWrap"><div class="line"><i id="bossFill"></i></div><div id="bossName"></div></div>
+      <div id="bossWrap">
+        <div class="head">
+          <span id="bossKind">ボス</span>
+          <span id="bossName"></span>
+          <span id="bossNum"></span>
+        </div>
+        <div class="line"><i id="bossFill"></i></div>
+      </div>
       <div id="hud">
         <div class="sysbar">
           <span class="dot"></span>

@@ -250,7 +250,8 @@ function charParts({ cap = false, suit = false, hair = 0, glasses = 0, beard = 0
   return P;
 }
 
-export function buildChar3D(palette, opts = {}) {
+// opts からボクセルのグリッドを組む。buildChar3D と分割版で共有する。
+function charGrid(palette, opts) {
   const { W, H, D } = C3;
   const grid = new Array(W * H * D).fill(null);
   const at = (x, y, z) => x + y * W + z * W * H;
@@ -265,18 +266,28 @@ export function buildChar3D(palette, opts = {}) {
     const k = grid[at(x, y, z)];
     return k != null && palette[k] != null;
   };
+  return { grid, at, solid };
+}
 
+// グリッドを面カリングしてジオメトリの素を作る。
+//   keep … この部品に含めるボクセルか
+//   cull … 隣が埋まっていて面を省けるか
+// cull を部品の範囲に限ると切り口に蓋がつく。グリッド全体で判定すると蓋がつかない
+// （面が1枚も増えないので継ぎ目も出ない）。使い分けは buildChar3DSplit を参照。
+function meshGrid(g, palette, keep, cull) {
+  const { W, H, D } = C3;
   const positions = [], normals = [], colors = [], indices = [];
   let vi = 0;
   const ox = -W / 2, oz = -D / 2;
   for (let z = 0; z < D; z++) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const k = grid[at(x, y, z)];
+    const k = g.grid[g.at(x, y, z)];
     if (k == null) continue;
     const hexv = palette[k];
     if (hexv == null) continue;
+    if (!keep(x, y, z)) continue;
     const rgb = toLinear(hexv);
     for (const f of FACES) {
-      if (solid(x + f.d[0], y + f.d[1], z + f.d[2])) continue;
+      if (cull(x + f.d[0], y + f.d[1], z + f.d[2])) continue;
       for (const v of f.v) {
         positions.push(ox + x + v[0], y + v[1], oz + z + v[2]);
         normals.push(f.n[0], f.n[1], f.n[2]);
@@ -295,6 +306,39 @@ export function buildChar3D(palette, opts = {}) {
   };
 }
 
+export function buildChar3D(palette, opts = {}) {
+  const g = charGrid(palette, opts);
+  return meshGrid(g, palette, () => true, g.solid);
+}
+
+// ===== 歩行アニメ用の分割 =====
+// 1体を「腰より上 / 左脚 / 右脚」の3部品に切り分ける。脚だけを腰で前後に振るため。
+// top までが脚。腰のブロック(y15-19)は胴側に残すので、振れるのは膝から下にあたる部分。
+// pivot は切り口と同じ高さにしておく（切り口より上に回転軸を置くと、振ったときに
+// 脚の上端が横にずれて腰の下から覗く）。
+// cx は脚ごとの回転中心。体の中心で振ると、横にずれた脚が回転のぶん沈んで
+// 両脚そろって屈伸しているように見えるので、脚ごとに軸を持たせる。
+export const LEG = {
+  top: 14,                     // 靴 0-5 + ズボン 6-14
+  pivot: 15,
+  mid: 20,                     // 左右の境目（脚は x 11-18 と 21-28、間は空洞）
+  cxA: 14.5 - C3.W / 2,
+  cxB: 24.5 - C3.W / 2,
+};
+
+export function buildChar3DSplit(palette, opts = {}) {
+  const g = charGrid(palette, opts);
+  const inA = (x, y) => y <= LEG.top && x < LEG.mid;
+  const inB = (x, y) => y <= LEG.top && x >= LEG.mid;
+  return {
+    // 胴はグリッド全体で間引く。底面は腰の下＝カメラから見えないので蓋は不要。
+    body: meshGrid(g, palette, (x, y) => y > LEG.top, g.solid),
+    // 脚は自分の範囲だけで間引く＝上面に蓋がつき、振っても中が透けない。
+    legA: meshGrid(g, palette, inA, (x, y, z) => inA(x, y) && g.solid(x, y, z)),
+    legB: meshGrid(g, palette, inB, (x, y, z) => inB(x, y) && g.solid(x, y, z)),
+  };
+}
+
 /** CHAR_PALETTES のキーから 3D用モデルを作る（輪郭線なし・高解像度） */
 // 個体差のための色。全員同じ顔だと不自然なので、肌と髪に少し幅を持たせる
 export const SKINS = ['#f1c79b', '#e6b88b', '#f7d7b2', '#d9a877', '#ecc296'];
@@ -303,7 +347,8 @@ export const HAIRS = [
   '#6a635c', '#9a958e', '#c8c4bf',              // ごま塩〜白髪（年齢差）
 ];
 
-export function buildChar3DForType(key, v = {}) {
+// パレットと charParts の引数を、キャラ種別＋個体差から決める
+function charSpec(key, v) {
   const ov = CHAR_PALETTES[key] || CHAR_PALETTES.buka;
   const { map, ...colors } = ov;
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
@@ -313,9 +358,23 @@ export function buildChar3DForType(key, v = {}) {
   if (v.skin != null) pal.s = SKINS[v.skin % SKINS.length];
   // 髪色のキーは作業着が 'r'、スーツが 'h'（SUIT_BASE の規約）
   if (v.hairColor != null) pal[map === 'suit' ? 'h' : 'r'] = HAIRS[v.hairColor % HAIRS.length];
-  return buildChar3D(pal, {
-    cap: map === 'cap', suit: map === 'suit',
-    hair: v.hair || 0, glasses: v.glasses || 0, beard: v.beard || 0,
-    build: v.build == null ? 1 : v.build,
-  });
+  return {
+    pal,
+    opts: {
+      cap: map === 'cap', suit: map === 'suit',
+      hair: v.hair || 0, glasses: v.glasses || 0, beard: v.beard || 0,
+      build: v.build == null ? 1 : v.build,
+    },
+  };
+}
+
+export function buildChar3DForType(key, v = {}) {
+  const { pal, opts } = charSpec(key, v);
+  return buildChar3D(pal, opts);
+}
+
+/** 歩行アニメ用に3部品へ分けたもの（胴 / 左脚 / 右脚） */
+export function buildChar3DSplitForType(key, v = {}) {
+  const { pal, opts } = charSpec(key, v);
+  return buildChar3DSplit(pal, opts);
 }
