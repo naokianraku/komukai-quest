@@ -946,14 +946,13 @@ function enterTrueFinal() {
 // 体格の拡縮は root ではなく末端のメッシュに掛ける。root に非等倍スケールを置くと、
 // その下で回した脚がせん断して潰れる。
 const WALK = {
-  // 1歩で進むワールド距離。振り幅 × 脚長 と釣り合っていると足裏が滑らない。
-  // ただしこのキャラは頭身が低く脚が短い（15ボクセル＝全高の1/4）ので、
-  // 完全に釣り合わせると歩幅のわりに振り幅が大股になりすぎる。
-  // 振り幅を見た目優先で決め、1割ほどの滑りは許している。
-  stride: 5.0,
-  swing: 0.50,   // 振り幅(rad)。前後に約7ボクセル出る
-  drop: 0.75,    // 脚を開いたとき腰を沈める量（1.0で足裏がぴったり床に残る）
-  twist: 0.09,   // 胴のひねり。腕は胴と一体なので、これで腕が振れて見える
+  swing: 0.66,   // 振り幅(rad)。脚を前後に開く角度
+  // 踏み出す側の足を持ち上げる量（ボクセル）。これが無いと両足が接地したまま
+  // 開閉するだけになり、歩いているというより床を滑っているように見える。
+  // 脚は1本の棒なので、膝を曲げる代わりに脚ごと腰へ引き込んで足を浮かせる。
+  lift: 2.4,
+  drop: 0.8,     // 脚を開いたとき腰を沈める量（1.0で足裏がぴったり床に残る）
+  twist: 0.13,   // 胴のひねり。腕は胴と一体なので、これで腕が振れて見える
   air: 0.40,     // 跳躍中の開き
 };
 const meshes = new Map();   // entity.id → リグ
@@ -993,15 +992,24 @@ function syncEntities(dt) {
     // --- 歩行の位相 ---
     // 時間ではなく「実際に動いた距離」で進める。こうすると止まれば脚も止まり、
     // 殴られて流されている間に歩き出すこともない。
+    // 1歩の歩幅は振り幅と脚長から出す。固定値にすると体格ごとに足裏が滑る。
+    const stride = 2 * LEG.pivot * sy * Math.sin(WALK.swing);
     const moved = Math.hypot(e.x - r.px, e.y - r.py);
     r.px = e.x; r.py = e.y;
     const walking = moved > 0.01 && e.z === 0 && e.hitstun <= 0 && !e.attackActive;
     // ステージ読み込みの瞬間移動で位相が飛ばないよう、1フレームの歩進を抑える
-    if (walking) r.ph += (Math.min(moved, 12) * S / WALK.stride) * Math.PI;
+    if (walking) r.ph += (Math.min(moved, 12) * S / stride) * Math.PI;
     r.amp += ((walking ? 1 : 0) - r.amp) * Math.min(1, dt * 11);   // 止まると脚を揃える
     r.air += ((e.z > 0 ? 1 : 0) - r.air) * Math.min(1, dt * 14);
     const sw = WALK_FIX != null ? WALK_FIX
       : r.amp * WALK.swing * Math.sin(r.ph) * (1 - r.air) + WALK.air * r.air;
+
+    // 足の持ち上げ。前へ出ていく側（角度が増えている側）だけ浮かせる。
+    // 脚が揃うところで最大、開ききったところで0になるので、
+    // 「浮いた足が立っている足を追い越す」という歩行のかたちになる。
+    const c = Math.cos(r.ph) * r.amp * (1 - r.air) * (WALK_FIX != null ? 0 : 1);
+    const liftA = Math.max(0, c) * WALK.lift * sy;
+    const liftB = Math.max(0, -c) * WALK.lift * sy;
 
     // 脚を開いたぶん腰を沈める。沈めないと歩くたび足が床に潜る。
     // 1.0まで沈めると足が床に貼りついて重く見えるので、少しだけ浮かせる。
@@ -1014,6 +1022,10 @@ function syncEntities(dt) {
     r.hipB.position.set(LEG.cxB * sx, LEG.pivot * sy, 0);
     r.hipA.rotation.z = sw;
     r.hipB.rotation.z = -sw;
+    // 脚を自分の軸方向へ引き込んで足を浮かせる（膝の代わり）。
+    // 引き込んだぶん脚の上端は腰のブロックに潜るので、外からは見えない。
+    r.legA.position.y = liftA;
+    r.legB.position.y = liftB;
 
     // 進行方向へ向ける。真横(90°)まで回すと薄い板に見えるので浅めに留め、顔はカメラ側に残す。
     // 符号に注意: Y軸回転 θ で正面(+Z)は x=sin(θ) へ向く。右(+X)を向かせるには θ>0。
@@ -1320,10 +1332,14 @@ function syncLabels() {
       tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
     } else tag.style.display = 'none';
 
-    // セリフの吹き出し
+    // セリフの吹き出し。文字の大きさはキャラの体格に合わせる。
+    // ボスは1.5〜2.2倍の体格があるので、同じ級数だと相対的に小さく見える。
     if (e.taunt && e.tauntT > 0) {
+      const sr = (e.scale || 3) / 3;
       bubble.textContent = e.taunt;
+      bubble.style.fontSize = Math.min(30, 15 * (1 + (sr - 1) * 0.85)).toFixed(1) + 'px';
       bubble.classList.toggle('ally', e.team === 'ally');
+      bubble.classList.toggle('boss', !!(e.isBoss || e.midboss));
       bubble.style.display = 'block';
       bubble.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY - 20}px)`;
     } else bubble.style.display = 'none';
@@ -1385,6 +1401,7 @@ function updateCamera(dt) {
 // ===== HUD（案A: 高解像度レイヤー / 案B: 社内システムの語彙）=====
 const hud = {
   rank: document.getElementById('rank'),
+  diffchip: document.getElementById('diffchip'),
   hpFill: document.getElementById('hpFill'),
   hpNum: document.getElementById('hpNum'),
   lives: document.getElementById('lives'),
@@ -1405,6 +1422,10 @@ function updateHUD(dt) {
   hpShown += ((p.hp / p.maxhp) - hpShown) * Math.min(1, dt * 7);   // バーを補間（案D）
   scoreShown += (game.score - scoreShown) * Math.min(1, dt * 6);
   hud.rank.textContent = stage.data.playerRank;
+  // 今どの難易度で遊んでいるか。タイトルでしか分からないと確認しようがない
+  const dd = DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1];
+  hud.diffchip.textContent = dd[1];
+  hud.diffchip.className = 'diff ' + dd[0];
   hud.hpFill.style.width = (hpShown * 100).toFixed(1) + '%';
   hud.hpFill.style.background = hpShown < 0.3 ? '#c73333' : hpShown < 0.6 ? '#e0a030' : '#389451';
   hud.hpNum.textContent = Math.max(0, Math.round(p.hp)) + ' / ' + p.maxhp;
@@ -1487,6 +1508,7 @@ function renderScreen() {
           <tr><th>件名</th><td>${ch.name}</td></tr>
           <tr><th>作業場所</th><td>${ch.location || ''}</td></tr>
           <tr><th>等級</th><td>${ch.playerRank}</td></tr>
+          <tr><th>難易度</th><td>${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[1]}　<span style="color:#6c737c">${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[3]}</span></td></tr>
           <tr><th>指示事項</th><td>${(ch.intro || '').replace(/\n/g, '<br>')}</td></tr>
         </table>
         ${hint('Enter で作業開始')}

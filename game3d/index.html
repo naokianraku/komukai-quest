@@ -31,15 +31,21 @@
   #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
     font:700 11px/1 system-ui,sans-serif;
     text-shadow:0 1px 3px rgba(0,0,0,.95), 0 0 2px rgba(0,0,0,.9)}
+  /* セリフ。級数は体格に合わせて JS 側で入れ替えるので、
+     余白・角丸・しっぽは em で持たせて一緒に大きくなるようにする */
   #labels .bubble{position:absolute;left:0;top:0;white-space:nowrap;
-    background:rgba(250,250,252,.97);color:#15171a;border-radius:10px;
-    padding:5px 11px;font:700 12px/1.2 system-ui,sans-serif;
+    background:rgba(250,250,252,.97);color:#15171a;border-radius:.62em;
+    padding:.34em .72em;font:700 15px/1.25 system-ui,sans-serif;
     box-shadow:0 5px 16px rgba(0,0,0,.5)}
-  #labels .bubble::after{content:'';position:absolute;left:50%;bottom:-5px;
-    transform:translateX(-50%);border:5px solid transparent;
+  #labels .bubble::after{content:'';position:absolute;left:50%;bottom:-.33em;
+    transform:translateX(-50%);border:.34em solid transparent;
     border-top-color:rgba(250,250,252,.97);border-bottom:0}
   #labels .bubble.ally{background:rgba(216,242,224,.97)}
   #labels .bubble.ally::after{border-top-color:rgba(216,242,224,.97)}
+  /* ボス・中ボスは2D版と同じく、暖色の地に橙の縁 */
+  #labels .bubble.boss{background:rgba(255,243,224,.98);
+    box-shadow:0 0 0 2px #ff7f0e, 0 8px 22px rgba(0,0,0,.6)}
+  #labels .bubble.boss::after{border-top-color:#ff7f0e}
   #labels .float{position:absolute;left:0;top:0;
     font:700 13px/1 ui-monospace,monospace;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
@@ -100,6 +106,12 @@
   .sysbar .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
   .sysbar .name{font-size:12px;font-weight:700;letter-spacing:.04em}
   .sysbar .ver{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  /* 現在の難易度。プレイ中に確認する手段がどこにも無かったので、ここに常時出す */
+  .sysbar .diff{font-size:11px;font-weight:700;letter-spacing:.06em;
+    border-radius:999px;padding:2px 9px;border:1px solid}
+  .sysbar .diff.easy{color:#8fe0ab;border-color:rgba(143,224,171,.45);background:rgba(56,148,81,.18)}
+  .sysbar .diff.normal{color:#d8dde3;border-color:rgba(216,221,227,.35);background:rgba(255,255,255,.07)}
+  .sysbar .diff.hell{color:#ff9b9b;border-color:rgba(255,120,120,.55);background:rgba(199,51,51,.22)}
   .sysbar .spacer{flex:1}
   .sysbar .loc{font-size:11px;color:var(--sub)}
 
@@ -191,6 +203,7 @@
           <span class="dot"></span>
           <span class="name">小向工場 業務支援システム</span>
           <span class="ver">Ver 2.4</span>
+          <span class="diff normal" id="diffchip">ふつう</span>
           <span class="spacer"></span>
           <span class="loc" id="loc"></span>
         </div>

@@ -250,8 +250,12 @@ export class Char extends Entity {
     this.atkReach = (def.reach || 22) * CHAR_SCALE;
     this.atkDmg = def.dmg || 1;
     this.atkKb = def.kb || 90;
-    this.cooldown = def.cooldown || 0.7;
-    this.telegraph = def.telegraph || 0.32;
+    // 攻撃の間も個体差をつける。全員が同じ拍で振りかぶると、壁が迫ってくるように見える。
+    // ボスだけは読んで避ける相手なので、拍を揺らさず def のままにする。
+    const rv = def.boss ? 1 : 0.82 + (this.id % 6) * 0.072;   // 0.82〜1.18
+    const rw = def.boss ? 1 : 0.86 + (this.id % 5) * 0.07;    // 0.86〜1.14
+    this.cooldown = (def.cooldown || 0.7) * rv;
+    this.telegraph = (def.telegraph || 0.32) * rw;
     this.active = def.activeDur || 0.14;
     this.thrower = !!def.thrower;
     this.passive = !!def.passive; // true=攻撃してこない（近づくが殴らない）
@@ -263,6 +267,14 @@ export class Char extends Entity {
     this.score = def.score || 100;
     this.scale = (def.scale || 1) * CHAR_SCALE;
     this.w = 12 * this.scale;
+    // --- 動きの癖（id から決まるので、同じ個体はずっと同じ動き方をする）---
+    // 全員が最短距離をまっすぐ同じ速さで来ると、隊列行進のように見える。
+    this.moveStyle = this.id % 4;                  // 0=直進 1=回り込み 2=ためらい 3=早足
+    this.speedMul = 0.84 + (this.id % 7) * 0.055;  // 足の速さ 0.84〜1.17倍
+    this.standY = ((this.id % 5) - 2) * 7;         // 詰める先の奥行きをずらす（一点に集まらない）
+    this.weaveA = 10 + (this.id % 3) * 7;          // 蛇行の振れ
+    this.weaveW = 1.5 + (this.id % 4) * 0.45;      // 蛇行の速さ
+    this.hesitT = 0;
     this.thinkT = 0.2 + (this.id % 5) * 0.06;
     this.throwT = 1 + (this.id % 4) * 0.4;
     this.betrayer = !!def.betrayer;
@@ -347,18 +359,48 @@ export class Char extends Entity {
       // ミサイル兵は近すぎると離れて撃つ（カイト）。ただし画面内＆到達可能な範囲に留める
       const nx = -sign(dx) || -1;
       const ny = Math.abs(dy) > 6 ? sign(dy) : 0;
-      this.x += nx * this.speed * dt;
-      this.y += ny * this.speed * 0.5 * dt;
+      this.x += nx * this.speed * this.speedMul * dt;
+      this.y += ny * this.speed * this.speedMul * 0.5 * dt;
       this.x = clamp(this.x, stage.camera.x + 16, stage.lockX + 8); // 壁際で必ず届く範囲に留める
       this.moving = true;
     } else {
-      const nx = Math.abs(dx) > 3 ? sign(dx) : 0;
-      const ny = Math.abs(dy) > 3 ? sign(dy) : 0;
-      this.x += nx * this.speed * dt;
-      this.y += ny * this.speed * dt;
-      this.moving = !!(nx || ny);
+      this.approach(dt, dx, dy);
     }
     this.integrate(dt);
+  }
+
+  // 詰め方。全員が最短距離をまっすぐ来ると行進に見えるので、個体ごとに癖をつける。
+  // 癖は id で決まるため、同じ敵は出現から倒されるまで同じ動き方をする（運任せにしない）。
+  approach(dt, dx, dy) {
+    const sp = this.speed * this.speedMul;
+
+    // ためらい型: 間合いが見えてきたあたりで、ときどき足を止めて様子をうかがう。
+    // 遠くからでも止まるようにすると、ただ到着が遅いだけの個体になる。
+    if (this.moveStyle === 2 && Math.abs(dx) < this.atkReach * 4) {
+      if (this.hesitT > 0) { this.hesitT -= dt; this.moving = false; return; }
+      this.thinkT -= dt;
+      if (this.thinkT <= 0) {
+        this.hesitT = 0.4 + (this.id % 3) * 0.2;
+        this.thinkT = 2.2 + (this.id % 4) * 0.5;
+        this.moving = false;
+        return;
+      }
+    }
+
+    // 立ち位置を個体ごとにずらす。回り込み型は、遠いうちは正面を外して寄る。
+    let off = this.standY;
+    if (this.moveStyle === 1 && Math.abs(dx) > this.atkReach * 1.4) off += (this.id % 2 ? 1 : -1) * 16;
+    const wy = dy - off;
+
+    const nx = Math.abs(dx) > 3 ? sign(dx) : 0;
+    const ny = Math.abs(wy) > 3 ? sign(wy) : 0;
+    // 早足型: 遠くは速く詰め、間合いの手前で減速する（突っ込みっぱなしにしない）
+    const k = this.moveStyle === 3 ? (Math.abs(dx) < this.atkReach * 1.5 ? 0.72 : 1.3) : 1;
+    this.x += nx * sp * k * dt;
+    this.y += ny * sp * k * dt;
+    // 蛇行。寄ってくる線がまっすぐだと全員同じ軌道になる
+    if (nx) this.y += Math.sin(this.animT * this.weaveW + this.id) * this.weaveA * dt;
+    this.moving = !!(nx || ny);
   }
 
   // mob の徘徊: 一定間隔で向きを変え、ゆっくり歩くだけ
@@ -382,16 +424,22 @@ export class Char extends Entity {
       const d = Math.hypot(dx, dy);
       if (d < R && d > 0.001) { const f = (R - d) / R; px += (dx / d) * f; py += (dy / d) * f; cnt++; }
     }
-    if (cnt) { this.x += px * 55 * dt; this.y += py * 55 * dt; }
+    // 逃がす方向は奥行きを強めに、横は弱めに。横へ均等に押し返すと、後ろの個体が
+    // 前につかえたまま押し戻され、いつまでも間合いに入れない「行列」ができる。
+    // 奥行きへ逃がすと、自然に横へ広がって取り囲むかたちになる。
+    if (cnt) { this.x += px * 26 * dt; this.y += py * 78 * dt; }
   }
 
   followPlayer(dt, stage) {
     const p = stage.player;
-    const tx = p.x - 26 * p.facing;
-    const dx = tx - this.x, dy = p.y - this.y;
-    if (Math.abs(dx) > 6) { this.x += sign(dx) * this.speed * 0.8 * dt; this.facing = sign(dx) || this.facing; this.moving = true; }
+    // 3人が同じ1点に並ぶと「隊列」に見えるので、ついてくる位置を個体ごとにずらす
+    const tx = p.x - (22 + (this.id % 3) * 14) * p.facing;
+    const ty = p.y + this.standY;
+    const dx = tx - this.x, dy = ty - this.y;
+    const sp = this.speed * this.speedMul * 0.8;
+    if (Math.abs(dx) > 6) { this.x += sign(dx) * sp * dt; this.facing = sign(dx) || this.facing; this.moving = true; }
     else this.moving = false;
-    if (Math.abs(dy) > 4) this.y += sign(dy) * this.speed * 0.8 * dt;
+    if (Math.abs(dy) > 4) this.y += sign(dy) * sp * dt;
   }
 
   startAttack() {
