@@ -191,23 +191,24 @@ function fire(x, z, s, n) {
   box(2.2 * s, 1.1 * s, 2.0 * s, '#3a1206', x, 0.5 * s, z, { receive: false });   // 燃えている物
   // 足元の照り返し。これが無いと炎だけが宙に浮いて見える
   const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({
-    color: hex('#ff6a1e'), transparent: true, opacity: 0.3,
+    color: hex('#ff6a1e'), transparent: true, opacity: 0.44,
     depthWrite: false, blending: THREE.AdditiveBlending }));
   glow.position.set(x, 0.14, z);
-  glow.scale.set(5.2 * s, 1, 5.2 * s);
+  glow.scale.set(6.6 * s, 1, 6.6 * s);
   scenery.add(glow);
   // 細い舌を3枚。太いと炎ではなく三角コーンに見えるので、高さのわりに細くする。
   const spec = [
-    [0.0,  0.0, 1.35, 7.6, 0.52],   // 外側（高く、いちばん薄い）
-    [-0.6, 0.4, 0.88, 5.2, 0.60],   // 中
-    [0.5, -0.3, 0.46, 3.2, 0.75],   // 芯（低く小さい）
+    [0.0,  0.0, 1.55, 12.0, 0.58],  // 外側（いちばん高く、薄い）
+    [-0.7, 0.5, 1.05,  8.2, 0.66],  // 中
+    [0.6, -0.4, 0.55,  4.8, 0.82],  // 芯（低く小さい・いちばん白い）
+    [0.2,  0.6, 0.42, 15.5, 0.34],  // 噴き上がる細い舌。上へ抜ける勢いを出す
   ];
   spec.forEach(([dx, dz, r, h, o], i) => {
     const hh = h * s * (0.7 + fr(i) * 0.7);
     const rr = r * s * (0.85 + fr(i + 7) * 0.35);
     const tilt = (fr(i + 5) - 0.5) * 0.34;
     const m = tongue(x + dx * s, z + dz * s, rr, hh, o, tilt);
-    flames.push({ m, ph: fr(i + 3) * 6.28, rate: 5.2 + fr(i + 11) * 4.4,
+    flames.push({ m, ph: fr(i + 3) * 6.28, rate: 7.0 + fr(i + 11) * 6.0,
                   sy: m.scale.y, sx: rr, x: m.position.x, tilt });
   });
 }
@@ -215,35 +216,42 @@ function fire(x, z, s, n) {
 // 炎の列をまとめて置き、ところどころに点光源と火の粉を添える
 function fireRow(x0, x1, z, s, step, n0) {
   let n = n0;
+  const spots = [];
   for (let x = x0; x < x1; x += step * (0.7 + ((n * 7) % 5) / 5)) {
     const fr = Math.abs(Math.sin(n * 7.13) * 10) % 1;
     n++;
-    if (fr < 0.16) continue;                                   // 抜け（一列に揃えない）
-    fire(x, z + (fr - 0.5) * 8, s * (0.72 + fr * 0.7), n);
-    if (fireLights.length < 5 && n % 4 === 0) {
-      const l = new THREE.PointLight(0xff6a1e, 2.4, 190, 2);
-      l.position.set(x, 9, z);
+    if (fr < 0.08) continue;                                   // 抜け（一列に揃えない）
+    fire(x, z + (fr - 0.5) * 8, s * (0.8 + fr * 0.85), n);
+    // 点光源は炎の数だけ置くと重い。列あたり数個に絞って、床と人に照りだけ乗せる。
+    if (fireLights.length < 5 && n % 5 === 0) {
+      const l = new THREE.PointLight(0xff6a1e, 4.0, 240, 2);
+      l.position.set(x, 10, z);
       scenery.add(l);
-      fireLights.push({ l, ph: fr * 6.28, base: 2.4 });
+      fireLights.push({ l, ph: fr * 6.28, base: 4.0 });
     }
-    for (let k = 0; k < 2; k++) {                              // 昇る火の粉
-      const m = new THREE.Mesh(emberGeo, new THREE.MeshBasicMaterial({
-        color: hex(k ? '#ffd24a' : '#ff8a3a'), transparent: true, opacity: 0.9, fog: false }));
-      m.position.set(x, 2, z);
-      scenery.add(m);
-      embers.push({ m, x, z, vy: 11 + fr * 12, t: fr * 3 + k, life: 2.6 + fr * 1.6 });
-    }
+    spots.push(x);
+  }
+  // 火の粉は炎1つずつに持たせると数が増えすぎる。列ごとにまとめて散らす。
+  for (let k = 0; k < 16 && spots.length; k++) {
+    const sx2 = spots[(k * 7) % spots.length];
+    const f2 = ((k * 13) % 11) / 11;
+    const m = new THREE.Mesh(emberGeo, new THREE.MeshBasicMaterial({
+      color: hex(k % 2 ? '#ffd24a' : '#ff8a3a'), transparent: true, opacity: 0.95, fog: false }));
+    m.position.set(sx2, 2, z);
+    scenery.add(m);
+    embers.push({ m, x: sx2, z, vy: 16 + f2 * 18, t: f2 * 3 + k * 0.17, life: 2.4 + f2 * 1.6 });
   }
 }
 
 function updateFlames(dt, t) {
   for (const f of flames) {
-    const w = Math.sin(t * f.rate + f.ph);
-    f.m.scale.y = f.sy * (1 + w * 0.3);                        // 伸び縮み
-    const k = f.sx * (1 - w * 0.14);
+    // 速い揺れに遅いうねりを重ねる。単純な正弦だけだと規則正しく脈打って見える
+    const w = Math.sin(t * f.rate + f.ph) * 0.7 + Math.sin(t * f.rate * 0.37 + f.ph * 1.7) * 0.3;
+    f.m.scale.y = f.sy * (1 + w * 0.46);                       // 伸び縮み
+    const k = f.sx * (1 - w * 0.2);
     f.m.scale.x = k; f.m.scale.z = k;                          // 伸びたぶん細る
-    f.m.position.x = f.x + Math.sin(t * f.rate * 0.6 + f.ph) * 0.5 * f.sx;   // 揺らぎ
-    f.m.rotation.z = f.tilt + Math.sin(t * f.rate * 0.45 + f.ph) * 0.14;     // 先がなびく
+    f.m.position.x = f.x + Math.sin(t * f.rate * 0.6 + f.ph) * 0.8 * f.sx;   // 揺らぎ
+    f.m.rotation.z = f.tilt + Math.sin(t * f.rate * 0.45 + f.ph) * 0.24;     // 先がなびく
   }
   for (const g of fireLights) {
     g.l.intensity = g.base * (0.62 + 0.38 * Math.abs(Math.sin(t * 7.3 + g.ph) * Math.sin(t * 3.1)));
@@ -915,10 +923,11 @@ function buildHellfire(W, halfD) {
 
   // 床の炎。歩行帯は空けて、手前と奥にだけ置く。
   // 奥ほど小さく、手前ほど大きくして、画面の下側が燃えているように見せる。
-  fireRow(-6, W + 20, -halfD - 24, 1.0, 26, 3);
-  fireRow(-6, W + 20, -halfD - 8, 0.8, 24, 61);
-  fireRow(-6, W + 20, halfD + 11, 1.1, 25, 127);
-  fireRow(-6, W + 20, halfD + 32, 1.45, 30, 211);
+  fireRow(-6, W + 20, -halfD - 38, 1.2, 24, 907);
+  fireRow(-6, W + 20, -halfD - 22, 1.0, 20, 3);
+  fireRow(-6, W + 20, -halfD - 7, 0.82, 19, 61);
+  fireRow(-6, W + 20, halfD + 10, 1.15, 20, 127);
+  fireRow(-6, W + 20, halfD + 30, 1.5, 24, 211);
 
   // 焼け残った壁ぎわのキャビネットと、倒れた机
   for (let x = -14; x < W + 24; x += 24) {
@@ -1104,7 +1113,7 @@ const origShatter = stage.fx.shatter.bind(stage.fx);
 stage.fx.shatter = (x, y, look) => { origShatter(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
 // メテオ着弾。揺らして赤く光らせる
 const origMeteor = stage.fx.meteor.bind(stage.fx);
-stage.fx.meteor = (x, y) => { origMeteor(x, y); meteorBoom(x, y); };
+stage.fx.meteor = (x, y, r) => { origMeteor(x, y, r); meteorBoom(x, y, r); };
 
 // ===== ステージの読み込み =====
 function clearStageObjects() {
@@ -1116,6 +1125,8 @@ function clearStageObjects() {
   weapons.clear();
   for (const p of parts) { p.m.visible = false; partPool.push(p.m); }
   parts.length = 0;
+  for (const d of domes) { scene.remove(d.m); d.m.material.dispose(); }
+  domes.length = 0;
   for (const [, r] of tagEls) { r.tag.remove(); r.bubble.remove(); r.hp.remove(); }
   tagEls.clear();
   for (const f of floats) f.el.remove();
@@ -1135,7 +1146,7 @@ function attachStage(st, data) {
   const origShatter2 = stage.fx.shatter.bind(stage.fx);
   stage.fx.shatter = (x, y, look) => { origShatter2(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
   const origMeteor2 = stage.fx.meteor.bind(stage.fx);
-  stage.fx.meteor = (x, y) => { origMeteor2(x, y); meteorBoom(x, y); };
+  stage.fx.meteor = (x, y, r) => { origMeteor2(x, y, r); meteorBoom(x, y, r); };
   stage.player.ranged = (game.difficulty === 'easy');   // 2D版の applyDifficulty と同じ
   buildScenery(data);
   camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
@@ -1239,7 +1250,8 @@ function syncEntities(dt) {
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
     const bd = BUILDS[(e._v && e._v.build) ?? 1];
-    const sx = sc * bd.w, sy = sc * bd.h;   // 体格の差
+    // 体格の差。bodyW/bodyH は def 側の指定（魔王Y下を太らせるなど）
+    const sx = sc * bd.w * (e.bodyW || 1), sy = sc * bd.h * (e.bodyH || 1);
     const dir = e.facing >= 0 ? 1 : -1;
 
     // --- 歩行の位相 ---
@@ -1409,7 +1421,8 @@ function syncWeapons() {
     }
     const sc = (e.scale || 3) / 3;
     const dir = e.facing >= 0 ? 1 : -1;
-    const px = wx(e.x) + 9.5 * sc * dir, py = wy(e.z) + 10 * sc, pz = wz(e.y);
+    // 太い相手は腕も外に出るので、得物の位置を横幅に合わせてずらす
+    const px = wx(e.x) + 9.5 * sc * (e.bodyW || 1) * dir, py = wy(e.z) + 10 * sc * (e.bodyH || 1), pz = wz(e.y);
     r.group.position.set(px, py, pz);
     r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
     r.group.visible = true;
@@ -1516,17 +1529,26 @@ const THROWN = {
     g.add(lid);
     return g;
   },
-  // 魔王Y下のメテオ。岩塊と尾。自分で光るので暗い業火の中でもはっきり見える
+  // 魔王Y下のメテオ。岩ではなく「頭が白熱して長い尾を引く筋」にする。
+  // ローカル +x を進行方向とし、syncProjectiles で速度の向きへ回す。
   meteor: () => {
     const g = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(6.4, 0),
-      mat('#6b2b14', { emissive: new THREE.Color('#ff5a18') }));
-    g.add(core);
-    for (let i = 0; i < 9; i++) {                       // 尾。長く引くほど彗星らしく見える
-      const t = new THREE.Mesh(new THREE.IcosahedronGeometry(4.6 - i * 0.44, 0),
-        mat(i % 2 ? '#ff7f0e' : '#ffd24a', { emissive: new THREE.Color(i % 2 ? '#ff7f0e' : '#ffd24a') }));
-      t.position.set((i % 2 ? 1 : -1) * (1.4 + i * 0.3), 8 + i * 8.0, (i % 3 ? 1 : -1) * 1.2);
-      g.add(t);
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(3.6, 0),
+      mat('#fff6d8', { emissive: new THREE.Color('#fff0b0') }));
+    g.add(head);
+    const halo = new THREE.Mesh(new THREE.IcosahedronGeometry(5.6, 0), new THREE.MeshBasicMaterial({
+      color: hex('#ffb04a'), transparent: true, opacity: 0.5,
+      depthWrite: false, blending: THREE.AdditiveBlending }));
+    g.add(halo);
+    // 尾。粒が離れていると数珠に見えるので、重なるだけ詰めて一本の筋にする
+    for (let i = 0; i < 12; i++) {
+      const t = i / 11;
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(3.4 - t * 2.7, 0), new THREE.MeshBasicMaterial({
+        color: hex(t < 0.3 ? '#fff0b0' : t < 0.62 ? '#ffa02a' : '#c23a08'),
+        transparent: true, opacity: 0.8 - t * 0.55,
+        depthWrite: false, blending: THREE.AdditiveBlending }));
+      m.position.set(-3.6 - i * 4.2, 0, 0);
+      g.add(m);
     }
     return g;
   },
@@ -1578,13 +1600,16 @@ function syncProjectiles() {
     if (r.mark) {
       const rr = pr.aoe * S;
       const prog = 1 - Math.min(1, Math.max(0, pr.z) / 240);     // 0=出たばかり 1=着地直前
-      r.mark.g.position.set(wx(pr.x), 0.2, wz(pr.y));
+      r.mark.g.position.set(wx(pr.mx), 0.2, wz(pr.my));
       r.mark.g.scale.set(rr, 1, rr / 1.6);                        // 奥行きを潰す
       r.mark.fill.material.opacity = 0.10 + 0.26 * prog;
       r.mark.ring.material.opacity = 0.45 + 0.5 * prog;
     }
     r.group.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
-    if (r.look === 'missile') {
+    if (r.look === 'meteor') {
+      // 速度の向き（斜め下）へ筋を寝かせる。真下に落ちる岩に見せない。
+      r.group.rotation.set(0, 0, Math.atan2(pr.vz || -1, pr.vx || -1));
+    } else if (r.look === 'missile') {
       r.group.rotation.set(0, pr.vx > 0 ? 0 : Math.PI, 0);       // 誘導弾は進行方向を向く
     } else {
       const sp = SPIN[r.look] || { z: 1, x: 0.6 };                // 投げ物はくるくる回る
@@ -1603,11 +1628,38 @@ function syncProjectiles() {
 // メテオ着弾: 火の粉を3色で散らし、画面を揺らして赤く光らせる
 const flashEl = document.getElementById('flash');
 let flashT = 0, casting = 0;
-function meteorBoom(gx, gy) {
+// 着弾の火球。粒子が散るだけでは「落ちてきた」感じが出ないので、
+// 床にドーム状の火球を膨らませて消す（参考: FF のメテオ）。
+const domeGeo = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+const domes = [];
+function meteorBoom(gx, gy, radius = 42) {
   hitstop = Math.max(hitstop, 0.05);
   shake = Math.max(shake, 3.2);
   flashT = Math.max(flashT, 0.42);
   for (const c of ['#fff0b0', '#ff7f0e', '#c73333']) burst(gx, gy, c);
+  // 見た目の火球は当たり判定より一回り大きく。判定の広さは落ちる前の床の印で見せてある。
+  const R = radius * S * 1.5;
+  for (const [col, k, op] of [['#ff6a1e', 1.0, 0.72], ['#ffd24a', 0.62, 0.8], ['#fff4cc', 0.3, 0.9]]) {
+    const m = new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({
+      color: hex(col), transparent: true, opacity: op,
+      depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.position.set(wx(gx), 0.3, wz(gy));
+    m.renderOrder = 5;
+    scene.add(m);
+    domes.push({ m, r: R * k, t: 0, life: 0.5 + k * 0.2, op });
+  }
+}
+
+function updateDomes(dt) {
+  for (let i = domes.length - 1; i >= 0; i--) {
+    const d = domes[i];
+    d.t += dt;
+    const q = d.t / d.life;
+    if (q >= 1) { scene.remove(d.m); d.m.material.dispose(); domes.splice(i, 1); continue; }
+    const g = d.r * (0.35 + 0.65 * Math.sqrt(q));     // 最初に速く広がって止まる
+    d.m.scale.set(g, g * 0.95, g * 0.78);             // 丸く盛り上がった火球
+    d.m.material.opacity = d.op * (1 - q * q);
+  }
 }
 
 // 砕けた投げ物の破片の色（2D側の DEBRIS と揃える）
@@ -1682,7 +1734,7 @@ function syncLabels() {
     if (!e.alive) continue;
     seen.add(e.id);
     const { tag, bubble, hp } = elFor(e.id);
-    const headY = wy(e.z) + 19 * ((e.scale || 3) / 3);     // 頭のすぐ上
+    const headY = wy(e.z) + 19 * ((e.scale || 3) / 3) * (e.bodyH || 1);   // 頭のすぐ上
     const p = project(wx(e.x), headY, wz(e.y));
     if (!p) { tag.style.display = bubble.style.display = hp.style.display = 'none'; continue; }
 
@@ -2125,6 +2177,7 @@ function loop(now) {
 
   updateAudio();
   if (flames.length) updateFlames(frame, now / 1000);
+  if (domes.length) updateDomes(frame);
   // 詠唱中は床の印に加えて画面全体をうっすら赤くし、揺らして圧をかける
   const cast = stage.entities.some((e) => e.alive && e.state === 'cast');
   casting += ((cast ? 1 : 0) - casting) * Math.min(1, frame * 5);

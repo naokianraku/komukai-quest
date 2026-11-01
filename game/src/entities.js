@@ -265,6 +265,9 @@ export class Char extends Entity {
     // メテオ（魔王Y下の大技）。def に無ければ一切撃たない＝他のキャラの挙動は変わらない。
     this.meteorDef = def.meteor || null;
     this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
+    // 3D版の体型の倍率。2D版はドット絵が固定なので参照しない（未指定なら1＝従来と同じ）。
+    this.bodyW = def.bodyW || 1;
+    this.bodyH = def.bodyH || 1;
     this.isBoss = !!def.boss;
     this.midboss = !!def.midboss;   // 道中の強敵。3D版のゲージ表示に使う（2D版は参照しない）
     this.score = def.score || 100;
@@ -626,6 +629,9 @@ export class Projectile {
     // 彗星（魔王Y下のメテオ）用。空で待ってから落ち、着地点を中心に範囲で当たる。
     this.delay = opts.delay || 0;
     this.aoe = opts.aoe || 0;
+    // 斜めに降るので、いま居る場所と落ちる場所は別。印と範囲判定はこちらを使う。
+    this.mx = opts.mx ?? x;
+    this.my = opts.my ?? y;
     this.floorZ = opts.floorZ ?? -HAND_Z;
     // 投げ上げ（一升瓶や鉄アレイのような山なりの投擲）。未指定なら従来どおり高さは動かない。
     this.vz = opts.vz || 0;
@@ -677,26 +683,28 @@ export class Projectile {
       ctx.fillStyle = '#c73333'; // 弾頭
       ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
     } else if (this.kind === 'meteor') {
-      const gy = Math.round(this.y);
-      // 着地点の印。落ちるほど濃く小さくなる＝あと何秒で落ちるかが読める
+      // 印は「落ちる場所」に出す。彗星は斜めに飛んでくるので現在地とは別。
+      const mx = Math.round(this.mx - camX), my = Math.round(this.my);
       const prog = this.z > 0 ? 1 - Math.min(1, this.z / 240) : 1;
-      const rr = this.aoe * (1 - 0.25 * prog);
+      const rr = this.aoe * (1 - 0.25 * prog);   // 落ちるほど濃く小さく＝あと何秒かが読める
       ctx.save();
       ctx.globalAlpha = 0.3 + 0.55 * prog;
       ctx.strokeStyle = '#ff5a2a'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(Math.round(sx), gy, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(mx, my, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 0.14 + 0.2 * prog;
       ctx.fillStyle = '#ff2a0e';
-      ctx.beginPath(); ctx.ellipse(Math.round(sx), gy, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(mx, my, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
       if (this.z > 0) {                       // 本体と尾（空にいる間だけ描く）
-        const my = Math.round(this.y - this.z);
-        ctx.fillStyle = '#ffd24a'; ctx.fillRect(Math.round(sx) - 4, my - 4, 9, 9);
-        ctx.fillStyle = '#ff7f0e'; ctx.fillRect(Math.round(sx) - 3, my - 3, 7, 7);
-        ctx.fillStyle = '#fff0b0'; ctx.fillRect(Math.round(sx) - 1, my - 1, 3, 3);
-        ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ff7f0e';
-        for (let i = 1; i < 5; i++) ctx.fillRect(Math.round(sx) - 2, my - 4 - i * 7, 5, 5);
+        const bx = Math.round(sx), by = Math.round(this.y - this.z);
+        // 尾は進行方向の逆へ。斜めに来るので横にもずらす。
+        const dirx = this.vx >= 0 ? -1 : 1;
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff7f0e';
+        for (let i = 1; i < 7; i++) ctx.fillRect(bx + dirx * i * 5 - 2, by - i * 7, 5 - (i >> 1), 5 - (i >> 1));
         ctx.restore();
+        ctx.fillStyle = '#ff7f0e'; ctx.fillRect(bx - 4, by - 4, 9, 9);
+        ctx.fillStyle = '#ffd24a'; ctx.fillRect(bx - 3, by - 3, 7, 7);
+        ctx.fillStyle = '#fff4cc'; ctx.fillRect(bx - 1, by - 1, 4, 4);
       }
     } else if (THROWN_2D[this.look]) {
       // 回転は90度刻み。ドット絵の格子を崩さずに、縦横が入れ替わって回って見える

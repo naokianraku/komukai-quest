@@ -110,12 +110,16 @@ export class Stage {
   // 彗星（魔王Y下のメテオ）。高いところから落ちてきて、着地点を中心に範囲で当たる。
   spawnMeteor(x, y, team, m, delay) {
     const Z0 = 240, fall = m.fall || 1.2;
-    this.projectiles.push(new Projectile(x, y, 0, 0, team, {
+    // 真下に落とすと岩が湧いたように見える。斜めに流し込んで、落ちる場所へ収束させる。
+    // 画面の右奥から左手前へ、全部そろった向きで降らせる（流星群らしく見せる）。
+    const vx = -(150 + (this.projectiles.length % 3) * 26);
+    const p = new Projectile(x - vx * fall, y, vx, 0, team, {
       kind: 'meteor', look: 'meteor', dmg: m.dmg, kb: m.kb || 190, w: 10,
       vz: 0, gz: 2 * Z0 / (fall * fall), floorZ: 0, aoe: m.radius,
-      delay, life: delay + fall + 1.5,
-    }));
-    this.projectiles[this.projectiles.length - 1].z = Z0;
+      mx: x, my: y, delay, life: delay + fall + 1.5,
+    });
+    p.z = Z0;
+    this.projectiles.push(p);
   }
 
   spawnWave(w) {
@@ -250,9 +254,13 @@ export class Stage {
     this.sweepDead();
     this.checkBetrayal();
     this.updateWaves();
-    this.projectiles = this.projectiles.filter(
-      (p) => p.alive && p.x > this.camera.x - 40 && p.x < this.camera.x + VIEW_W + 40,
-    );
+    this.projectiles = this.projectiles.filter((p) => {
+      if (!p.alive) return false;
+      // 彗星は空の高いところを斜めに飛んでくるので、いま居る x で切ると着地前に消える。
+      // 画面内に居るかは「落ちる場所」で見る。
+      const px2 = p.kind === 'meteor' ? p.mx : p.x;
+      return px2 > this.camera.x - 40 && px2 < this.camera.x + VIEW_W + 40;
+    });
     this.updateCamera();
     this.handlePlayerDeath();
     this.bannerT = Math.max(0, this.bannerT - dt);

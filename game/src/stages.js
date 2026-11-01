@@ -66,6 +66,7 @@ export const UNIT_TYPES = {
   maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.3, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4,
                thrower: true, proj: 'junk', projRange: 200, throwCooldown: 1.9,
                meteor: { n: 5, first: 5.0, every: 8.5, cast: 1.6, fall: 1.35, dmg: 2, kb: 190, radius: 42 },
+               bodyW: 1.3, bodyH: 0.94,   // 3D版の体型: 横に広く、少し低い（太っちょ）
                score: 12000 },
 };
 

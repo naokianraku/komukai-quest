@@ -65,12 +65,13 @@ export function resolveProjectiles(projectiles, entities, fx) {
     // 彗星は落ちきるまで当たらない。着地した瞬間に、着地点を中心とした範囲で当てる。
     if (p.aoe) {
       if (!p.grounded) continue;
+      const cx = p.mx ?? p.x, cy = p.my ?? p.y;      // 斜めに来るので中心は着地点
       for (const t of entities) {
         if (!t.alive || t.invuln > 0 || !targetable(t) || sameSide(p, t)) continue;
-        if (Math.hypot(p.x - t.x, (p.y - t.y) * 1.6) > p.aoe) continue;   // 奥行きは詰めて判定
-        applyHit(t, sign(t.x - p.x) || 1, p.dmg, p.kb, fx);
+        if (Math.hypot(cx - t.x, (cy - t.y) * 1.6) > p.aoe) continue;     // 奥行きは詰めて判定
+        applyHit(t, sign(t.x - cx) || 1, p.dmg, p.kb, fx);
       }
-      fx.meteor(p.x, p.y);
+      fx.meteor(cx, cy, p.aoe);
       p.alive = false;
       continue;
     }
@@ -129,7 +130,7 @@ export class Fx {
   }
 
   // 彗星の着弾。爆発より派手に、火の粉を長く飛ばす
-  meteor(x, y) {
+  meteor(x, y, radius = 42) {
     Audio.sfxMeteor();
     for (let i = 0; i < 26; i++) {
       const a = (i / 26) * Math.PI * 2;
