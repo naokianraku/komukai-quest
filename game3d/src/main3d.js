@@ -1750,6 +1750,12 @@ function elFor(id) {
 }
 
 function syncLabels() {
+  // タイトルは一枚絵として見せたいので、頭上の名札も吹き出しも出さない
+  // （中央の書類に重なって縁で切れる）。
+  if (game.state === 'title') {
+    for (const [, r] of tagEls) { r.tag.style.display = 'none'; r.bubble.style.display = 'none'; r.hp.style.display = 'none'; }
+    return;
+  }
   const seen = new Set();
   for (const e of stage.entities) {
     if (!e.alive) continue;

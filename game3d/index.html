@@ -66,11 +66,9 @@
   /* タイトルだけは背景（正門）を見せたいので暗幕を薄くする */
   #screen.soft{background:linear-gradient(rgba(8,10,14,.16),rgba(8,10,14,.50));
     backdrop-filter:blur(1px)}
-  /* タイトルは背景の正門を右側に見せたいので、書類を左へ寄せて細くする */
-  #screen.soft{justify-content:flex-start;padding-left:min(6%,56px)}
+  /* タイトルは書類を細くして、左右に背景の正門を見せる（位置は中央のまま） */
   #screen.soft .sheet{background:rgba(246,247,249,.96);box-shadow:0 24px 70px rgba(0,0,0,.72);
     min-width:0;width:min(470px,78vw);padding:22px 26px}
-  @media (max-width:760px){ #screen.soft{justify-content:center;padding-left:24px} }
   #screen .sheet{background:#f6f7f9;color:#1b1e23;border-radius:14px;
     padding:26px 30px;min-width:min(560px,86vw);max-width:86vw;
     box-shadow:0 20px 60px rgba(0,0,0,.6);border-top:5px solid var(--accent)}
