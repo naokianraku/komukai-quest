@@ -42,7 +42,13 @@ export class Stage {
     this.bannerColor = 'rgba(120,16,16,0.88)';
     this.location = data.location || '';
     if (this.location) { this.banner = this.location; this.bannerColor = 'rgba(22,42,74,0.92)'; this.bannerT = 2.8; } // 開始時に現在地表示
-    this.door = data.door ? { x: data.door.x, y: FLOOR_TOP + 14, used: false } : null;
+    // 「出向」の扉（3D版は稲荷の鳥居）。奥の壁ぎわに立っているので、奥へ寄らないと触れない。
+    // 歩ける奥行きは2Dと3Dで違う（76 / 150）ため、置き場所も判定も帯の割合で決める。
+    // 帯の中央＝既定の立ち位置ではわずかに届かない。出向は自分で奥へ踏み込んだときだけ起きる。
+    const dep = PLAY.bottom - PLAY.top;
+    this.door = data.door
+      ? { x: data.door.x, y: PLAY.top + dep * 0.18, tol: dep * 0.29, used: false }
+      : null;
     this.detourRequested = false;
     this.isDetour = false;
 
@@ -273,7 +279,7 @@ export class Stage {
     this.bannerT = Math.max(0, this.bannerT - dt);
     // 「出向」の扉に触れたら分岐をリクエスト
     if (this.door && !this.door.used &&
-        Math.abs(this.player.x - this.door.x) < 16 && Math.abs(this.player.y - this.door.y) < 22) {
+        Math.abs(this.player.x - this.door.x) < 16 && Math.abs(this.player.y - this.door.y) < this.door.tol) {
       this.door.used = true;
       this.detourRequested = true;
     }

@@ -283,7 +283,7 @@ function updateFlames(dt, t) {
 }
 
 function clearScenery() {
-  flames.length = 0; fireLights.length = 0; embers.length = 0;
+  flames.length = 0; fireLights.length = 0; embers.length = 0; doorFx.length = 0;
   for (const m of [...scenery.children]) {
     scenery.remove(m);
     // Group を混ぜると geometry が無くてここで落ちる。入れ子でも確実に捨てる。
@@ -321,8 +321,17 @@ const ROOM = {
     shrineWood: '#7d5f41', roof: '#3b4648', tree: '#2f5a35', treeDark: '#23462a',
     bldg: '#e7eaec', bldgWin: '#8fa8bc', stone: '#9a978d',
   },
-  // 正門（タイトル画面）: 黒い槍柵と門柱、守衛所、奥に白い高層棟とガラスの低層棟。
-  // 2D版のタイトル画と同じ配色に合わせてある。
+  // 「出向」の入り口（Stage3のフロアの奥に立つ小さな稲荷）。構内の稲荷社と同じ配色に寄せる。
+  inari: {
+    path: '#bdb8ab', pathLine: '#9d998f', torii: '#d9451f', toriiDark: '#241d18',
+    plaque: '#e8d9ae', rope: '#d8cfa8', paper: '#f4f2ec',
+    lantern: '#d8483c', lanternLit: '#5a1008',
+    fox: '#e6e2d6', bib: '#c8321e', stone: '#9a978d', pole: '#6a6258',
+    wood: '#7d5f41', roof: '#3b4648', roofRidge: '#2c3537', dark: '#120f0c',
+    glow: '#ff8a3a',
+  },
+  // 正門（タイトル画面）: 白いコンクリート塀に濃緑の縦格子、引き戸の門扉と社名板の角柱、
+  // 奥に連窓の事務棟と階段室。実際の入り口の写真に合わせてある。
   gate: {
     sky: '#9ec3dd', ground: '#86898c', road: '#75787c', line: '#e8eae8',
     bikeLane: '#2f5aa0',                                   // 自転車レーンの青
@@ -603,6 +612,105 @@ function buildShrine(W, halfD) {
     box(110, 54, 10, R.bldg, x, 27, BACK - 26);
     for (let f = 0; f < 5; f++) box(100, 3.4, 1.0, R.bldgWin, x, 10 + f * 9, BACK - 31);
   }
+}
+
+// --- 「出向」の入り口（稲荷）---
+// 2D版は壁の扉で表しているが、3Dでは奥の壁ぎわに朱の鳥居を立てた。構内に稲荷社がある
+// のと同じ理屈で、フロアの奥に小さな稲荷が据わっている。くぐると関連会社へ出向になる。
+// 社名は出さない。扁額の「出向」はボクセルに文字が描けないので DOM 側（#labels .plate）で出す。
+const doorFx = [];   // 脈打たせる光る印（場面を張り替えるたびに作り直す）
+
+function buildInariDoor(door) {
+  const R = ROOM.inari;
+  const cx = wx(door.x), dz = wz(door.y);
+  // 触れる範囲。参道と光る印をこれに合わせておけば、どこへ寄れば出向になるか見て分かる
+  const tolX = 16 * S, tolZ = door.tol * S;
+
+  // 参道。触れる範囲の手前端から社の手前まで。石畳の継ぎ目は板に沈めてから出す
+  // （同じ高さに並べると点滅する）
+  const pF = dz + tolZ, pB = dz - 6, pC = (pF + pB) / 2, pD = pF - pB;
+  box(tolX * 2 + 3, 0.5, pD, R.path, cx, 0.25, pC, { receive: true });
+  for (let i = -2; i <= 2; i++) {
+    box(tolX * 2 + 1.4, 0.2, 0.4, R.pathLine, cx, 0.55, pC + i * (pD / 5.5));
+  }
+
+  // 鳥居。柱→貫→額束→島木→笠木。笠木だけ濃色にして、朱との対比で形が読めるようにする
+  const half = 11, hP = 27;
+  for (const px of [cx - half, cx + half]) {
+    box(3.0, hP, 3.0, R.torii, px, hP / 2, dz, { cast: true });
+    box(4.2, 1.5, 4.2, R.toriiDark, px, 0.75, dz);                             // 根巻き
+  }
+  box(half * 2 + 11, 2.2, 4.2, R.toriiDark, cx, hP + 1.6, dz, { cast: true }); // 笠木
+  box(half * 2 + 7, 1.5, 3.4, R.torii, cx, hP - 0.1, dz, { cast: true });      // 島木
+  box(half * 2 - 1, 1.4, 2.6, R.torii, cx, hP * 0.74, dz, { cast: true });     // 貫
+  box(1.2, 5.6, 1.2, R.torii, cx, 23.4, dz);                                   // 額束
+  box(2.8, 3.6, 1.2, R.plaque, cx, 24.3, dz + 1.7);                            // 扁額（文字はDOM）
+
+  // 注連縄と紙垂
+  box(half * 2 - 4, 1.1, 1.1, R.rope, cx, 15.1, dz - 1.9);
+  for (const dx of [-7, -2.4, 2.4, 7]) box(1.0, 2.6, 0.3, R.paper, cx + dx, 14.0, dz - 1.9);
+
+  // 提灯。笠木から吊る
+  for (const dx of [-6.6, 6.6]) {
+    box(0.4, 2.4, 0.4, R.toriiDark, cx + dx, 25.9, dz - 1.2);
+    box(2.6, 3.2, 2.6, R.lantern, cx + dx, 23.1, dz - 1.2, { emissive: R.lanternLit, cast: true });
+  }
+
+  // 幟。朱の布を2本立てて、離れたところからでも稲荷と分かるようにする。
+  // 布だけだと赤い幕に見えるので、上下に白い縁を入れて幟らしくする
+  for (const sd of [-1, 1]) {
+    const px = cx + sd * 15.5, bx = px + sd * 1.8;
+    box(0.9, 23, 0.9, R.pole, px, 11.5, dz + 1.5, { cast: true });
+    box(2.6, 13, 0.5, R.bib, bx, 14.5, dz + 1.5, { cast: true });
+    box(2.8, 1.0, 0.7, R.paper, bx, 20.6, dz + 1.5);
+    box(2.8, 1.0, 0.7, R.paper, bx, 8.4, dz + 1.5);
+  }
+
+  // 狐。鳥居の手前の両脇に据える（奥に置くと社に埋まる）。参道の幅には掛けない
+  const fz = dz + 4.5;
+  const fox = (fcx) => {
+    box(5.0, 5.0, 5.0, R.stone, fcx, 2.5, fz, { cast: true });                 // 台座
+    box(3.0, 4.2, 3.4, R.fox, fcx, 7.1, fz, { cast: true });                   // 胴
+    box(2.4, 2.4, 1.4, R.fox, fcx, 6.2, fz + 1.9);                             // 前脚
+    box(2.6, 2.6, 2.4, R.fox, fcx, 10.5, fz + 0.7, { cast: true });            // 頭
+    box(1.2, 1.0, 1.4, R.fox, fcx, 10.0, fz + 2.2);                            // 口
+    for (const ex of [-0.9, 0.9]) box(0.8, 1.5, 0.8, R.fox, fcx + ex, 12.4, fz + 0.7);
+    box(1.6, 3.8, 1.6, R.fox, fcx, 8.4, fz - 2.2, { cast: true });             // 尾
+    box(2.9, 1.5, 0.6, R.bib, fcx, 7.6, fz + 2.8);                             // 赤い前垂れ
+  };
+  fox(cx - 13.5); fox(cx + 13.5);
+
+  // 小さな社。鳥居の先に据えて、ここが出向の口であることを示す。
+  // 鳥居と同じ背丈にすると鳥居が小屋の入口に見えてしまうので、半分の高さに抑える。
+  // 奥の長机にぶつからない位置に留める（屋根の奥端 -28 / 長机の手前端 -30.5）。
+  const sz = dz - 8;
+  box(12, 1.6, 6.5, R.stone, cx, 0.8, sz, { cast: true });                     // 基壇
+  box(9, 7, 5, R.wood, cx, 4.9, sz, { cast: true });                           // 社
+  box(4.4, 4.8, 0.8, R.dark, cx, 4.6, sz + 2.7);                               // 暗い開口
+  box(14, 1.8, 8, R.roof, cx, 9.1, sz, { cast: true });                        // 瓦屋根
+  box(10, 1.4, 5.6, R.roof, cx, 10.6, sz, { cast: true });
+  box(2.2, 0.8, 8.6, R.roofRidge, cx, 11.5, sz);                               // 棟
+
+  // 出向になる場所を脈打つ光で示す（2D版の足元の点滅マーカーと同じ役目）。
+  // 石畳いっぱいを薄く光らせても「石の色」にしか見えなかったので、
+  // またぐ線（判定の手前端）と、鳥居の下の照り返しの2本に絞る。一度くぐった後は出さない。
+  if (door.used) return;
+  const band = (w, d, z, a2) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({
+        color: hex(R.glow), transparent: true, opacity: a2,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+      }),
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(cx, 0.7, z);
+    m.userData.amp = a2;
+    scenery.add(m);
+    doorFx.push(m);
+  };
+  band(tolX * 2, 2.4, dz + tolZ, 0.85);      // またぐ線
+  band(half * 2 - 3, 5.0, dz, 0.45);         // 鳥居の下
 }
 
 // --- 食堂 ---
@@ -1115,6 +1223,9 @@ function applyScene(key, data) {
   const W = data.width * S;
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
   (SCENES[key] || buildOffice)(W, halfD);
+  // 「出向」の入り口は場面の一部ではなくステージの仕掛け。場面を張り替えても消えないよう、
+  // どの場面のあとにも足す（ボス戦で稲荷社に変わったあとも、来た道に残っていてよい）。
+  if (stage && stage.door) buildInariDoor(stage.door);
 }
 
 // ステージ内で場面が変わる区間。data.scenes3d は 3D専用のキーで、
@@ -1856,6 +1967,25 @@ function syncLabels() {
   }
 }
 
+// 鳥居の扁額に出す「出向」の二文字。ボクセルでは文字が読めないので、
+// 名札と同じ投影DOMで扁額の板の上に重ねる。くぐった後は薄く残す。
+let plateEl = null;
+function syncDoorPlate() {
+  const d = (game.state === 'playing' || game.state === 'intro') && stage.door ? stage.door : null;
+  if (!d) { if (plateEl) plateEl.style.display = 'none'; return; }
+  if (!plateEl) {
+    plateEl = document.createElement('div');
+    plateEl.className = 'plate';
+    plateEl.textContent = '出向';
+    layer.appendChild(plateEl);
+  }
+  const p = project(wx(d.x), 24.3, wz(d.y) + 2.4);
+  if (!p) { plateEl.style.display = 'none'; return; }
+  plateEl.style.display = 'block';
+  plateEl.style.opacity = d.used ? '0.4' : '1';
+  plateEl.style.transform = `translate(-50%,-50%) translate(${p.x}px,${p.y}px)`;
+}
+
 // ダメージ数字など、浮かんで消える文字
 const floats = [];
 function addFloat(gx, gy, gz, text, color) {
@@ -2234,6 +2364,10 @@ function loop(now) {
 
   updateAudio();
   if (flames.length) updateFlames(frame, now / 1000);
+  if (doorFx.length) {
+    const o = 0.62 + 0.38 * Math.sin(now / 1000 * 3.2);
+    for (const m of doorFx) m.material.opacity = m.userData.amp * o;
+  }
   if (domes.length) updateDomes(frame);
   // 詠唱中は床の印に加えて画面全体をうっすら赤くし、揺らして圧をかける
   const cast = stage.entities.some((e) => e.alive && e.state === 'cast');
@@ -2250,6 +2384,7 @@ function loop(now) {
   syncProjectiles();
   updateParts(frame);
   syncLabels();
+  syncDoorPlate();
   updateFloats(frame);
   if (!window.__once && Q.get('dbg') === '1') { window.__once = 1; window.__dbg && window.__dbg(
     'OK frame1 / meshes=' + meshes.size + ' / children=' + scene.children.length +

@@ -130,7 +130,7 @@ export const STAGES = [
     intro: '大隊長（EX級）へ。生管スタッフと「PMR審査会」が詰めてくる。\n工場長を倒せ。',
     width: 1750,
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
-    door: { x: 1050 }, // 「出向」の扉（触れると関連会社サブステージへ）
+    door: { x: 1050 }, // 「出向」の札（2D＝壁の扉／3D＝稲荷の鳥居。触れると関連会社サブステージへ）
     waves: [
       { x: 380, enemies: [{ type: 'vendor', count: 1 }, { type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
       { x: 800, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'missile', count: 1 }] },
@@ -184,7 +184,7 @@ export const SHUKKOU_STAGE = {
   name: '出向編 — 関連会社',
   playerRank: '大隊長（出向中）',
   location: '62号6階',
-  intro: '「出向」の扉に触れた——関連会社へ出向となった。\n社員と出向先上長、そして“顔が怖い”関連会社社長を倒し、本社へ戻れ。',
+  intro: '「出向」の札に触れた——関連会社へ出向となった。\n社員と出向先上長、そして“顔が怖い”関連会社社長を倒し、本社へ戻れ。',
   width: 1500,
   bg: { scene: 'office', wall: '#2e3640', floor: '#48525e', detail: '#1f262e', accent: '#7a8a9a' },
   // 3D版だけ、本社と同じ造りで色だけ古い関連会社の執務室にする
