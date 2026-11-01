@@ -1,5 +1,5 @@
 // 戦闘解決（2.5Dの当たり判定）とエフェクト
-import { Z_TOL, PLAY } from './config.js';
+import { Z_TOL, PLAY, sign } from './config.js';
 import { SPRITE_H } from './sprites.js';
 import { Audio } from './audio.js';
 
@@ -62,6 +62,18 @@ export function resolveMelee(entities, fx) {
 export function resolveProjectiles(projectiles, entities, fx) {
   for (const p of projectiles) {
     if (!p.alive) continue;
+    // 彗星は落ちきるまで当たらない。着地した瞬間に、着地点を中心とした範囲で当てる。
+    if (p.aoe) {
+      if (!p.grounded) continue;
+      for (const t of entities) {
+        if (!t.alive || t.invuln > 0 || !targetable(t) || sameSide(p, t)) continue;
+        if (Math.hypot(p.x - t.x, (p.y - t.y) * 1.6) > p.aoe) continue;   // 奥行きは詰めて判定
+        applyHit(t, sign(t.x - p.x) || 1, p.dmg, p.kb, fx);
+      }
+      fx.meteor(p.x, p.y);
+      p.alive = false;
+      continue;
+    }
     // 床に落ちた投げ物は、誰にも当たらなくてもそこで砕ける（外した投擲にも手応えを残す）
     if (p.grounded) { fx.shatter(p.x, p.y, p.look); p.alive = false; continue; }
     for (const t of entities) {
@@ -114,6 +126,21 @@ export class Fx {
         life: 0.55, color: i % 2 ? '#ff7f0e' : '#ffd24a', size: 3 + (i % 3),
       });
     }
+  }
+
+  // 彗星の着弾。爆発より派手に、火の粉を長く飛ばす
+  meteor(x, y) {
+    Audio.sfxMeteor();
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2;
+      const sp = 120 + (i % 5) * 58;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 70,
+        life: 0.8, color: i % 3 === 0 ? '#fff0b0' : i % 3 === 1 ? '#ff7f0e' : '#c73333',
+        size: 3 + (i % 4),
+      });
+    }
+    this.texts.push({ x, y: y - 26, str: 'メテオ', color: '#ff7f0e', life: 1.1, vy: -14, big: true });
   }
 
   // 投げ物が砕ける（一升瓶=ガラス片と酒／鉄パイプ・鉄アレイ=金属片／パソコン=樹脂片と火花）

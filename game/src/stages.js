@@ -59,8 +59,11 @@ export const UNIT_TYPES = {
   shitennou_sda:   { name: 'S田', sprite: 'shitennou_sda',   taunts: 'sda',   elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   shitennou_hmoto: { name: 'H本', sprite: 'shitennou_hmoto', taunts: 'hmoto', elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   // 魔王Y下: 手近なものを何でも投げてくる（鉄パイプ→鉄アレイ→パソコンの順に持ち替える）。
+  // さらに大技「メテオ」。床に印を出してから彗星を5発落とす。印が出ている間に走れば必ず逃げられる。
   maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.3, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4,
-               thrower: true, proj: 'junk', projRange: 200, throwCooldown: 1.9, score: 12000 },
+               thrower: true, proj: 'junk', projRange: 200, throwCooldown: 1.9,
+               meteor: { n: 5, first: 5.0, every: 8.5, cast: 1.6, fall: 1.35, dmg: 2, kb: 190, radius: 42 },
+               score: 12000 },
 };
 
 export function defFor(type) {

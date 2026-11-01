@@ -27,6 +27,9 @@
 
   /* 吹き出し・頭上ラベル・ダメージ数字。3Dの中に文字を置くとボケるので、
      キャラの位置を投影してDOMで重ねる */
+  /* メテオ着弾の赤い閃光。詠唱中もうっすら点く */
+  #flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:12;
+    background:radial-gradient(110% 80% at 50% 62%, rgba(255,120,50,.30), rgba(150,15,0,.80))}
   #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
   /* 役職名。級数は体格に合わせて JS 側で入れ替える（下の .bubble と同じ考え方） */
   #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
@@ -245,6 +248,7 @@
           </div>
         </div>
       </div>
+      <div id="flash"></div>
       <div id="labels"></div>
       <div id="screen"></div>
       <div id="banner"></div>

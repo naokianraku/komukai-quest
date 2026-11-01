@@ -262,6 +262,9 @@ export class Char extends Entity {
     this.projKind = def.proj || 'paper';
     this.projRange = def.projRange || 210;
     this.throwCooldown = def.throwCooldown || 1.6;
+    // メテオ（魔王Y下の大技）。def に無ければ一切撃たない＝他のキャラの挙動は変わらない。
+    this.meteorDef = def.meteor || null;
+    this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
     this.isBoss = !!def.boss;
     this.midboss = !!def.midboss;   // 道中の強敵。3D版のゲージ表示に使う（2D版は参照しない）
     this.score = def.score || 100;
@@ -337,6 +340,12 @@ export class Char extends Entity {
     if (this.faceLock == null) this.facing = sign(dx) || this.facing;
     else this.facing = this.faceLock;
     const inRange = Math.abs(dx) <= this.atkReach * 0.9 && Math.abs(dy) <= PLAY.depthTol;
+
+    // メテオ。間合いに関係なく降らせるので、殴り合いより先に判定する
+    if (this.meteorDef) {
+      this.meteorT -= dt;
+      if (this.meteorT <= 0 && target.alive) { this.startMeteor(stage, target); this.integrate(dt); return; }
+    }
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
@@ -450,6 +459,24 @@ export class Char extends Entity {
     if (this.tauntCat) this.setTaunt(); // 攻撃時にしゃべる（味方の掛け声もここ）
   }
 
+  // メテオ: 狙った床に印を出してから、彗星を順番に落とす。
+  // 印は落ちきるまで出しっぱなしなので、走れば必ず逃げられる（理不尽にしない）。
+  startMeteor(stage, target) {
+    const m = this.meteorDef;
+    this.state = 'cast'; this.stateT = m.cast; this.moving = false;
+    this.meteorT = m.every + (this.id % 3) * 0.4;
+    if (this.tauntCat) this.setTaunt(m.cast + 0.4);
+    const half = (PLAY.bottom - PLAY.top) / 2;
+    const mid = (PLAY.top + PLAY.bottom) / 2;
+    for (let i = 0; i < m.n; i++) {
+      // 1発目は足元へ落とす。棒立ちは必ず痛い目を見る
+      const tx = i === 0 ? target.x
+        : target.x + (((i * 97) % 2 ? 1 : -1)) * (50 + ((i * 53) % 110));
+      const ty = i === 0 ? target.y : mid + (((i * 71) % 100) / 100 - 0.5) * 2 * half * 0.9;
+      stage.spawnMeteor(tx, clamp(ty, PLAY.top, PLAY.bottom), this.team, m, i * 0.24);
+    }
+  }
+
   // 味方のうっかり攻撃: 時々、後ろから意図しない一撃を入れてくる（言い訳つき）
   tryFumble(dt, stage) {
     this.fumbleT -= dt;
@@ -472,6 +499,11 @@ export class Char extends Entity {
   advanceFSM(dt) {
     if (this.state === 'idle') return;
     this.stateT -= dt;
+    if (this.state === 'cast') {
+      // 詠唱中は動かない。彗星はもう飛んでいるので、ここでは硬直だけ数える
+      if (this.stateT <= 0) { this.state = 'recover'; this.stateT = 0.5; }
+      return;
+    }
     if (this.state === 'telegraph' && this.stateT <= 0) {
       this.state = 'attack'; this.stateT = this.active;
       this.attack = { reach: this.atkReach, dmg: this.atkDmg, kb: this.atkKb, hitSet: new Set() };
@@ -591,17 +623,23 @@ export class Projectile {
     this.target = opts.target || null;
     // 見た目の指定。未指定なら kind のまま（書類/工具/ミサイルは従来どおり）。
     this.look = opts.look || null;
+    // 彗星（魔王Y下のメテオ）用。空で待ってから落ち、着地点を中心に範囲で当たる。
+    this.delay = opts.delay || 0;
+    this.aoe = opts.aoe || 0;
+    this.floorZ = opts.floorZ ?? -HAND_Z;
     // 投げ上げ（一升瓶や鉄アレイのような山なりの投擲）。未指定なら従来どおり高さは動かない。
     this.vz = opts.vz || 0;
     this.gz = opts.gz || 0;
-    this.grounded = false;      // 床に落ちた＝割れる（combat.js が見る）
-    this.life = this.kind === 'missile' ? 4 : 3;
+    this.grounded = false;      // 床に落ちた＝割れる / 着弾する（combat.js が見る）
+    this.life = opts.life ?? (this.kind === 'missile' ? 4 : 3);
     this.age = 0;
     this.alive = true;
   }
 
   update(dt) {
     this.age += dt;
+    // 落下待ち。着地点の印だけ床に出したまま、空で止まって見せる
+    if (this.delay > 0) { this.delay -= dt; this.life -= dt; return; }
     if (this.homing && this.target && this.target.alive) {
       // 奥行きを誘導弾としてじわっと標的のyへ寄せる
       const dy = this.target.y - this.y;
@@ -615,7 +653,7 @@ export class Projectile {
       // z はキャラの当たり判定と同じ高さ尺度。手の高さ(0)から投げ上げ、床(-HAND_Z)で止める。
       this.z += this.vz * dt;
       this.vz -= this.gz * dt;
-      if (this.z <= -HAND_Z) { this.z = -HAND_Z; this.grounded = true; }
+      if (this.z <= this.floorZ) { this.z = this.floorZ; this.grounded = true; }
     }
     this.life -= dt;
     if (this.life <= 0) this.alive = false;
@@ -638,6 +676,28 @@ export class Projectile {
       ctx.fillRect(Math.round(sx - 5), Math.round(sy), 10, 4);
       ctx.fillStyle = '#c73333'; // 弾頭
       ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
+    } else if (this.kind === 'meteor') {
+      const gy = Math.round(this.y);
+      // 着地点の印。落ちるほど濃く小さくなる＝あと何秒で落ちるかが読める
+      const prog = this.z > 0 ? 1 - Math.min(1, this.z / 240) : 1;
+      const rr = this.aoe * (1 - 0.25 * prog);
+      ctx.save();
+      ctx.globalAlpha = 0.3 + 0.55 * prog;
+      ctx.strokeStyle = '#ff5a2a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(Math.round(sx), gy, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.14 + 0.2 * prog;
+      ctx.fillStyle = '#ff2a0e';
+      ctx.beginPath(); ctx.ellipse(Math.round(sx), gy, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      if (this.z > 0) {                       // 本体と尾（空にいる間だけ描く）
+        const my = Math.round(this.y - this.z);
+        ctx.fillStyle = '#ffd24a'; ctx.fillRect(Math.round(sx) - 4, my - 4, 9, 9);
+        ctx.fillStyle = '#ff7f0e'; ctx.fillRect(Math.round(sx) - 3, my - 3, 7, 7);
+        ctx.fillStyle = '#fff0b0'; ctx.fillRect(Math.round(sx) - 1, my - 1, 3, 3);
+        ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ff7f0e';
+        for (let i = 1; i < 5; i++) ctx.fillRect(Math.round(sx) - 2, my - 4 - i * 7, 5, 5);
+        ctx.restore();
+      }
     } else if (THROWN_2D[this.look]) {
       // 回転は90度刻み。ドット絵の格子を崩さずに、縦横が入れ替わって回って見える
       const upright = (Math.floor(this.age * 9) & 1) === 1;

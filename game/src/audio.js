@@ -210,6 +210,29 @@ export const Audio = {
     src.start(now); src.stop(now + 0.16);
   },
 
+  // 彗星の着弾（ズドォン）= 落ちてくる唸りではなく、着いた瞬間の重い炸裂
+  sfxMeteor() {
+    if (!this.enabled || !this.ctx) return;
+    const c = this.ctx, now = c.currentTime;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(1800, now);
+    f.frequency.exponentialRampToValueAtTime(220, now + 0.45);
+    const gn = c.createGain();
+    gn.gain.setValueAtTime(0.75, now);
+    gn.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    src.connect(f); f.connect(gn); gn.connect(this.master);
+    src.start(now); src.stop(now + 0.52);
+    const o = c.createOscillator(), g2 = c.createGain();   // 腹に来る低音
+    o.type = 'sine';
+    o.frequency.setValueAtTime(90, now);
+    o.frequency.exponentialRampToValueAtTime(26, now + 0.4);
+    g2.gain.setValueAtTime(0.9, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
+    o.connect(g2); g2.connect(this.master);
+    o.start(now); o.stop(now + 0.48);
+  },
+
   _kick() {
     const c = this.ctx, o = c.createOscillator(), gn = c.createGain();
     const now = c.currentTime;

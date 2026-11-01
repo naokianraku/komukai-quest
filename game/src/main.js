@@ -107,6 +107,17 @@ export class Stage {
     }
   }
 
+  // 彗星（魔王Y下のメテオ）。高いところから落ちてきて、着地点を中心に範囲で当たる。
+  spawnMeteor(x, y, team, m, delay) {
+    const Z0 = 240, fall = m.fall || 1.2;
+    this.projectiles.push(new Projectile(x, y, 0, 0, team, {
+      kind: 'meteor', look: 'meteor', dmg: m.dmg, kb: m.kb || 190, w: 10,
+      vz: 0, gz: 2 * Z0 / (fall * fall), floorZ: 0, aoe: m.radius,
+      delay, life: delay + fall + 1.5,
+    }));
+    this.projectiles[this.projectiles.length - 1].z = Z0;
+  }
+
   spawnWave(w) {
     // 種別を1つの配列に展開してから、横にも奥行きにも広く散らして配置
     // 地獄モードは雑魚（ボス/中ボス/elite以外）の数を2倍にする

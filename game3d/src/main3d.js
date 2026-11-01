@@ -995,12 +995,15 @@ stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, 
 // 投げ物が砕けるのも3Dの粒子で出す（音と2D側の破片は fx 本体が受け持つ）
 const origShatter = stage.fx.shatter.bind(stage.fx);
 stage.fx.shatter = (x, y, look) => { origShatter(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
+// メテオ着弾。揺らして赤く光らせる
+const origMeteor = stage.fx.meteor.bind(stage.fx);
+stage.fx.meteor = (x, y) => { origMeteor(x, y); meteorBoom(x, y); };
 
 // ===== ステージの読み込み =====
 function clearStageObjects() {
   for (const [, r] of meshes) { scene.remove(r.root); if (r.ring) scene.remove(r.ring); }
   meshes.clear();
-  for (const [, m] of projMeshes) scene.remove(m);
+  for (const [, r] of projMeshes) { scene.remove(r.group); if (r.mark) scene.remove(r.mark.g); }
   projMeshes.clear();
   for (const [, r] of weapons) { scene.remove(r.group); scene.remove(r.flash); }
   weapons.clear();
@@ -1024,6 +1027,8 @@ function attachStage(st, data) {
   stage.fx.text = (x, y, str, color) => { origText2(x, y, str, color); addFloat(x, y, 0, str, color); };
   const origShatter2 = stage.fx.shatter.bind(stage.fx);
   stage.fx.shatter = (x, y, look) => { origShatter2(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
+  const origMeteor2 = stage.fx.meteor.bind(stage.fx);
+  stage.fx.meteor = (x, y) => { origMeteor2(x, y); meteorBoom(x, y); };
   stage.player.ranged = (game.difficulty === 'easy');   // 2D版の applyDifficulty と同じ
   buildScenery(data);
   camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
@@ -1182,7 +1187,8 @@ function syncEntities(dt) {
     r.body.rotation.y = face + r.amp * WALK.twist * Math.sin(r.ph);
     r.legA.rotation.y = r.legB.rotation.y = face;
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
-    r.body.rotation.x = e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
+    r.body.rotation.x = e.state === 'cast' ? -0.34
+      : e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
     r.body.scale.set(sx, sy, sx);
     r.legA.scale.set(sx, sy, sx);
     r.legB.scale.set(sx, sy, sx);
@@ -1402,15 +1408,46 @@ const THROWN = {
     g.add(lid);
     return g;
   },
+  // 魔王Y下のメテオ。岩塊と尾。自分で光るので暗い業火の中でもはっきり見える
+  meteor: () => {
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(6.4, 0),
+      mat('#6b2b14', { emissive: new THREE.Color('#ff5a18') }));
+    g.add(core);
+    for (let i = 0; i < 9; i++) {                       // 尾。長く引くほど彗星らしく見える
+      const t = new THREE.Mesh(new THREE.IcosahedronGeometry(4.6 - i * 0.44, 0),
+        mat(i % 2 ? '#ff7f0e' : '#ffd24a', { emissive: new THREE.Color(i % 2 ? '#ff7f0e' : '#ffd24a') }));
+      t.position.set((i % 2 ? 1 : -1) * (1.4 + i * 0.3), 8 + i * 8.0, (i % 3 ? 1 : -1) * 1.2);
+      g.add(t);
+    }
+    return g;
+  },
 };
 const LOOKS = ['paper', 'mug', 'keyboard'];
 // 投げ物ごとの回り方。倒れずに回る軸と速さで、重さの違いを出す。
 const SPIN = {
+  meteor:   { z: 0.25, x: 0 },    // 岩塊なのでゆっくり回る
   sake:     { z: 1.5, x: 0 },     // 端から端へくるくる回る
   pipe:     { z: 2.6, x: 0 },     // 一番速く回る
   dumbbell: { z: 0.9, x: 0 },     // 重いのでゆっくり
   pc:       { z: 1.0, x: 0.7 },   // 開いたまま不規則に舞う
 };
+
+// 彗星の着地点を床に出す印。落ちるほど濃くなるので、あと何秒かが読める。
+// 当たり判定が奥行きを 1.6 倍で詰めて見ているので、円ではなく奥行きを潰した楕円にする。
+const markGeo = new THREE.CircleGeometry(1, 30); markGeo.rotateX(-Math.PI / 2);
+const markRing = new THREE.RingGeometry(0.88, 1.0, 30); markRing.rotateX(-Math.PI / 2);
+function makeMark() {
+  const g = new THREE.Group();
+  const fill = new THREE.Mesh(markGeo, new THREE.MeshBasicMaterial({
+    color: new THREE.Color('#ff2a0e'), transparent: true, opacity: 0.18, depthWrite: false, fog: false }));
+  const ring = new THREE.Mesh(markRing, new THREE.MeshBasicMaterial({
+    color: new THREE.Color('#ff7a3a'), transparent: true, opacity: 0.85, depthWrite: false, fog: false }));
+  fill.renderOrder = 2; ring.renderOrder = 3;
+  g.add(fill); g.add(ring); g.position.y = 0.2;
+  scene.add(g);
+  return { g, fill, ring };
+}
 
 const projMeshes = new Map();
 function syncProjectiles() {
@@ -1427,8 +1464,16 @@ function syncProjectiles() {
       const group = THROWN[look]();
       group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       scene.add(group);
-      r = { group, look, spin: (pr.id % 2 ? 1 : -1) * 0.26 };
+      r = { group, look, spin: (pr.id % 2 ? 1 : -1) * 0.26, mark: pr.aoe ? makeMark() : null };
       projMeshes.set(pr.id, r);
+    }
+    if (r.mark) {
+      const rr = pr.aoe * S;
+      const prog = 1 - Math.min(1, Math.max(0, pr.z) / 240);     // 0=出たばかり 1=着地直前
+      r.mark.g.position.set(wx(pr.x), 0.2, wz(pr.y));
+      r.mark.g.scale.set(rr, 1, rr / 1.6);                        // 奥行きを潰す
+      r.mark.fill.material.opacity = 0.10 + 0.26 * prog;
+      r.mark.ring.material.opacity = 0.45 + 0.5 * prog;
     }
     r.group.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
     if (r.look === 'missile') {
@@ -1441,8 +1486,20 @@ function syncProjectiles() {
   }
   for (const [id, r] of projMeshes) {
     if (seen.has(id)) continue;
-    scene.remove(r.group); projMeshes.delete(id);
+    scene.remove(r.group);
+    if (r.mark) { scene.remove(r.mark.g); r.mark.fill.material.dispose(); r.mark.ring.material.dispose(); }
+    projMeshes.delete(id);
   }
+}
+
+// メテオ着弾: 火の粉を3色で散らし、画面を揺らして赤く光らせる
+const flashEl = document.getElementById('flash');
+let flashT = 0, casting = 0;
+function meteorBoom(gx, gy) {
+  hitstop = Math.max(hitstop, 0.05);
+  shake = Math.max(shake, 3.2);
+  flashT = Math.max(flashT, 0.42);
+  for (const c of ['#fff0b0', '#ff7f0e', '#c73333']) burst(gx, gy, c);
 }
 
 // 砕けた投げ物の破片の色（2D側の DEBRIS と揃える）
@@ -1959,6 +2016,12 @@ function loop(now) {
   }
 
   updateAudio();
+  // 詠唱中は床の印に加えて画面全体をうっすら赤くし、揺らして圧をかける
+  const cast = stage.entities.some((e) => e.alive && e.state === 'cast');
+  casting += ((cast ? 1 : 0) - casting) * Math.min(1, frame * 5);
+  if (cast) shake = Math.max(shake, 0.5 + casting * 0.9);
+  flashT = Math.max(0, flashT - frame * 2.4);
+  flashEl.style.opacity = Math.min(0.5, flashT * 1.1 + casting * 0.09).toFixed(3);
   shake = Math.max(0, shake - frame * 4.5);
   syncEntities(frame);
   updateCamera(frame);
@@ -2052,6 +2115,20 @@ if (Q.get('boss') === '1') {
   stage.lockX = stage.width - 40;
   stage.player.x = stage.width - 150;
   stage.startBoss();
+  camPos.x = wx(stage.player.x); camLook.x = wx(stage.player.x);
+}
+
+// ?meteor=1 … 魔王のメテオをすぐ撃たせる（印と着弾の確認用）。間合いは開けておく。
+if (Q.get('meteor') === '1') {
+  game.state = 'playing'; hideScreen();
+  stage.currentWave = stage.data.waves.length;
+  stage.lockX = stage.width - 40;
+  stage.player.x = stage.width - 150;
+  stage.startBoss();
+  if (stage.boss) {
+    stage.boss.x = stage.player.x + 230;
+    if (stage.boss.meteorDef) stage.boss.meteorT = 0.8;
+  }
   camPos.x = wx(stage.player.x); camLook.x = wx(stage.player.x);
 }
 
