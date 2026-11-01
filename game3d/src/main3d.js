@@ -324,12 +324,18 @@ const ROOM = {
   // 正門（タイトル画面）: 黒い槍柵と門柱、守衛所、奥に白い高層棟とガラスの低層棟。
   // 2D版のタイトル画と同じ配色に合わせてある。
   gate: {
-    sky: '#8fc0e4', ground: '#8a8f96', road: '#777c83', line: '#e6e8ea',
-    fence: '#16171c', accent: '#ff7f0e', base: '#b9bdc1', baseDark: '#969ca2',
-    hedge: '#2f5a32', hedgeLit: '#3a6e3d', post: '#9aa2aa', plate: '#20262e',
-    bldg: '#d6dade', bldgSide: '#bcc2c8', bldgWin: '#6f7b88',
-    glass: '#cdd5da', glassWin: '#a6cad4', bridge: '#c8ccd0',
-    booth: '#e8eaec', boothRoof: '#6e747a', tree: '#2f5a35', pole: '#cfd3d7',
+    sky: '#9ec3dd', ground: '#86898c', road: '#75787c', line: '#e8eae8',
+    bikeLane: '#2f5aa0',                                   // 自転車レーンの青
+    wall: '#dcdcd6', wallTop: '#c6c6bf',                   // 白いコンクリート塀
+    rail: '#2b3a33', railDark: '#1b2620',                  // 濃緑の縦格子フェンス
+    gateLeaf: '#2a332e',                                   // 引き戸の門扉
+    stripeA: '#e05a1e', stripeB: '#f0f0ec',                // オレンジ白の縞ポール
+    sign: '#efede7', signPlate: '#d8d6d0', signMark: '#b03028',
+    bldg: '#b7babb', bldgPanel: '#c4c7c7', bldgWin: '#4e5a63', spandrel: '#cdcfce',
+    tower: '#a8acad', balcony: '#9ba0a1',
+    annex: '#cfd4d6', annexWin: '#8fa8b8', bridge: '#aeb4b6',
+    booth: '#e4e4de', boothRoof: '#7c8184', canopy: '#b9c2c6', canopyGlass: '#9fb4bc',
+    tree: '#2c5230', treeDark: '#1f3d24', pole: '#c3c7c9', cone: '#1f4fa8',
   },
   // 構内道路: 頭上の配管ラック、灰色の柱、白い建屋。工場らしさが一番出る場所
   yard: {
@@ -974,102 +980,126 @@ function buildHellfire(W, halfD) {
 // プレイ用の場面ではないので、カメラに入る範囲だけを組んで軽くしてある。
 function buildGate(W, halfD) {
   const R = ROOM.gate;
-  // 画面中央は書類で塞がるので、門そのものは右寄りに置く（cx=自機、gx=門の中心）
+  // 実際の正門の写真に合わせた構成。
+  //  ・境界は黒い槍柵ではなく「白いコンクリート塀 ＋ 濃緑の縦格子フェンス」
+  //  ・門は引き戸（開けて脇に寄せてある）。脇に白い社名板の角柱とオレンジ白の縞ポール
+  //  ・奥の事務棟は普通の窓グリッドではなく「細長い連窓の帯」。帯の間は無地のコンクリート
+  //  ・門の奥に構内道路がまっすぐ伸び、連絡通路がその上を跨ぐ
+  // 面どうしを同じ位置に置かないこと（z-fighting で点滅する）。窓は壁へ食い込ませ、
+  // かつ手前へ突き出す。
   const cx = stage ? wx(stage.player.x) : W / 2;
-  const gx = cx + 38;
+  const gx = cx + 38;                                     // 門の中心（画面の右寄り）
   const L = cx - 150, Rt = cx + 150;
-  const FZ = -(halfD + 22);                        // 柵の位置（歩行帯の奥）
-  const GW = 27;                                   // 門の開口（中心からの半幅）
-  const SPANS = [[L, gx - GW], [gx + GW, Rt]];     // 柵・基礎・植栽は門の両側に分けて置く
+  const FZ = -(halfD + 22);                               // 塀の位置
+  const GW = 27;                                          // 門の開口（中心からの半幅）
+  const SPANS = [[L, gx - GW], [gx + GW, Rt]];
   setLighting(true);
   scene.background = hex(R.sky);
   scene.fog = new THREE.Fog(hex(R.sky), 360, 1100);
 
-  // 地面（アスファルト）と、門を抜けて奥へ続く構内道路
+  // --- 路面 ---
   box(Rt - L + 160, 2, 420, R.ground, cx, -1, FZ + 70);
-  box(GW * 2 - 5, 0.3, 430, R.road, gx, 0.1, FZ - 60);
+  box(GW * 2 - 5, 0.3, 430, R.road, gx, 0.1, FZ - 60);                     // 門を抜ける構内道路
   for (let z = FZ - 200; z < halfD + 24; z += 17) box(2.0, 0.1, 9, R.line, gx, 0.32, z);
   for (let x = gx - GW + 6; x < gx + GW - 4; x += 7) box(4.4, 0.1, 11, R.line, x, 0.32, halfD + 8);
+  box(Rt - L + 60, 0.1, 9, R.bikeLane, cx, 0.3, halfD + 20);               // 自転車レーンの青
+  box(Rt - L + 60, 0.12, 0.7, R.line, cx, 0.34, halfD + 15.6);             // 車道との区画線
 
-  // 黒い槍柵。左寄りの一区画だけオレンジ塗装（2D版と同じ目印）
-  for (let x = L; x <= Rt; x += 3.2) {
-    if (Math.abs(x - gx) < GW) continue;
-    const c = (x > gx - GW - 104 && x < gx - GW - 84) ? R.accent : R.fence;
-    box(1.1, 29, 1.1, c, x, 15.5, FZ, { cast: true });
-    box(1.9, 1.7, 1.9, c, x, 30.8, FZ);                                   // 槍状の先端
-  }
+  // --- 白いコンクリート塀と濃緑の縦格子 ---
   for (const [x0, x1] of SPANS) {
     const w = x1 - x0, xm = (x0 + x1) / 2;
-    box(w, 1.5, 1.3, R.fence, xm, 27.8, FZ);                              // 上レール
-    box(w, 1.5, 1.3, R.fence, xm, 14.5, FZ);                              // 中レール
-    box(w, 2.6, 3.2, R.base, xm, 0.9, FZ);                                // コンクリ基礎
-    box(w, 0.5, 3.4, R.baseDark, xm, 2.2, FZ);
-    box(w, 10, 7, R.hedge, xm, 5, FZ - 7, { cast: true });                // 背後の植栽
-    for (let x = x0 + 3; x < x1; x += 7) box(6.4, 6.4, 6.4, R.hedgeLit, x, 9.4, FZ - 7);
+    box(w, 13, 3.0, R.wall, xm, 6.5, FZ, { cast: true });                  // 腰までの白い塀
+    box(w + 0.4, 1.0, 3.6, R.wallTop, xm, 13.2, FZ);                       // 笠木
+    // 塀の上に立つ縦格子。実物は細い角パイプが等間隔に並ぶ
+    for (let x = x0 + 1.5; x < x1; x += 2.6) box(0.8, 13, 0.8, R.rail, x, 20, FZ, { cast: true });
+    box(w, 0.9, 1.0, R.railDark, xm, 26.2, FZ);                            // 上レール
+    box(w, 0.7, 1.0, R.railDark, xm, 14.4, FZ);                            // 下レール
   }
 
-  // 門柱・社名板・開いたままの門扉
-  for (const sd of [-1, 1]) {
-    const x = gx + sd * (GW + 4.5);
-    box(9, 40, 9, R.post, x, 20, FZ, { cast: true });
-    box(11, 3, 11, R.base, x, 41.3, FZ);                                  // 笠木（柱の天端に食い込ませる）
-    box(9.4, 3, 9.4, R.plate, x, 2, FZ);                                  // 足元の黒い帯
-    box(9.4, 1.6, 9.4, R.plate, x, 33, FZ);                               // 上の目地
-    box(2.2, 2.2, 0.8, R.accent, x, 28, FZ + 4.7, { receive: false });    // 門灯
-    // 門扉。構内側へ開いたままにしておく（朝の通勤時間帯）。
-    // 縦桟は回さなくてよいので、桟ごとに位置を出して置く（Group を作らない）
-    const th = 1.02, LEN = 24, hx = x - sd * 4.5;
-    for (let d = 2; d <= LEN; d += 2.8) {
-      box(0.95, 25, 0.95, R.fence, hx + sd * d * Math.cos(th), 12.5, FZ + d * Math.sin(th), { cast: true });
-    }
-    for (const [h, t] of [[24.6, 1.3], [12, 1.1]]) {                      // 上レール・中レール
-      const rail = box(LEN, t, 1.1, R.fence,
-        hx + sd * (LEN / 2) * Math.cos(th), h, FZ + (LEN / 2) * Math.sin(th));
-      rail.rotation.y = -sd * th;
+  // --- 塀の内側の樹木。写真では丸く刈られた常緑樹が塀より高く並ぶ ---
+  for (const [x0, x1] of SPANS) {
+    for (let x = x0 + 6; x < x1; x += 13) {
+      const h = 20 + Math.abs(Math.sin(x * 0.7)) * 14;
+      box(9, h * 0.5, 9, R.treeDark, x, h * 0.28, FZ - 11, { cast: true });        // 下枝
+      box(13, h * 0.42, 13, R.tree, x, h * 0.62, FZ - 11, { cast: true });         // 中段
+      box(9.5, h * 0.26, 9.5, R.tree, x, h * 0.9, FZ - 11, { cast: true });        // 天端を丸める
     }
   }
-  box(26, 9, 1.4, R.plate, gx + GW + 4.5, 27, FZ + 5.4, { receive: false });   // 社名板（柱の前面に食い込ませる）
-  box(21, 1.8, 0.6, '#b9c3cc', gx + GW + 4.5, 28.6, FZ + 6.0, { receive: false });
-  box(15, 1.4, 0.6, '#b9c3cc', gx + GW + 2.5, 25.4, FZ + 6.0, { receive: false });
 
-  // 守衛所。開口を塞がないよう門柱の外側に置く
-  const bx = gx + GW + 16;
-  box(21, 16, 15, R.booth, bx, 8, FZ + 13, { cast: true });               // 門柱の前面へ少し食い込ませる
-  box(24, 1.6, 18, R.boothRoof, bx, 16.7, FZ + 13, { cast: true });
-  box(15, 7.5, 1.4, R.glassWin, bx, 10.5, FZ + 20.8, { receive: false }); // 窓は壁から突き出す
-  for (const x of [gx - GW - 13, gx + GW + 13]) box(0.9, 13, 0.9, R.pole, x, 6.5, FZ + 21, { cast: true });
-
-  // 柵の向こう: 左の白い高層棟（窓グリッド）／右のガラス低層棟／連絡通路
-  //
-  // 重ねる箱は「面どうしを同じ位置に置かない」。壁とぴったり同じ平面に窓を貼ると、
-  // どちらが手前か決まらず、見える面が毎フレーム入れ替わって点滅する（z-fighting）。
-  // 窓は必ず壁へ食い込ませ、かつ手前へ突き出す。
-  const BZ = FZ - 78;
-  const HF = BZ + 13;                                                     // 高層棟の前面
-  box(132, 58, 26, R.bldg, cx - 76, 29, BZ, { cast: true });
-  box(16, 56, 27, R.bldgSide, cx - 14, 29, BZ);                           // 側面の濃い帯（本体より薄く・厚く）
-  box(134, 3, 28, R.bldgSide, cx - 76, 59.2, BZ);                         // パラペット
-  for (let y = 10; y < 54; y += 7.4) {
-    for (let x = cx - 136; x < cx - 22; x += 11) box(7.6, 4.6, 2.0, R.bldgWin, x, y, HF + 0.4, { receive: false });
+  // --- 門まわり ---
+  // 引き戸の門扉。開けて右へ寄せてある（戸袋の内側に重なっている体）
+  for (let x = gx + GW + 6; x < gx + GW + 28; x += 2.4) {
+    box(0.9, 24, 0.9, R.gateLeaf, x, 12, FZ + 2.6, { cast: true });
   }
-  const GF = BZ + 20;                                                     // ガラス棟の前面
-  box(118, 28, 24, R.glass, cx + 112, 14, BZ + 8, { cast: true });
-  box(120, 2.6, 26, R.bldgSide, cx + 112, 29.2, BZ + 8);
-  for (let y = 6; y < 26; y += 6.4) {
-    box(112, 4.0, 1.6, R.glassWin, cx + 112, y, GF + 0.5, { receive: false });
-    box(112, 1.2, 1.2, '#7fadba', cx + 112, y - 1.8, GF + 1.1, { receive: false });
+  box(22, 1.1, 1.2, R.gateLeaf, gx + GW + 17, 23.8, FZ + 2.6);
+  box(22, 0.9, 1.2, R.gateLeaf, gx + GW + 17, 1.2, FZ + 2.6);
+  // 社名板の角柱（白い角柱に、赤い印の入った板）
+  const sx2 = gx - GW - 4.5;
+  box(6.5, 30, 5.5, R.sign, sx2, 15, FZ + 1.0, { cast: true });
+  box(7.1, 1.2, 6.1, R.wallTop, sx2, 30.2, FZ + 1.0);
+  box(5.2, 6.0, 0.9, R.signPlate, sx2, 21, FZ + 4.2, { receive: false });
+  box(3.6, 0.9, 0.5, R.signMark, sx2 - 0.4, 22.8, FZ + 4.8, { receive: false });
+  box(4.4, 0.6, 0.5, '#6a6a66', sx2, 20.0, FZ + 4.8, { receive: false });
+  // オレンジ白の縞ポール。実物は門の角に必ず立っている目印
+  for (let i = 0; i < 11; i++) {
+    box(1.6, 3.2, 1.6, i % 2 ? R.stripeB : R.stripeA, gx + GW + 2.5, 1.8 + i * 3.2, FZ + 12, { cast: true });
   }
-  const RF = BZ + 11.5;                                                   // 連絡通路の前面
-  box(44, 9, 11, R.bridge, cx + 34, 33, BZ + 6, { cast: true });          // 連絡通路
-  for (let x = cx + 15; x < cx + 53; x += 5.5) box(3.2, 5.4, 1.6, R.bldgWin, x, 34, RF + 0.5, { receive: false });
-
-  // 旗竿と植栽。門の手前に縦の要素があると構図が締まる
-
-  for (let x = L + 16; x < Rt; x += 52) {
-    if (Math.abs(x - gx) < GW + 40) continue;
-    box(13, 2.4, 11, R.base, x, 1.2, FZ + 27);                            // 縁石（植栽桝）
-    box(9, 7, 9, R.tree, x, 5.6, FZ + 27, { cast: true });
+  box(5.2, 1.2, 1.2, R.stripeA, gx + GW + 5, 36.5, FZ + 12, { receive: false });   // 上の小さな旗板
+  // 青いコーン（門の手前に2つ）
+  for (const dx of [-14, -4, 8]) {
+    box(3.0, 0.8, 3.0, R.cone, gx + dx, 0.4, FZ + 13, { receive: false });
+    box(1.9, 4.0, 1.9, R.cone, gx + dx, 2.4, FZ + 13, { cast: true });
+    box(2.1, 0.8, 2.1, R.stripeB, gx + dx, 3.4, FZ + 13, { receive: false });
   }
+
+  // --- 守衛所と、自転車置場の長い庇（写真の左手に写っているガラス張りの建屋）---
+  const bx = gx + GW + 30;
+  box(17, 15, 13, R.booth, bx, 7.5, FZ + 14, { cast: true });
+  box(20, 1.4, 16, R.boothRoof, bx, 15.7, FZ + 14, { cast: true });
+  box(12, 6.5, 1.4, R.canopyGlass, bx, 9.5, FZ + 21.2, { receive: false });
+  const kx = gx - GW - 46;
+  box(62, 11, 14, R.canopy, kx, 5.5, FZ - 6, { cast: true });              // 自転車置場
+  box(66, 1.2, 17, R.boothRoof, kx, 11.6, FZ - 6, { cast: true });
+  for (let x = kx - 28; x < kx + 30; x += 7) box(4.6, 7.0, 1.4, R.canopyGlass, x, 5.5, FZ + 1.6, { receive: false });
+
+  // --- 奥の事務棟。細長い連窓が帯になって並ぶのが実物の特徴 ---
+  const BZ = FZ - 86;
+  const MF = BZ + 14;                                                      // 正面の位置
+  box(126, 74, 28, R.bldg, cx - 66, 37, BZ, { cast: true });               // 本体
+  box(128, 2.6, 30, R.bldgPanel, cx - 66, 75.4, BZ);                       // パラペット
+  for (let f = 0; f < 9; f++) {
+    const y = 10 + f * 7.2;
+    box(112, 2.6, 2.2, R.bldgWin, cx - 70, y, MF + 0.6, { receive: false });        // 連窓の帯
+    box(114, 0.8, 2.6, R.spandrel, cx - 70, y + 2.0, MF + 0.7, { receive: false }); // 帯の上の白い見切り
+    for (let x = cx - 126; x < cx - 14; x += 14)                                     // 方立（まだら感）
+      box(0.9, 2.8, 2.8, R.bldgPanel, x, y, MF + 0.8, { receive: false });
+  }
+  // 右端の階段室。窓が少なく、バルコニーが段々に付く
+  box(26, 76, 34, R.tower, cx - 1, 38, BZ, { cast: true });               // 本体より手前へ出す
+  for (let f = 0; f < 7; f++) box(16, 1.2, 3.0, R.balcony, cx + 4, 16 + f * 8.4, BZ + 18.2, { receive: false });
+  for (let f = 0; f < 7; f++) box(9, 3.0, 2.2, R.bldgWin, cx - 8, 14 + f * 8.4, BZ + 18.0, { receive: false });
+
+  // --- 門の奥: 構内道路の両脇の建屋と、道路を跨ぐ連絡通路 ---
+  box(54, 34, 40, R.annex, gx + 62, 17, BZ + 30, { cast: true });
+  for (let f = 0; f < 4; f++) box(50, 2.6, 2.0, R.annexWin, gx + 62, 8 + f * 8, BZ + 50.6, { receive: false });
+  box(40, 30, 40, R.annex, gx - 56, 15, BZ + 30, { cast: true });
+  box(GW * 2 + 26, 9, 12, R.bridge, gx, 34, BZ + 43, { cast: true });      // 連絡通路
+  for (let x = gx - GW - 4; x < gx + GW + 6; x += 6.5) box(2.4, 4.4, 1.6, R.bldgWin, x, 35, BZ + 49.4, { receive: false });
+  box(3.4, 34, 3.4, R.tower, gx - GW - 10, 17, BZ + 43, { cast: true });   // 通路の柱
+  box(3.4, 34, 3.4, R.tower, gx + GW + 10, 17, BZ + 43, { cast: true });
+
+  // --- 街路の設え: 押ボタン式の歩行者信号、照明柱、電柱 ---
+  const px2 = gx - GW - 54;                               // 門の正面を塞がないよう左へ
+  box(1.6, 34, 1.6, R.pole, px2, 17, halfD + 14, { cast: true });
+  box(5.0, 7.0, 2.4, '#2a2e31', px2 + 2.6, 30, halfD + 14, { receive: false });     // 信号機
+  box(3.2, 3.2, 0.6, '#2fb24a', px2 + 2.6, 30, halfD + 12.9, { emissive: '#2fb24a', receive: false });
+  box(3.6, 5.2, 0.5, '#f2f4f6', px2 - 1.2, 29, halfD + 13.0, { receive: false });   // 「押ボタン式」の板
+  for (const x of [cx - 60, cx + 96]) {                                             // 照明柱
+    box(1.2, 40, 1.2, R.pole, x, 20, halfD + 18, { cast: true });
+    box(5.0, 1.2, 2.4, '#5a6064', x + 2, 40.2, halfD + 18, { receive: false });
+  }
+  box(2.0, 46, 2.0, '#8a7f72', cx - 96, 23, halfD + 20, { cast: true });            // 電柱
+  box(9, 0.6, 0.6, '#6a6a66', cx - 96, 44, halfD + 20, { receive: false });
 }
 
 const SCENES = {
