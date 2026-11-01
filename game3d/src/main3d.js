@@ -909,16 +909,9 @@ function buildHellfire(W, halfD) {
   box(W + 80, 2, FRONT - BACK, R.floor, W / 2, -1, (FRONT + BACK) / 2);
   box(W + 80, 64, 2, R.wall, W / 2, 32, BACK - 1);
 
-  // 天井は落ちている。残った野縁と、垂れ下がった蛍光灯だけ
-  for (let x = -10; x < W + 20; x += 9) {
-    if (Math.abs((x * 7) % 29) < 11) continue;                           // 抜け落ちた区画
-    box(8, 1.2, FRONT - BACK, R.ceiling, x, 47, (FRONT + BACK) / 2);
-  }
-  for (let x = 16; x < W; x += 76) {                           // 垂れ下がった照明器具
-    box(0.4, 26, 0.4, '#3a2a22', x, 33, -halfD - 8);
-    const t = box(26, 0.8, 2.0, '#4a3a30', x, 20.4, -halfD - 8, { receive: false });
-    t.rotation.z = 0.35;                                       // 片側が外れて斜めに垂れる
-  }
+  // 天井は作らない。残った野縁や垂れ下がった蛍光灯を置くと、画面の上を
+  // 暗い横棒が何本も横切って、炎より先にそちらが目に入ってしまう。
+  // 上は抜けたまま煙で終わらせる。
 
   // 床の炎。歩行帯は空けて、手前と奥にだけ置く。
   // 奥ほど小さく、手前ほど大きくして、画面の下側が燃えているように見せる。
