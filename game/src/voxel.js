@@ -83,7 +83,7 @@ export function buildVoxel(map, palette) {
 export function buildVoxelForType(key) {
   const ov = CHAR_PALETTES[key];
   if (!ov) return null;
-  const { map, ...colors } = ov;
+  const { map, shirt, ...colors } = ov;   // shirt は色ではなく形の指定
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
   const srcMap = map === 'suit' ? SUIT_MAP : map === 'cap' ? WORKER_CAP_MAP : WORKER_MAP;
   return buildVoxel(srcMap, { ...base, ...colors });
@@ -105,7 +105,7 @@ export const C3 = { W: 40, H: 60, D: 24, SCALE: 0.3 }; // SCALE: 2D版と同じ�
 // その頭身がキャラの可愛げを作っている。等身を上げると途端に寸胴に見えるので、
 // 解像度だけ上げて比率は変えない。
 //   靴 0-10% / ズボン 10-28% / 胴 28-62% / 頭 62-85% / かぶりもの 85-100%
-function charParts({ cap = false, suit = false, hair = 0, glasses = 0, beard = 0, build = 1 }) {
+function charParts({ cap = false, suit = false, hair = 0, glasses = 0, beard = 0, build = 1, openShirt = false }) {
   // build: 0=細身 / 1=標準 / 2=がっしり / 3=小柄で太め。
   // メッシュを拡大縮小するだけでは差が出ないので、肩幅・胴まわり・腹の出方をモデル側で変える。
   // 胸ポケットやボタンなど胴の前面につくものは、bd と一緒に前へ出さないと腹に埋まる。
@@ -130,7 +130,17 @@ function charParts({ cap = false, suit = false, hair = 0, glasses = 0, beard = 0
   add(6 - bw, 10 - bw, 18, 21, 8, 16, 's');   // 左手
   add(29 + bw, 33 + bw, 18, 21, 8, 16, 's');  // 右手
 
-  if (suit) {
+  if (suit && openShirt) {
+    // ネクタイなし。胸元をV字に開けてワイシャツを見せる。
+    // 細い帯のままだと、色を変えても「白いネクタイ」にしか見えない。
+    add(17, 22, 32, 36, 19 + bd, 19 + bd, 't');            // 胸元（いちばん広い）
+    add(18, 21, 26, 31, 19 + bd, 19 + bd, 't');            // 中ほど
+    add(19, 20, 20, 25, 19 + bd, 19 + bd, 't');            // 裾へ向けて細く
+    add(16, 18, 35, 37, 5 - bd, 19 + bd, 't');             // ワイシャツの襟
+    add(21, 23, 35, 37, 5 - bd, 19 + bd, 't');
+    add(14, 15, 34, 37, 5 - bd, 19 + bd, 'b');             // ジャケットの襟（その外側）
+    add(24, 25, 34, 37, 5 - bd, 19 + bd, 'b');
+  } else if (suit) {
     add(19, 20, 20, 36, 19 + bd, 19 + bd, 't');            // ネクタイ
     add(15, 18, 35, 37, 5 - bd, 19 + bd, 'b');             // 襟（スーツ）
     add(21, 24, 35, 37, 5 - bd, 19 + bd, 'b');
@@ -350,7 +360,7 @@ export const HAIRS = [
 // パレットと charParts の引数を、キャラ種別＋個体差から決める
 function charSpec(key, v) {
   const ov = CHAR_PALETTES[key] || CHAR_PALETTES.buka;
-  const { map, ...colors } = ov;
+  const { map, shirt, ...colors } = ov;   // shirt は色ではなく形の指定
   const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
   const pal = { ...base, ...colors };
   delete pal.k;                                   // 3Dでは黒の輪郭線を使わない
@@ -364,6 +374,7 @@ function charSpec(key, v) {
       cap: map === 'cap', suit: map === 'suit',
       hair: v.hair || 0, glasses: v.glasses || 0, beard: v.beard || 0,
       build: v.build == null ? 1 : v.build,
+      openShirt: !!shirt,
     },
   };
 }

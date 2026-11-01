@@ -134,11 +134,18 @@ export class Stage {
     }
     const total = list.length;
     const band = PLAY.bottom - PLAY.top - 12;
+    // 前から来る組は「一定の幅」に収める。1体あたり固定間隔で並べると、
+    // 人数が増えたぶんだけ右へ伸びて、5体目以降が画面の外に湧く
+    //（名前も見えないまま歩いてくる）。地獄モードの倍増でも同じことが起きる。
+    const front = [], behind = [];
+    for (let n = 0; n < total; n++) ((total > 3 && n % 4 === 3) ? behind : front).push(n);
+    const FRONT_SPAN = 150;
+    const step = front.length > 1 ? Math.min(58, FRONT_SPAN / (front.length - 1)) : 0;
     for (let n = 0; n < total; n++) {
-      const fromBehind = total > 3 && n % 4 === 3; // 集団は一部を後方からも（取り囲む）
-      let x = fromBehind
-        ? this.player.x - 72 - (n % 3) * 38
-        : this.player.x + 78 + n * 58 + ((n % 2) ? 26 : 0);
+      const fi = front.indexOf(n);                 // 前から来る組の通し番号（-1 なら後方から）
+      let x = fi < 0
+        ? this.player.x - 72 - (n % 3) * 38        // 集団は一部を後方からも（取り囲む）
+        : this.player.x + 78 + fi * step + ((fi % 2) ? 18 : 0);
       x = clamp(x, 12, this.width - 24);
       // 奥行きは黄金比刻みで全体に分散（縦の列に固まらない）
       const y = PLAY.top + 6 + Math.round(band * ((n * 0.618 + 0.13) % 1));

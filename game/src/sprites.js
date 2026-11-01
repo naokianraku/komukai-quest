@@ -135,7 +135,7 @@ export const CHAR_PALETTES = {
   shitennou_sda:   { map: 'worker', h: '#7a7a4a' }, // S田（くすんだ黄土ヘルメット）
   shitennou_hmoto: { map: 'worker', h: '#4a5a7a' }, // H本（くすんだ青ヘルメット）
   shitennou_hno:   { map: 'worker', h: '#7a3a2a' }, // H野（くすんだ赤茶ヘルメット）
-  maou:      { map: 'suit', b: '#1a0608', p: '#120406', t: '#c00a0a', h: '#dcdcdc', s: '#b87a4a', e: '#ff1212' }, // 魔王Y下: 漆黒赤スーツ・白髪・日焼け・紅蓮の目
+  maou:      { map: 'suit', shirt: true, b: '#1a0608', p: '#120406', t: '#f2f4f6', h: '#4a3422', s: '#b87a4a', e: '#0d1118' }, // 魔王Y下: 漆黒のジャケット・白ワイシャツ(ネクタイなし)・茶髪・日焼け・黒縁眼鏡
 };
 
 // 頭上に出す役職ラベル（ボス以外の識別用。ボスはボスHPバーで表示）
@@ -187,7 +187,7 @@ export function buildSprites() {
     }
   }
   for (const [key, ov] of Object.entries(CHAR_PALETTES)) {
-    const { map, ...colors } = ov;
+    const { map, shirt, ...colors } = ov;   // shirt は色ではなく形の指定（3D用）
     const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
     const baseMap = map === 'suit' ? SUIT_MAP : map === 'cap' ? WORKER_CAP_MAP : WORKER_MAP;
     REGISTRY[key] = bake(baseMap, base, colors);

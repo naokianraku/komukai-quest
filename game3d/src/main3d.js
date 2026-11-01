@@ -60,7 +60,18 @@ const BOSS_APPEARANCES = [
 ];
 const PLAYER_APPEARANCE = [0, 0, 0, 0, 0, 1];
 
+// 見た目を固定するキャラ。ボスの個体差は e.id から選んでいるが、id は出現順で
+// 変わるので、同じボスでも遊ぶたびに髪型・髪色・眼鏡が入れ替わってしまう
+// （眼鏡が無い回もある）。看板キャラだけはここで固定する。
+// skin / hairColor を null にすると、個体差で上書きせず CHAR_PALETTES の指定が残る。
+const FIXED_APPEARANCE = {
+  // 魔王Y下: 七三・黒縁眼鏡・髭なし。黒髪と日焼けはパレット側の指定をそのまま使う。
+  maou: { hair: 2, glasses: 1, beard: 0, skin: null, hairColor: null, build: 2 },
+};
+
 function variantOf(e) {
+  const fixed = FIXED_APPEARANCE[e.spriteKey];
+  if (fixed) return fixed;
   const t = e === stage.player ? PLAYER_APPEARANCE
     : e.isBoss ? BOSS_APPEARANCES[e.id % BOSS_APPEARANCES.length]
     : APPEARANCES[e.id % APPEARANCES.length];
@@ -1761,21 +1772,21 @@ function syncLabels() {
       : e.betrayed ? '裏切り者'
       : (e.isBoss ? null : TYPE_LABEL[e.spriteKey]);
     let tagH = 0;                        // 吹き出しをどれだけ上に逃がすか
-    if (label) {
-      tag.textContent = label;
-      tag.style.color = e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de');
+    // 画面の端に居る相手の名前が切れないよう、内側に寄せる。
+    // #labels は overflow:hidden なので、はみ出すと名前ごと消える。
+    const putTag = (text, color) => {
+      tag.textContent = text;
+      tag.style.color = color;
       tag.style.fontSize = tagPx.toFixed(1) + 'px';
       tag.style.display = 'block';
-      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${Math.max(tagPx + 4, tagY)}px)`;
+      const half = text.length * tagPx * 0.55;
+      const tx = Math.min(Math.max(p.x, half + 6), stageEl.clientWidth - half - 6);
+      tag.style.transform = `translate(-50%,-100%) translate(${tx}px,${Math.max(tagPx + 4, tagY)}px)`;
       tagH = tagPx;
-    } else if (e === stage.player) {
-      tag.textContent = '▼';
-      tag.style.color = '#ff7f0e';
-      tag.style.fontSize = tagPx.toFixed(1) + 'px';
-      tag.style.display = 'block';
-      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
-      tagH = tagPx;
-    } else tag.style.display = 'none';
+    };
+    if (label) putTag(label, e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de'));
+    else if (e === stage.player) putTag('▼', '#ff7f0e');
+    else tag.style.display = 'none';
 
     // セリフの吹き出し。名札の級数が上がったぶん、重ならないよう持ち上げる。
     if (e.taunt && e.tauntT > 0) {
