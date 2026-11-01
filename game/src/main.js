@@ -4,7 +4,7 @@ import {
 } from './config.js';
 import { Input } from './input.js';
 import { buildSprites } from './sprites.js';
-import { Player, Char, Projectile } from './entities.js';
+import { Player, Char, Projectile, THROWS, JUNK } from './entities.js';
 import { resolveMelee, resolveProjectiles, Fx } from './combat.js';
 import { STAGES, SHUKKOU_STAGE, URA_STAGE, defFor } from './stages.js';
 import {
@@ -84,6 +84,19 @@ export class Stage {
       this.projectiles.push(new Projectile(
         thrower.x + dirx * 10, thrower.y, dirx * 200, 0, thrower.team,
         { kind: 'missile', dmg: 2, kb: 130, w: 8, homing: true, target },
+      ));
+    } else if (THROWS[thrower.projKind] || thrower.projKind === 'junk') {
+      // 一升瓶（中村）や鉄パイプ・鉄アレイ・パソコン（魔王Y下）。山なりに投げて落とす。
+      // 魔王は投げるたびに中身が変わる。同じ弾の見た目が途中で変わらないよう、ここで決めてしまう。
+      const look = thrower.projKind === 'junk'
+        ? JUNK[(thrower.throwN = (thrower.throwN || 0) + 1) % JUNK.length]
+        : thrower.projKind;
+      const t = THROWS[look];
+      // 奥行きは着弾までに詰める。山なりに投げれば横のレーンがズレていても届く。
+      const vy = clamp((target.y - thrower.y) / 0.85, -70, 70);
+      this.projectiles.push(new Projectile(
+        thrower.x + dirx * 9, thrower.y, dirx * t.vx, vy, thrower.team,
+        { kind: 'thrown', look, dmg: t.dmg, kb: t.kb, w: t.w, vz: t.vz, gz: t.gz },
       ));
     } else {
       const vy = clamp(target.y - thrower.y, -28, 28);

@@ -12,6 +12,14 @@ export function sameSide(a, b) {
 // sameSide が2値（enemy かどうか）なので、mob は敵からは「別陣営」に見えてしまう。ここで弾く。
 export function targetable(t) { return t.team !== 'mob'; }
 
+// 投げ物が砕けたときの破片の色・数・音
+const DEBRIS = {
+  sake:     { cols: ['#1d4a2c', '#cfe8d6'], spray: '#f4f1e2', n: 14, sp: 70, sfx: 'sfxSmash' },
+  pipe:     { cols: ['#848d95', '#4d555c'], spray: null,      n: 9,  sp: 80, sfx: 'sfxClang' },
+  dumbbell: { cols: ['#3c4046', '#6b7076'], spray: null,      n: 8,  sp: 56, sfx: 'sfxThud'  },
+  pc:       { cols: ['#2b3038', '#c9ced4'], spray: '#7fd4ff', n: 15, sp: 76, sfx: 'sfxSmash' },
+};
+
 // ヒット適用（HP減・ノックバック・硬直・無敵・エフェクト）
 export function applyHit(t, dir, dmg, kb, fx) {
   Audio.sfxHit(); // 命中の打撃音
@@ -54,6 +62,8 @@ export function resolveMelee(entities, fx) {
 export function resolveProjectiles(projectiles, entities, fx) {
   for (const p of projectiles) {
     if (!p.alive) continue;
+    // 床に落ちた投げ物は、誰にも当たらなくてもそこで砕ける（外した投擲にも手応えを残す）
+    if (p.grounded) { fx.shatter(p.x, p.y, p.look); p.alive = false; continue; }
     for (const t of entities) {
       if (!t.alive || t.invuln > 0) continue;
       if (!targetable(t)) continue;
@@ -63,6 +73,7 @@ export function resolveProjectiles(projectiles, entities, fx) {
       if (Math.abs((p.z || 0) - t.z) > Z_TOL) continue; // ジャンプで頭上を通せる
       applyHit(t, Math.sign(p.vx) || 1, p.dmg, p.kb || 70, fx);
       if (p.kind === 'missile') fx.boom(p.x, p.y - 10);
+      if (p.look) fx.shatter(p.x, p.y - 10 - p.z, p.look);
       p.alive = false;
       break;
     }
@@ -101,6 +112,27 @@ export class Fx {
       this.parts.push({
         x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
         life: 0.55, color: i % 2 ? '#ff7f0e' : '#ffd24a', size: 3 + (i % 3),
+      });
+    }
+  }
+
+  // 投げ物が砕ける（一升瓶=ガラス片と酒／鉄パイプ・鉄アレイ=金属片／パソコン=樹脂片と火花）
+  shatter(x, y, look = 'sake') {
+    const d = DEBRIS[look] || DEBRIS.sake;
+    Audio[d.sfx]();
+    for (let i = 0; i < d.n; i++) {
+      const a = (i / d.n) * Math.PI * 2;
+      const sp = d.sp + (i % 4) * 44;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 46,
+        life: 0.5, color: i % 3 ? d.cols[0] : d.cols[1], size: 2 + (i % 2),
+      });
+    }
+    if (!d.spray) return;
+    for (let i = 0; i < 5; i++) {                       // 中身のしぶき（横に低く広がる）
+      this.parts.push({
+        x, y, vx: (i % 2 ? 1 : -1) * (40 + i * 22), vy: -18 - i * 6,
+        life: 0.34, color: d.spray, size: 2,
       });
     }
   }

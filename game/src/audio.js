@@ -152,6 +152,64 @@ export const Audio = {
     o.start(now); o.stop(now + 0.14);
   },
 
+  // 一升瓶が割れる（パリーン）= 高域ノイズの短い破裂 + 高い倍音の残り
+  sfxSmash() {
+    if (!this.enabled || !this.ctx) return;
+    const c = this.ctx, now = c.currentTime;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2600;
+    const gn = c.createGain();
+    gn.gain.setValueAtTime(0.42, now);
+    gn.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    src.connect(f); f.connect(gn); gn.connect(this.master);
+    src.start(now); src.stop(now + 0.24);
+    // ガラスの鳴り。少しずらして2つ重ねると「パリン」と割れたように聞こえる
+    [3100, 4300].forEach((hz, i) => {
+      const o = c.createOscillator(), g2 = c.createGain();
+      o.type = 'triangle'; o.frequency.value = hz;
+      const t0 = now + i * 0.03;
+      g2.gain.setValueAtTime(0.16, t0);
+      g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
+      o.connect(g2); g2.connect(this.master);
+      o.start(t0); o.stop(t0 + 0.18);
+    });
+  },
+
+  // 鉄パイプが跳ねる（カーン）= 金属の倍音が長く残る
+  sfxClang() {
+    if (!this.enabled || !this.ctx) return;
+    const c = this.ctx, now = c.currentTime;
+    [1180, 1790, 2630].forEach((hz, i) => {
+      const o = c.createOscillator(), gn = c.createGain();
+      o.type = 'square'; o.frequency.value = hz;
+      gn.gain.setValueAtTime(0.1 / (i + 1), now);
+      gn.gain.exponentialRampToValueAtTime(0.001, now + 0.42 - i * 0.1);
+      o.connect(gn); gn.connect(this.master);
+      o.start(now); o.stop(now + 0.46);
+    });
+  },
+
+  // 鉄アレイが落ちる（ドスン）= 低音の塊。倍音を持たせず鈍く
+  sfxThud() {
+    if (!this.enabled || !this.ctx) return;
+    const c = this.ctx, now = c.currentTime;
+    const o = c.createOscillator(), gn = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(110, now);
+    o.frequency.exponentialRampToValueAtTime(38, now + 0.16);
+    gn.gain.setValueAtTime(0.7, now);
+    gn.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    o.connect(gn); gn.connect(this.master);
+    o.start(now); o.stop(now + 0.22);
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
+    const g2 = c.createGain();
+    g2.gain.setValueAtTime(0.4, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    src.connect(f); f.connect(g2); g2.connect(this.master);
+    src.start(now); src.stop(now + 0.16);
+  },
+
   _kick() {
     const c = this.ctx, o = c.createOscillator(), gn = c.createGain();
     const now = c.currentTime;

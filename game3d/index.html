@@ -28,14 +28,15 @@
   /* 吹き出し・頭上ラベル・ダメージ数字。3Dの中に文字を置くとボケるので、
      キャラの位置を投影してDOMで重ねる */
   #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  /* 役職名。級数は体格に合わせて JS 側で入れ替える（下の .bubble と同じ考え方） */
   #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
-    font:700 11px/1 system-ui,sans-serif;
-    text-shadow:0 1px 3px rgba(0,0,0,.95), 0 0 2px rgba(0,0,0,.9)}
+    font:700 16px/1 system-ui,sans-serif;
+    text-shadow:0 2px 4px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.95), 0 0 1px rgba(0,0,0,1)}
   /* セリフ。級数は体格に合わせて JS 側で入れ替えるので、
      余白・角丸・しっぽは em で持たせて一緒に大きくなるようにする */
   #labels .bubble{position:absolute;left:0;top:0;white-space:nowrap;
     background:rgba(250,250,252,.97);color:#15171a;border-radius:.62em;
-    padding:.34em .72em;font:700 15px/1.25 system-ui,sans-serif;
+    padding:.34em .72em;font:700 21px/1.22 system-ui,sans-serif;
     box-shadow:0 5px 16px rgba(0,0,0,.5)}
   #labels .bubble::after{content:'';position:absolute;left:50%;bottom:-.33em;
     transform:translateX(-50%);border:.34em solid transparent;
@@ -59,6 +60,14 @@
   /* 画面（タイトル/作業指示書/作業報告書/休職願/辞令）。社内システムの書類を模す */
   #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     background:rgba(8,10,14,.74);backdrop-filter:blur(3px);padding:24px;z-index:20}
+  /* タイトルだけは背景（正門）を見せたいので暗幕を薄くする */
+  #screen.soft{background:linear-gradient(rgba(8,10,14,.16),rgba(8,10,14,.50));
+    backdrop-filter:blur(1px)}
+  /* タイトルは背景の正門を右側に見せたいので、書類を左へ寄せて細くする */
+  #screen.soft{justify-content:flex-start;padding-left:min(6%,56px)}
+  #screen.soft .sheet{background:rgba(246,247,249,.96);box-shadow:0 24px 70px rgba(0,0,0,.72);
+    min-width:0;width:min(470px,78vw);padding:22px 26px}
+  @media (max-width:760px){ #screen.soft{justify-content:center;padding-left:24px} }
   #screen .sheet{background:#f6f7f9;color:#1b1e23;border-radius:14px;
     padding:26px 30px;min-width:min(560px,86vw);max-width:86vw;
     box-shadow:0 20px 60px rgba(0,0,0,.6);border-top:5px solid var(--accent)}
@@ -112,6 +121,11 @@
   .sysbar .diff.easy{color:#8fe0ab;border-color:rgba(143,224,171,.45);background:rgba(56,148,81,.18)}
   .sysbar .diff.normal{color:#d8dde3;border-color:rgba(216,221,227,.35);background:rgba(255,255,255,.07)}
   .sysbar .diff.hell{color:#ff9b9b;border-color:rgba(255,120,120,.55);background:rgba(199,51,51,.22)}
+  /* BGMのミュート切替。Mキーでも切り替わるが、スマホ用に押せるものを置く */
+  .sysbar .mute{font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;
+    padding:2px 7px;border-radius:5px;border:1px solid rgba(255,255,255,.22);
+    background:rgba(255,255,255,.07);color:#d8dde3;user-select:none}
+  .sysbar .mute.off{color:#8b9199;border-color:rgba(255,255,255,.12);background:transparent}
   .sysbar .spacer{flex:1}
   .sysbar .loc{font-size:11px;color:var(--sub)}
 
@@ -204,10 +218,11 @@
           <span class="name">小向工場 業務支援システム</span>
           <span class="ver">Ver 2.4</span>
           <span class="diff normal" id="diffchip">ふつう</span>
+          <span class="mute" id="mute" title="BGMのオン/オフ（Mキー）">🔊 BGM</span>
           <span class="spacer"></span>
           <span class="loc" id="loc"></span>
         </div>
-        <div class="row">
+        <div class="row" id="cards">
           <div class="card">
             <span class="badge" id="rank">小向戦士</span>
             <div class="pair" style="margin-top:10px">

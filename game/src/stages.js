@@ -46,16 +46,21 @@ export const UNIT_TYPES = {
 
   // 中ボス（道中の強敵。midboss=地獄でも増殖しない。セリフは後から セリフ一覧.md の同名カテゴリに追記可）
   kanrik:    { name: '管理担当K',    sprite: 'kanrik',    taunts: 'kanrik',    midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 }, // Stage2 中ボス
-  seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 }, // Stage3 中ボス
+  // 生産企画課長（中村）: 一升瓶を山なりに投げる。投げるのは近すぎない間合いのときだけ。
+  seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
+               thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.5, score: 700 }, // Stage3 中ボス
 
   // 裏ステージ（事業部長撃破後の真・最終決戦／業火の60号7階Aゾーン）
   // Y下四天王（一人ずつ別キャラ）。N村=生産企画課長／K目=管理担当K の再登場（セリフ流用）。
-  shitennou_nmura: { name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
+  shitennou_nmura: { name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44,
+                     thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.4, score: 1200 }, // 生産企画課長と同一人物＝同じく一升瓶を投げる
   shitennou_kme:   { name: 'K目', sprite: 'shitennou_kme',   taunts: 'kanrik',    elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
   // S田・H本は攻撃してこない（passive）が体力多め。セリフは「。。。」のみ。
   shitennou_sda:   { name: 'S田', sprite: 'shitennou_sda',   taunts: 'sda',   elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   shitennou_hmoto: { name: 'H本', sprite: 'shitennou_hmoto', taunts: 'hmoto', elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
-  maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.3, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4, thrower: true, score: 12000 },
+  // 魔王Y下: 手近なものを何でも投げてくる（鉄パイプ→鉄アレイ→パソコンの順に持ち替える）。
+  maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.3, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4,
+               thrower: true, proj: 'junk', projRange: 200, throwCooldown: 1.9, score: 12000 },
 };
 
 export function defFor(type) {

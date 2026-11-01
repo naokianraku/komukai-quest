@@ -340,7 +340,10 @@ export class Char extends Entity {
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
-    const aligned = this.projKind === 'missile' || Math.abs(dy) < PLAY.depthTol + 5; // ミサイルは誘導なので奥行きズレOK
+    // ミサイルは誘導、投げ物（一升瓶や鉄アレイ）は山なりに落とすので、どちらも奥行きのズレを許す
+    const lobbed = !!THROWS[this.projKind] || this.projKind === 'junk';
+    const aligned = this.projKind === 'missile' ? true
+      : Math.abs(dy) < (lobbed ? PLAY.depthTol * 2 : PLAY.depthTol + 5);
     if (this.thrower && !this.passive && this.team === 'enemy' && !inRange && aligned &&
         Math.abs(dx) < this.projRange && this.throwT <= 0) {
       stage.spawnProjectile(this, target);
@@ -503,6 +506,77 @@ export class Char extends Entity {
   }
 }
 
+// 飛び道具が手を離れる高さ（床からの z）。山なりに投げたときの着地判定に使う。
+export const HAND_Z = 10;
+
+// 投げ物のドット絵。(x, y) は中心、upright=true で縦向き（90度回った状態）。
+// 中村の一升瓶と、魔王Y下が投げてくる鉄パイプ・鉄アレイ・パソコン。
+// 投げ物の飛び方。vz/gz は「投擲間合いの少し先で床に落ちる」ように決めた値で、
+// 弧の頂点はどれも当たり判定の高さ許容(Z_TOL=20)の内側。頭上を素通りして当たらない事故が起きない。
+export const THROWS = {
+  sake:     { vx: 205, vz: 72, gz: 150, dmg: 2, kb: 110, w: 7 },  // 一升瓶（中村）
+  pipe:     { vx: 240, vz: 0,  gz: 0,   dmg: 2, kb: 130, w: 7 },  // 鉄パイプ: 低く速い
+  dumbbell: { vx: 175, vz: 62, gz: 130, dmg: 3, kb: 175, w: 7 },  // 鉄アレイ: 高く重く、一番痛い
+  pc:       { vx: 195, vz: 44, gz: 95,  dmg: 2, kb: 155, w: 9 },  // パソコン
+};
+// 魔王Y下が手当たり次第に投げてくるもの
+export const JUNK = ['pipe', 'dumbbell', 'pc'];
+
+const px = (ctx, c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+const THROWN_2D = {
+  sake: (ctx, x, y, up) => {
+    if (up) {
+      px(ctx, '#1d4a2c', x - 2, y - 4, 5, 9);   // 胴
+      px(ctx, '#3f7d52', x - 2, y - 4, 1, 9);   // 照り
+      px(ctx, '#1d4a2c', x - 1, y - 7, 3, 3);   // 首
+      px(ctx, '#c8a23a', x - 1, y - 8, 3, 1);   // 王冠
+      px(ctx, '#efe7d2', x - 2, y - 1, 5, 4);   // ラベル
+    } else {
+      px(ctx, '#1d4a2c', x - 4, y - 2, 9, 5);
+      px(ctx, '#3f7d52', x - 4, y - 2, 9, 1);
+      px(ctx, '#1d4a2c', x + 5, y - 1, 3, 3);
+      px(ctx, '#c8a23a', x + 8, y - 1, 1, 3);
+      px(ctx, '#efe7d2', x - 2, y - 2, 4, 5);
+    }
+  },
+  pipe: (ctx, x, y, up) => {
+    if (up) {
+      px(ctx, '#848d95', x - 1, y - 6, 3, 13);
+      px(ctx, '#b4bcc3', x - 1, y - 6, 1, 13);  // 丸みの照り
+      px(ctx, '#4d555c', x - 1, y - 6, 3, 1);   // 切り口
+    } else {
+      px(ctx, '#848d95', x - 6, y - 1, 13, 3);
+      px(ctx, '#b4bcc3', x - 6, y - 1, 13, 1);
+      px(ctx, '#4d555c', x + 6, y - 1, 1, 3);
+    }
+  },
+  dumbbell: (ctx, x, y, up) => {
+    if (up) {
+      px(ctx, '#2f343a', x - 1, y - 4, 3, 9);   // シャフト
+      px(ctx, '#3c4046', x - 3, y - 6, 7, 3);   // 上の重り
+      px(ctx, '#3c4046', x - 3, y + 4, 7, 3);   // 下の重り
+      px(ctx, '#6b7076', x - 3, y - 6, 7, 1);
+    } else {
+      px(ctx, '#2f343a', x - 4, y - 1, 9, 3);
+      px(ctx, '#3c4046', x - 6, y - 3, 3, 7);
+      px(ctx, '#3c4046', x + 4, y - 3, 3, 7);
+      px(ctx, '#6b7076', x - 6, y - 3, 3, 1);
+    }
+  },
+  pc: (ctx, x, y, up) => {
+    if (up) {                                    // 画面側が手前を向いた状態
+      px(ctx, '#2b3038', x - 4, y - 5, 9, 11);
+      px(ctx, '#5a8fb8', x - 3, y - 4, 7, 6);    // 液晶
+      px(ctx, '#c9ced4', x - 3, y + 3, 7, 2);    // キーボード
+    } else {                                     // 開いたまま横倒しに飛ぶ
+      px(ctx, '#2b3038', x - 6, y - 4, 7, 8);    // 蓋
+      px(ctx, '#5a8fb8', x - 5, y - 3, 5, 6);
+      px(ctx, '#c9ced4', x + 1, y + 1, 7, 3);    // 本体
+      px(ctx, '#9aa1a8', x + 1, y + 1, 7, 1);
+    }
+  },
+};
+
 export class Projectile {
   constructor(x, y, vx, vy, team, opts = {}) {
     this.id = nextId();
@@ -515,6 +589,12 @@ export class Projectile {
     this.w = opts.w ?? 5;
     this.homing = !!opts.homing;
     this.target = opts.target || null;
+    // 見た目の指定。未指定なら kind のまま（書類/工具/ミサイルは従来どおり）。
+    this.look = opts.look || null;
+    // 投げ上げ（一升瓶や鉄アレイのような山なりの投擲）。未指定なら従来どおり高さは動かない。
+    this.vz = opts.vz || 0;
+    this.gz = opts.gz || 0;
+    this.grounded = false;      // 床に落ちた＝割れる（combat.js が見る）
     this.life = this.kind === 'missile' ? 4 : 3;
     this.age = 0;
     this.alive = true;
@@ -531,6 +611,12 @@ export class Projectile {
     }
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+    if (this.gz) {
+      // z はキャラの当たり判定と同じ高さ尺度。手の高さ(0)から投げ上げ、床(-HAND_Z)で止める。
+      this.z += this.vz * dt;
+      this.vz -= this.gz * dt;
+      if (this.z <= -HAND_Z) { this.z = -HAND_Z; this.grounded = true; }
+    }
     this.life -= dt;
     if (this.life <= 0) this.alive = false;
   }
@@ -552,6 +638,10 @@ export class Projectile {
       ctx.fillRect(Math.round(sx - 5), Math.round(sy), 10, 4);
       ctx.fillStyle = '#c73333'; // 弾頭
       ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
+    } else if (THROWN_2D[this.look]) {
+      // 回転は90度刻み。ドット絵の格子を崩さずに、縦横が入れ替わって回って見える
+      const upright = (Math.floor(this.age * 9) & 1) === 1;
+      THROWN_2D[this.look](ctx, Math.round(sx), Math.round(this.y - 10 - this.z), upright);
     } else if (this.kind === 'tool') {
       const sy = Math.round(this.y - 12); // プレイヤーの飛び道具（工具）
       ctx.fillStyle = '#cfd2d6'; ctx.fillRect(Math.round(sx) - 4, sy, 8, 3);

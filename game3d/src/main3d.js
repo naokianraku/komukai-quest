@@ -143,8 +143,8 @@ function box(w, h, d, color, x, y, z, opts = {}) {
 function clearScenery() {
   for (const m of [...scenery.children]) {
     scenery.remove(m);
-    m.geometry.dispose();
-    m.material.dispose();
+    // Group を混ぜると geometry が無くてここで落ちる。入れ子でも確実に捨てる。
+    m.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   }
 }
 
@@ -177,6 +177,16 @@ const ROOM = {
     sky: '#9ec8e8', ground: '#b4a992', path: '#d6d2c6', torii: '#d9451f', toriiDark: '#241d18',
     shrineWood: '#7d5f41', roof: '#3b4648', tree: '#2f5a35', treeDark: '#23462a',
     bldg: '#e7eaec', bldgWin: '#8fa8bc', stone: '#9a978d',
+  },
+  // 正門（タイトル画面）: 黒い槍柵と門柱、守衛所、奥に白い高層棟とガラスの低層棟。
+  // 2D版のタイトル画と同じ配色に合わせてある。
+  gate: {
+    sky: '#8fc0e4', ground: '#8a8f96', road: '#777c83', line: '#e6e8ea',
+    fence: '#16171c', accent: '#ff7f0e', base: '#b9bdc1', baseDark: '#969ca2',
+    hedge: '#2f5a32', hedgeLit: '#3a6e3d', post: '#9aa2aa', plate: '#20262e',
+    bldg: '#d6dade', bldgSide: '#bcc2c8', bldgWin: '#6f7b88',
+    glass: '#cdd5da', glassWin: '#a6cad4', bridge: '#c8ccd0',
+    booth: '#e8eaec', boothRoof: '#6e747a', tree: '#2f5a35', pole: '#cfd3d7',
   },
   // 構内道路: 頭上の配管ラック、灰色の柱、白い建屋。工場らしさが一番出る場所
   yard: {
@@ -828,7 +838,105 @@ function buildHellfire(W, halfD) {
   }
 }
 
+// --- 正門（タイトル画面の背景）---
+// 2D版のタイトル画と同じ構図を3Dで組む。全幅に黒い槍柵が走り、中央だけが開いて
+// 構内道路が奥へ抜ける。柵の向こうに白い高層棟・ガラスの低層棟・連絡通路。
+// プレイ用の場面ではないので、カメラに入る範囲だけを組んで軽くしてある。
+function buildGate(W, halfD) {
+  const R = ROOM.gate;
+  // 画面中央は書類で塞がるので、門そのものは右寄りに置く（cx=自機、gx=門の中心）
+  const cx = stage ? wx(stage.player.x) : W / 2;
+  const gx = cx + 38;
+  const L = cx - 150, Rt = cx + 150;
+  const FZ = -(halfD + 22);                        // 柵の位置（歩行帯の奥）
+  const GW = 27;                                   // 門の開口（中心からの半幅）
+  const SPANS = [[L, gx - GW], [gx + GW, Rt]];     // 柵・基礎・植栽は門の両側に分けて置く
+  setLighting(true);
+  scene.background = hex(R.sky);
+  scene.fog = new THREE.Fog(hex(R.sky), 360, 1100);
+
+  // 地面（アスファルト）と、門を抜けて奥へ続く構内道路
+  box(Rt - L + 160, 2, 420, R.ground, cx, -1, FZ + 70);
+  box(GW * 2 - 5, 0.3, 430, R.road, gx, 0.1, FZ - 60);
+  for (let z = FZ - 200; z < halfD + 24; z += 17) box(2.0, 0.1, 9, R.line, gx, 0.32, z);
+  for (let x = gx - GW + 6; x < gx + GW - 4; x += 7) box(4.4, 0.1, 11, R.line, x, 0.32, halfD + 8);
+
+  // 黒い槍柵。左寄りの一区画だけオレンジ塗装（2D版と同じ目印）
+  for (let x = L; x <= Rt; x += 3.2) {
+    if (Math.abs(x - gx) < GW) continue;
+    const c = (x > gx - GW - 104 && x < gx - GW - 84) ? R.accent : R.fence;
+    box(1.1, 29, 1.1, c, x, 15.5, FZ, { cast: true });
+    box(1.9, 1.7, 1.9, c, x, 30.8, FZ);                                   // 槍状の先端
+  }
+  for (const [x0, x1] of SPANS) {
+    const w = x1 - x0, xm = (x0 + x1) / 2;
+    box(w, 1.5, 1.3, R.fence, xm, 27.8, FZ);                              // 上レール
+    box(w, 1.5, 1.3, R.fence, xm, 14.5, FZ);                              // 中レール
+    box(w, 2.6, 3.2, R.base, xm, 0.9, FZ);                                // コンクリ基礎
+    box(w, 0.5, 3.4, R.baseDark, xm, 2.2, FZ);
+    box(w, 10, 7, R.hedge, xm, 5, FZ - 7, { cast: true });                // 背後の植栽
+    for (let x = x0 + 3; x < x1; x += 7) box(6.4, 6.4, 6.4, R.hedgeLit, x, 9.4, FZ - 7);
+  }
+
+  // 門柱・社名板・開いたままの門扉
+  for (const sd of [-1, 1]) {
+    const x = gx + sd * (GW + 4.5);
+    box(9, 40, 9, R.post, x, 20, FZ, { cast: true });
+    box(11, 3, 11, R.base, x, 41.5, FZ);                                  // 笠木
+    box(9.4, 3, 9.4, R.plate, x, 2, FZ);                                  // 足元の黒い帯
+    box(9.4, 1.6, 9.4, R.plate, x, 33, FZ);                               // 上の目地
+    box(2.2, 2.2, 0.8, R.accent, x, 28, FZ + 4.7, { receive: false });    // 門灯
+    // 門扉。構内側へ開いたままにしておく（朝の通勤時間帯）。
+    // 縦桟は回さなくてよいので、桟ごとに位置を出して置く（Group を作らない）
+    const th = 1.02, LEN = 24, hx = x - sd * 4.5;
+    for (let d = 2; d <= LEN; d += 2.8) {
+      box(0.95, 25, 0.95, R.fence, hx + sd * d * Math.cos(th), 12.5, FZ + d * Math.sin(th), { cast: true });
+    }
+    for (const [h, t] of [[24.6, 1.3], [12, 1.1]]) {                      // 上レール・中レール
+      const rail = box(LEN, t, 1.1, R.fence,
+        hx + sd * (LEN / 2) * Math.cos(th), h, FZ + (LEN / 2) * Math.sin(th));
+      rail.rotation.y = -sd * th;
+    }
+  }
+  box(26, 9, 1.4, R.plate, gx + GW + 4.5, 27, FZ + 5.2, { receive: false });   // 社名板
+  box(21, 1.8, 0.6, '#b9c3cc', gx + GW + 4.5, 28.6, FZ + 6.0, { receive: false });
+  box(15, 1.4, 0.6, '#b9c3cc', gx + GW + 2.5, 25.4, FZ + 6.0, { receive: false });
+
+  // 守衛所。開口を塞がないよう門柱の外側に置く
+  const bx = gx + GW + 16;
+  box(21, 16, 15, R.booth, bx, 8, FZ + 12, { cast: true });
+  box(24, 1.6, 18, R.boothRoof, bx, 16.7, FZ + 12, { cast: true });
+  box(15, 7.5, 0.7, R.glassWin, bx, 10.5, FZ + 19.7, { receive: false });
+  for (const x of [gx - GW - 13, gx + GW + 13]) box(0.9, 13, 0.9, R.pole, x, 6.5, FZ + 21, { cast: true });
+
+  // 柵の向こう: 左の白い高層棟（窓グリッド）／右のガラス低層棟／連絡通路
+  const BZ = FZ - 78;
+  box(132, 58, 26, R.bldg, cx - 76, 29, BZ, { cast: true });
+  box(16, 58, 26, R.bldgSide, cx - 14, 29, BZ);                           // 側面の濃い帯
+  box(134, 3, 28, R.bldgSide, cx - 76, 59, BZ);                           // パラペット
+  for (let y = 10; y < 54; y += 7.4) {
+    for (let x = cx - 136; x < cx - 22; x += 11) box(7.6, 4.6, 0.8, R.bldgWin, x, y, BZ + 13.4, { receive: false });
+  }
+  box(118, 28, 24, R.glass, cx + 112, 14, BZ + 8, { cast: true });
+  box(120, 2.6, 26, R.bldgSide, cx + 112, 29, BZ + 8);
+  for (let y = 6; y < 26; y += 6.4) {
+    box(112, 4.0, 0.8, R.glassWin, cx + 112, y, BZ + 20.4, { receive: false });
+    box(112, 1.2, 1.0, '#7fadba', cx + 112, y - 1.8, BZ + 20.5, { receive: false });
+  }
+  box(44, 9, 11, R.bridge, cx + 34, 33, BZ + 6, { cast: true });          // 連絡通路
+  for (let x = cx + 15; x < cx + 53; x += 5.5) box(3.2, 5.4, 0.8, R.bldgWin, x, 34, BZ + 11.8, { receive: false });
+
+  // 旗竿と植栽。門の手前に縦の要素があると構図が締まる
+
+  for (let x = L + 16; x < Rt; x += 52) {
+    if (Math.abs(x - gx) < GW + 40) continue;
+    box(13, 2.4, 11, R.base, x, 1.2, FZ + 27);                            // 縁石（植栽桝）
+    box(9, 7, 9, R.tree, x, 5.6, FZ + 27, { cast: true });
+  }
+}
+
 const SCENES = {
+  gate: buildGate,
   office_win: buildOffice, office: buildOfficeInner, meeting: buildMeeting,
   kanren: (W, halfD) => buildOfficeInner(W, halfD, ROOM.kanren),
   boardroom: buildBoardroom, hellfire: buildHellfire,
@@ -852,6 +960,16 @@ function sceneAt(data, x) {
 }
 
 let curScene = null;
+
+// タイトルの背景は正門。ステージの場面とは別に張り替える。
+// タイトルへ戻るときは必ずここを通す（戻り先が執務室のままだと開始画面が暗いだけになる）。
+function buildTitleScenery() {
+  clearScenery();
+  const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
+  buildGate(STAGES[0].width * S, halfD);
+  curScene = 'gate';
+}
+
 function buildScenery(data) {
   const forced = new URLSearchParams(location.search).get('scene');
   curScene = forced || sceneAt(data, stage ? stage.player.x : 0).scene;
@@ -865,7 +983,7 @@ const game = {
   toGameOver() { this.state = 'gameover'; this.screenT = 0; },
 };
 let stage = new Stage(STAGES[0], game);
-buildScenery(STAGES[0]);
+buildTitleScenery();
 
 // 打撃フック: ヒットストップ＋カメラシェイク（案D）
 let hitstop = 0, shake = 0, bossSceneApplied = false;
@@ -874,10 +992,13 @@ stage.fx.hit = (x, y, color) => { origHit(x, y, color); hitstop = 0.06; shake = 
 // ダメージ数字は2D用のテキストではなく、投影したDOMで出す
 const origText = stage.fx.text.bind(stage.fx);
 stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, y, 0, str, color); };
+// 投げ物が砕けるのも3Dの粒子で出す（音と2D側の破片は fx 本体が受け持つ）
+const origShatter = stage.fx.shatter.bind(stage.fx);
+stage.fx.shatter = (x, y, look) => { origShatter(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
 
 // ===== ステージの読み込み =====
 function clearStageObjects() {
-  for (const [, r] of meshes) scene.remove(r.root);
+  for (const [, r] of meshes) { scene.remove(r.root); if (r.ring) scene.remove(r.ring); }
   meshes.clear();
   for (const [, m] of projMeshes) scene.remove(m);
   projMeshes.clear();
@@ -901,6 +1022,8 @@ function attachStage(st, data) {
   stage.fx.hit = (x, y, color) => { origHit2(x, y, color); hitstop = 0.06; shake = 1.1; burst(x, y, color); };
   const origText2 = stage.fx.text.bind(stage.fx);
   stage.fx.text = (x, y, str, color) => { origText2(x, y, str, color); addFloat(x, y, 0, str, color); };
+  const origShatter2 = stage.fx.shatter.bind(stage.fx);
+  stage.fx.shatter = (x, y, look) => { origShatter2(x, y, look); shake = Math.max(shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
   stage.player.ranged = (game.difficulty === 'easy');   // 2D版の applyDifficulty と同じ
   buildScenery(data);
   camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
@@ -959,6 +1082,23 @@ const meshes = new Map();   // entity.id → リグ
 // ?walk=<rad> … 歩行ポーズを固定する（脚の付き方・継ぎ目の確認用。開発用）
 const WALK_FIX = Q.get('walk') != null ? parseFloat(Q.get('walk')) : null;
 
+// 足元に敷く陣営リング。乱戦でも敵味方が一目で分かるようにする。
+// キャラ本体ではなく床に置くので、跳んでいる間は体だけが離れて影の位置も分かる。
+const RING_COL = { player: '#ff7f0e', ally: '#2ad48a', enemy: '#c2352f' };
+const ringGeo = new THREE.RingGeometry(0.72, 1.0, 28);
+ringGeo.rotateX(-Math.PI / 2);
+function makeRing(e) {
+  const col = e === stage.player ? RING_COL.player : RING_COL[e.team];
+  if (!col) return null;                       // mob（通行人）には付けない
+  const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+    color: new THREE.Color(col), transparent: true, opacity: 0.72,
+    depthWrite: false, fog: false, side: THREE.DoubleSide,
+  }));
+  m.renderOrder = 1;                           // 床の影より上に描く
+  scene.add(m);
+  return m;
+}
+
 function makeRig(e) {
   e._v = e._v || variantOf(e);   // _v が先に入っていればそれを使う（?looks=1 の確認用）
   const g = partsFor(e.spriteKey, e._v);
@@ -972,7 +1112,8 @@ function makeRig(e) {
   for (const m of [body, legA, legB]) { m.castShadow = true; m.receiveShadow = false; }
   scene.add(root);
   // 位相は個体ごとにずらす。全員が同じ足から踏み出すと行進に見える
-  const r = { root, body, legA, legB, hipA, hipB, ph: (e.id % 7) * 0.9, amp: 0, air: 0, px: e.x, py: e.y };
+  const r = { root, body, legA, legB, hipA, hipB, ring: makeRing(e),
+              ph: (e.id % 7) * 0.9, amp: 0, air: 0, px: e.x, py: e.y };
   meshes.set(e.id, r);
   return r;
 }
@@ -1017,6 +1158,13 @@ function syncEntities(dt) {
     // 攻撃中は前に踏み込む。棒立ちで当たり判定だけ出るのを避ける（手応えの演出）
     const lunge = e.attackActive ? 3.2 * sc : (e.state === 'attack' ? 1.4 * sc : 0);
     r.root.position.set(wx(e.x) + lunge * dir, wy(e.z) - drop, wz(e.y));
+    if (r.ring) {
+      // 自分のリングだけ少し大きく・濃くして、人混みでも自機を見失わない
+      const rr = (e === stage.player ? 7.6 : 6.4) * ((e.scale || 3) / 3);
+      r.ring.scale.set(rr, 1, rr);
+      r.ring.position.set(wx(e.x), 0.12, wz(e.y));
+      r.ring.material.opacity = (e === stage.player ? 0.9 : 0.62) * (e.hitstun > 0 ? 0.4 : 1);
+    }
 
     r.hipA.position.set(LEG.cxA * sx, LEG.pivot * sy, 0);
     r.hipB.position.set(LEG.cxB * sx, LEG.pivot * sy, 0);
@@ -1045,7 +1193,9 @@ function syncEntities(dt) {
   }
   for (const [id, r] of meshes) {
     if (seen.has(id)) continue;
-    scene.remove(r.root); meshes.delete(id);
+    scene.remove(r.root);
+    if (r.ring) { scene.remove(r.ring); r.ring.material.dispose(); }
+    meshes.delete(id);
   }
 }
 
@@ -1082,6 +1232,10 @@ const WEAPON_SPEC = {
             b: [new THREE.BoxGeometry(0.9, 10, 8), mat('#f2f4f6'), [1.2, 0, 0]] },
   stamp:  { a: [new THREE.CylinderGeometry(2.2, 2.2, 6, 10), mat('#8a6a46'), [0, 0, 0], [0, 0, Math.PI / 2]],
             b: [new THREE.CylinderGeometry(2.4, 2.4, 1.0, 10), mat('#c0352a'), [3.4, 0, 0], [0, 0, Math.PI / 2]] },
+  bottle: { a: [new THREE.CylinderGeometry(2.0, 2.0, 11, 10), mat('#1d4a2c'), [0, 0, 0], [0, 0, Math.PI / 2]],
+            b: [new THREE.CylinderGeometry(1.0, 1.0, 4.0, 8), mat('#1d4a2c'), [7.4, 0, 0], [0, 0, Math.PI / 2]] },
+  pipe:   { a: [new THREE.CylinderGeometry(1.25, 1.25, 13, 10), mat('#848d95'), [2.5, 0, 0], [0, 0, Math.PI / 2]],
+            b: [new THREE.CylinderGeometry(1.3, 1.3, 0.9, 10), mat('#4d555c'), [8.8, 0, 0], [0, 0, Math.PI / 2]] },
 };
 
 // 職種 → 武器。書類仕事は丸めた資料やバインダー、現場はレンチ、管理は判子。
@@ -1091,7 +1245,10 @@ const WEAPON_OF = {
   buka: 'roll', senpai: 'roll', dr: 'roll', staff: 'binder', exctrl: 'stamp',
   kyaku: 'binder', vendor: 'binder', missile: 'wrench', kanren: 'wrench', shukkou: 'binder',
   pmr_seisan: 'binder', pmr_seizou: 'wrench', pmr_choutatsu: 'binder',
-  pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', seikikaku: 'roll', kanrik: 'stamp',
+  pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp',
+  // 生産企画課長（中村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
+  seikikaku: 'bottle', shitennou_nmura: 'bottle',
+  maou: 'pipe',   // 魔王Y下は鉄パイプ。投げ切ってもまた拾ってくる、という体
 };
 const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
 
@@ -1197,8 +1354,63 @@ const THROWN = {
     tip.position.x = 4.2; tip.rotation.z = -Math.PI / 2; g.add(tip);
     return g;
   },
+  // 中村の一升瓶
+  sake: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 10, 10), mat('#1d4a2c')));
+    const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 2.1, 2.0, 10), mat('#1d4a2c'));
+    shoulder.position.y = 6.0; g.add(shoulder);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 3.2, 8), mat('#1d4a2c'));
+    neck.position.y = 8.3; g.add(neck);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 1.0, 8), mat('#c8a23a'));
+    cap.position.y = 10.1; g.add(cap);
+    const label = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 4.4, 10), mat('#efe7d2'));
+    label.position.y = -0.6; g.add(label);
+    return g;
+  },
+  // 魔王Y下の投げ物
+  pipe: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 17, 10), mat('#848d95')));
+    for (const y of [8.4, -8.4]) {                     // 切り口を暗くして筒に見せる
+      const e = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.55, 0.6, 10), mat('#4d555c'));
+      e.position.y = y; g.add(e);
+    }
+    return g;
+  },
+  dumbbell: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 9, 8), mat('#2f343a')));
+    for (const y of [4.2, -4.2]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.1, 2.6, 12), mat('#3c4046'));
+      w.position.y = y; g.add(w);
+    }
+    return g;
+  },
+  pc: () => {
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(11, 0.9, 8), mat('#c9ced4'));
+    g.add(base);
+    const keys = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.4, 6.4), mat('#8e959c'));
+    keys.position.y = 0.6; g.add(keys);
+    // 蓋は開いたまま飛ぶ（たたんでいる余裕はない）
+    const lid = new THREE.Group();
+    lid.add(new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 7.6), mat('#2b3038')));
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.3, 6.6), mat('#5a8fb8', { emissive: new THREE.Color('#13293a') }));
+    panel.position.y = 0.5; lid.add(panel);
+    lid.position.set(0, 3.4, -4.0); lid.rotation.x = -1.15;
+    g.add(lid);
+    return g;
+  },
 };
 const LOOKS = ['paper', 'mug', 'keyboard'];
+// 投げ物ごとの回り方。倒れずに回る軸と速さで、重さの違いを出す。
+const SPIN = {
+  sake:     { z: 1.5, x: 0 },     // 端から端へくるくる回る
+  pipe:     { z: 2.6, x: 0 },     // 一番速く回る
+  dumbbell: { z: 0.9, x: 0 },     // 重いのでゆっくり
+  pc:       { z: 1.0, x: 0.7 },   // 開いたまま不規則に舞う
+};
 
 const projMeshes = new Map();
 function syncProjectiles() {
@@ -1208,8 +1420,10 @@ function syncProjectiles() {
     seen.add(pr.id);
     let r = projMeshes.get(pr.id);
     if (!r) {
-      // 同じ弾が毎フレーム見た目を変えないよう、IDから決める
-      const look = pr.kind === 'missile' ? 'missile' : LOOKS[pr.id % LOOKS.length];
+      // pr.look は投げた時点で決まっている（一升瓶・鉄パイプなど）。
+      // 書類(paper)だけは見た目を散らしたいので、同じ弾が毎フレーム変わらないよう ID から決める。
+      const look = (pr.look && THROWN[pr.look]) ? pr.look
+        : (pr.kind === 'missile' ? 'missile' : LOOKS[pr.id % LOOKS.length]);
       const group = THROWN[look]();
       group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       scene.add(group);
@@ -1218,10 +1432,11 @@ function syncProjectiles() {
     }
     r.group.position.set(wx(pr.x), wy(pr.z || 0) + 9, wz(pr.y));
     if (r.look === 'missile') {
-      r.group.rotation.set(0, pr.vx > 0 ? 0 : Math.PI, 0);       // 誘導弾は진行方向を向く
+      r.group.rotation.set(0, pr.vx > 0 ? 0 : Math.PI, 0);       // 誘導弾は進行方向を向く
     } else {
-      r.group.rotation.z += r.spin;                               // 投げ物はくるくる回る
-      r.group.rotation.x += r.spin * 0.6;
+      const sp = SPIN[r.look] || { z: 1, x: 0.6 };                // 投げ物はくるくる回る
+      r.group.rotation.z += r.spin * sp.z;
+      r.group.rotation.x += r.spin * sp.x;
     }
   }
   for (const [id, r] of projMeshes) {
@@ -1229,6 +1444,9 @@ function syncProjectiles() {
     scene.remove(r.group); projMeshes.delete(id);
   }
 }
+
+// 砕けた投げ物の破片の色（2D側の DEBRIS と揃える）
+const SHARD = { sake: '#9ccfae', pipe: '#b4bcc3', dumbbell: '#6b7076', pc: '#7fd4ff' };
 
 // 打撃の粒子
 const partGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
@@ -1268,13 +1486,14 @@ function updateParts(dt) {
 const layer = document.getElementById('labels');
 const projV = new THREE.Vector3();
 
+// 画面（#stage）の実寸。box() は背景を置く関数なので名前を分けてある。
+const stageEl = document.getElementById('stage');
 function project(wxp, wyp, wzp) {
   projV.set(wxp, wyp, wzp).project(camera);
   if (projV.z > 1) return null;                       // カメラの後ろ
-  const box = document.getElementById('stage');
   return {
-    x: (projV.x * 0.5 + 0.5) * box.clientWidth,
-    y: (-projV.y * 0.5 + 0.5) * box.clientHeight,
+    x: (projV.x * 0.5 + 0.5) * stageEl.clientWidth,
+    y: (-projV.y * 0.5 + 0.5) * stageEl.clientHeight,
   };
 }
 
@@ -1315,33 +1534,46 @@ function syncLabels() {
       hp.style.transform = `translate(-50%,-100%) translate(${p.x}px,${p.y}px)`;
     } else hp.style.display = 'none';
     const tagY = p.y - (showHp ? (e.midboss ? 10 : 8) : 0);   // バーのぶん名札を上げる
+    // 文字の大きさはキャラの体格に合わせる。ボスは1.5〜2.3倍の体格があるので、
+    // 同じ級数だと相対的に小さく見えてしまう。
+    const sr = (e.scale || 3) / 3;
+    const tagPx = Math.min(26, 16 * (1 + (sr - 1) * 0.55));
 
     // 頭上の役職ラベル（ボスとプレイヤーは出さない。2D版と同じ）
     const label = e === stage.player ? null
       : e.betrayed ? '裏切り者'
       : (e.isBoss ? null : TYPE_LABEL[e.spriteKey]);
+    let tagH = 0;                        // 吹き出しをどれだけ上に逃がすか
     if (label) {
       tag.textContent = label;
       tag.style.color = e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de');
+      tag.style.fontSize = tagPx.toFixed(1) + 'px';
       tag.style.display = 'block';
-      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
+      tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${Math.max(tagPx + 4, tagY)}px)`;
+      tagH = tagPx;
     } else if (e === stage.player) {
       tag.textContent = '▼';
       tag.style.color = '#ff7f0e';
+      tag.style.fontSize = tagPx.toFixed(1) + 'px';
       tag.style.display = 'block';
       tag.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY}px)`;
+      tagH = tagPx;
     } else tag.style.display = 'none';
 
-    // セリフの吹き出し。文字の大きさはキャラの体格に合わせる。
-    // ボスは1.5〜2.2倍の体格があるので、同じ級数だと相対的に小さく見える。
+    // セリフの吹き出し。名札の級数が上がったぶん、重ならないよう持ち上げる。
     if (e.taunt && e.tauntT > 0) {
-      const sr = (e.scale || 3) / 3;
       bubble.textContent = e.taunt;
-      bubble.style.fontSize = Math.min(30, 15 * (1 + (sr - 1) * 0.85)).toFixed(1) + 'px';
       bubble.classList.toggle('ally', e.team === 'ally');
       bubble.classList.toggle('boss', !!(e.isBoss || e.midboss));
       bubble.style.display = 'block';
-      bubble.style.transform = `translate(-50%,-100%) translate(${p.x}px,${tagY - 20}px)`;
+      // 大きいボスほど吹き出しが高く上がるので、画面の外へ出してしまわないよう内側に寄せる。
+      // offsetWidth を読むと毎フレーム再レイアウトが走るため、級数と文字数から見積もる。
+      const fs = Math.min(42, 21 * (1 + (sr - 1) * 0.85));
+      bubble.style.fontSize = fs.toFixed(1) + 'px';
+      const halfW = (e.taunt.length * fs + fs * 1.5) / 2;
+      const by = Math.max(fs * 1.95 + 8, tagY - tagH - 9);
+      const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
+      bubble.style.transform = `translate(-50%,-100%) translate(${bxp}px,${by}px)`;
     } else bubble.style.display = 'none';
   }
   for (const [id, r] of tagEls) {
@@ -1382,6 +1614,20 @@ const camLook = new THREE.Vector3(wx(stageStartX()), CAM.lookY, -3);
 function stageStartX() { return 60; }
 function updateCamera(dt) {
   const p = stage.player;
+  // タイトルは自機を追わず、門を正面から見る固定カメラ。ゆっくり横に流す。
+  if (game.state === 'title') {
+    // 画面中央は書類で塞がるので、門は右三分の一に来るよう構図を左へ振る
+    const cx = wx(p.x), t = game.screenT, sw = Math.sin(t * 0.17);
+    camPos.set(cx - 32 + sw * 13, 72 + Math.sin(t * 0.11) * 3, 252);
+    camLook.set(cx - 32 + sw * 5, 26, -50);
+    camera.position.copy(camPos);
+    camera.lookAt(camLook);
+    sun.target.position.set(cx, 0, -40);
+    sun.position.set(cx - 70, 150, 90);
+    fill.target.position.set(cx, 10, -40);
+    fill.position.set(cx + 30, 40, 130);
+    return;
+  }
   const bossOn = stage.bossStarted && stage.boss && stage.boss.alive;
   const dist = bossOn ? CAM.dist * 0.82 : CAM.dist;   // ボス戦は寄る（案D）
   const height = bossOn ? CAM.height * 0.86 : CAM.height;
@@ -1413,11 +1659,18 @@ const hud = {
   bossFill: document.getElementById('bossFill'),
   banner: document.getElementById('banner'),
   loc: document.getElementById('loc'),
+  mute: document.getElementById('mute'),
+  cards: document.getElementById('cards'),
 };
 let hpShown = 1, bossShown = 1, scoreShown = 0;
 // 下のゲージに出している相手。頭上バーと二重にしないため syncLabels から見る
 let gaugeTarget = null, bossRef = null;
 function updateHUD(dt) {
+  // タイトルは一枚絵として見せたいので、稼働率や評価ポイントのカードは出さない
+  const onTitle = game.state === 'title';
+  hud.cards.style.visibility = onTitle ? 'hidden' : 'visible';
+  hud.loc.style.visibility = onTitle ? 'hidden' : 'visible';
+  if (onTitle) { hud.bossWrap.classList.remove('show'); return; }
   const p = stage.player;
   hpShown += ((p.hp / p.maxhp) - hpShown) * Math.min(1, dt * 7);   // バーを補間（案D）
   scoreShown += (game.score - scoreShown) * Math.min(1, dt * 6);
@@ -1461,7 +1714,14 @@ function updateHUD(dt) {
 
 // ===== 画面（案B: 社内システムの語彙で統一）=====
 const screenEl = document.getElementById('screen');
-function showScreen(html) { screenEl.innerHTML = html; screenEl.style.display = 'flex'; }
+// soft=true … 背景（タイトルの正門）を見せるため暗幕を薄くする
+// ?nosheet=1 … 書類を出さない（タイトルの背景の構図を確認する開発用）
+function showScreen(html, soft = false) {
+  if (Q.get('nosheet')) { screenEl.style.display = 'none'; return; }
+  screenEl.innerHTML = html;
+  screenEl.classList.toggle('soft', soft);
+  screenEl.style.display = 'flex';
+}
 function hideScreen() { screenEl.style.display = 'none'; }
 
 // 書類（#screen）は canvas の上に重なっているので、ここへのタップは Input に届かない。
@@ -1497,8 +1757,8 @@ function renderScreen() {
             `<button class="dbtn${k === cur[0] ? ' sel' : ''}" data-diff="${k}"><b>${name}</b><i>${key} キー</i></button>`).join('')}</div>
           <p class="diffdesc${cur[0] === 'hell' ? ' hell' : ''}">${cur[1]}: ${cur[3]}</p>
         </div>
-        ${hint('Enter キー、または上のボタン以外を押して開始')}
-      </div>`);
+        ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）')}
+      </div>`, true);
       break;
     }
     case 'intro':
@@ -1566,8 +1826,26 @@ resize();
 
 Input.init();
 Input.initTouch(document.getElementById('c3d'));
+hud.mute.addEventListener('click', () => { Audio.resume(); Audio.toggleMute(); renderMute(); });
+renderMute();
 addEventListener('keydown', () => Audio.resume(), { once: true });
 addEventListener('pointerdown', () => Audio.resume(), { once: true });
+
+// BGM。2D版の Game.updateAudio と同じ割り当て。Audio.play は同じ曲なら何もしないので毎フレーム呼べる。
+function updateAudio() {
+  let track = 'stage';
+  if (game.state === 'title') track = 'title';
+  else if (game.state === 'ending') track = 'ending';
+  else if (game.state === 'gameover') track = 'gameover';
+  else if (game.state === 'playing' && stage && stage.boss && stage.boss.alive) track = 'boss';
+  Audio.play(track);
+}
+
+// ミュートの表示を実際の状態に合わせる
+function renderMute() {
+  hud.mute.textContent = Audio.muted ? '🔇 BGM' : '🔊 BGM';
+  hud.mute.classList.toggle('off', Audio.muted);
+}
 
 const STEP = 1 / 60;
 // ?shot=秒 … その秒数ぶんまとめて進めて1枚だけ描き、ループを止める。
@@ -1638,9 +1916,14 @@ function loop(now) {
         break;
       case 'gameover':
       case 'ending':
-        if (game.screenT > 0.6 && confirmed()) { game.state = 'title'; game.screenT = 0; renderScreen(); }
+        if (game.screenT > 0.6 && confirmed()) {
+          game.state = 'title'; game.screenT = 0;
+          stage = new Stage(STAGES[0], game);   // 自機を門前に立たせ直す
+          buildTitleScenery(); renderScreen();
+        }
         break;
     }
+    if (Input.pressed('KeyM')) { Audio.toggleMute(); renderMute(); }   // どの画面でもMでミュート
     Input.endFrame(); screenTap = false;
     acc -= STEP;
   }
@@ -1675,6 +1958,7 @@ function loop(now) {
     stage.bannerT = 3.0;
   }
 
+  updateAudio();
   shake = Math.max(0, shake - frame * 4.5);
   syncEntities(frame);
   updateCamera(frame);
