@@ -51,13 +51,16 @@ export const UNIT_TYPES = {
                thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.5, score: 700 }, // Stage3 中ボス
 
   // 裏ステージ（事業部長撃破後の真・最終決戦／業火の60号7階Aゾーン）
-  // Y下四天王（一人ずつ別キャラ）。N村=生産企画課長／K目=管理担当K の再登場（セリフ流用）。
+  // Y下5人衆（一人ずつ別キャラ）。N村=生産企画課長／K目=管理担当K の再登場（セリフ流用）。
   shitennou_nmura: { name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44,
                      thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.4, score: 1200 }, // 生産企画課長と同一人物＝同じく一升瓶を投げる
   shitennou_kme:   { name: 'K目', sprite: 'shitennou_kme',   taunts: 'kanrik',    elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
   // S田・H本は攻撃してこない（passive）が体力多め。セリフは「。。。」のみ。
   shitennou_sda:   { name: 'S田', sprite: 'shitennou_sda',   taunts: 'sda',   elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   shitennou_hmoto: { name: 'H本', sprite: 'shitennou_hmoto', taunts: 'hmoto', elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
+  // H野: 5人目。殴り役2人・壁役2人に対して、速いが脆い詰め役。
+  // セリフは共通の shitennou カテゴリ（あとで H野 専用に差し替え可）。
+  shitennou_hno:   { name: 'H野', sprite: 'shitennou_hno',   taunts: 'shitennou', elite: true, scale: 1.55, hp: 16, speed: 60, reach: 26, dmg: 2, kb: 120, cooldown: 0.55, telegraph: 0.34, score: 1100 },
   // 魔王Y下: 手近なものを何でも投げてくる（鉄パイプ→鉄アレイ→パソコンの順に持ち替える）。
   // さらに大技「メテオ」。床に印を出してから彗星を5発落とす。印が出ている間に走れば必ず逃げられる。
   maou:      { name: '魔王Y下',   sprite: 'maou',      taunts: 'maou',      boss: true, scale: 2.3, hp: 72, speed: 50, reach: 34, dmg: 3, kb: 170, cooldown: 0.62, telegraph: 0.4,
@@ -194,21 +197,22 @@ export const SHUKKOU_STAGE = {
 };
 
 // 裏ステージ（事業部長を倒した“その先”。Stage4クリアで分岐。クリアでエンディング）
-// 業火に包まれた60号7階Aゾーン。Y下四天王と、常軌を逸したパワハラの魔王Y下が待つ。
+// 業火に包まれた60号7階Aゾーン。Y下5人衆と、常軌を逸したパワハラの魔王Y下が待つ。
 export const URA_STAGE = {
   id: 'ura',
   stageLabel: '— 裏 —',
   name: '真・最終決戦 — 業火の60号7階Aゾーン',
   playerRank: '小向司令官',
   location: '60号7階Aゾーン（業火）',
-  intro: '事業部長を倒した——だが終わりではなかった。\n60号7階Aゾーンが業火に包まれ、仲間は呑まれて消えた。奥から「Y下四天王」と魔王Y下が現れる。\n常軌を逸したパワハラに屈するな。すべての元凶を討て。',
+  intro: '事業部長を倒した——だが終わりではなかった。\n60号7階Aゾーンが業火に包まれ、仲間は呑まれて消えた。奥から「Y下5人衆」と魔王Y下が現れる。\n常軌を逸したパワハラに屈するな。すべての元凶を討て。',
   width: 1200,
   bg: { scene: 'hellfire', wall: '#1a0c08', floor: '#2a160c', detail: '#3a1408', accent: '#ff5a14' },
-  // 敵は四天王と魔王のみ（雑魚なし）。味方も登場しない（業火に呑まれた）。
+  // 敵は5人衆と魔王のみ（雑魚なし）。味方も登場しない（業火に呑まれた）。
   waves: [
-    { x: 480, label: 'Y下四天王 出現！', enemies: [
+    { x: 480, label: 'Y下5人衆 出現！', enemies: [
       { type: 'shitennou_nmura', count: 1 }, { type: 'shitennou_kme', count: 1 },
       { type: 'shitennou_sda', count: 1 }, { type: 'shitennou_hmoto', count: 1 },
+      { type: 'shitennou_hno', count: 1 },
     ] },
   ],
   allies: [],

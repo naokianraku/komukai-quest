@@ -140,7 +140,128 @@ function box(w, h, d, color, x, y, z, opts = {}) {
   return m;
 }
 
+// ===== 炎 =====
+// 箱を3段に積んだだけでは炎に見えない（オレンジの荷物に見える）。
+// 先細りの舌を3枚重ね、毎フレーム伸び縮みさせて揺らす。さらに火の粉を昇らせ、
+// 近くに揺らぐ点光源を置いて、床と人に炎の照り返しを乗せる。
+const flames = [];          // {m, ph, rate, sy, sx, sway, x}
+const fireLights = [];      // {l, ph, base}
+const embers = [];          // {m, vy, t, life, x, y, z}
+const flameGeo = new THREE.ConeGeometry(1, 2, 6, 4);
+flameGeo.translate(0, 1, 0);                      // 底を原点に置く（伸ばすと上だけ伸びる）
+{
+  // 根元が白熱して先へ行くほど暗い赤になる階調を、頂点カラーで持たせる。
+  // 一色に塗った円錐は三角コーンにしか見えないので、ここが炎らしさの要になる。
+  // （頂点カラーは three の sRGB 自動変換の対象外なので手で linear 化する）
+  const pos = flameGeo.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const hot = new THREE.Color('#fff4cc').convertSRGBToLinear();
+  const mid = new THREE.Color('#ff8a1e').convertSRGBToLinear();
+  const tip = new THREE.Color('#7a1604').convertSRGBToLinear();
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, pos.getY(i) / 2));     // 0=根元 1=先端
+    if (t < 0.4) c.copy(hot).lerp(mid, t / 0.4);
+    else c.copy(mid).lerp(tip, (t - 0.4) / 0.6);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  flameGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+const emberGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+const glowGeo = new THREE.CircleGeometry(1, 24); glowGeo.rotateX(-Math.PI / 2);
+
+// 加算合成。重なったところが白く飛んで、暗い先端は背景に溶ける＝炎の見え方になる
+function tongue(x, z, r, h, opacity, tilt) {
+  const m = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity,
+    depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  m.position.set(x, 0.4, z);
+  m.scale.set(r, h / 2, r);
+  m.rotation.z = tilt;
+  m.renderOrder = 4;
+  scenery.add(m);
+  return m;
+}
+
+// 1か所ぶんの炎。s で大きさ、n で見た目の個体差を変える。
+function fire(x, z, s, n) {
+  const fr = (k) => { const v = Math.sin((n + k) * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  box(3.6 * s, 0.5, 3.4 * s, '#140a06', x, 0.25, z, { receive: false });          // 焦げ跡
+  box(2.2 * s, 1.1 * s, 2.0 * s, '#3a1206', x, 0.5 * s, z, { receive: false });   // 燃えている物
+  // 足元の照り返し。これが無いと炎だけが宙に浮いて見える
+  const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({
+    color: hex('#ff6a1e'), transparent: true, opacity: 0.3,
+    depthWrite: false, blending: THREE.AdditiveBlending }));
+  glow.position.set(x, 0.14, z);
+  glow.scale.set(5.2 * s, 1, 5.2 * s);
+  scenery.add(glow);
+  // 細い舌を3枚。太いと炎ではなく三角コーンに見えるので、高さのわりに細くする。
+  const spec = [
+    [0.0,  0.0, 1.35, 7.6, 0.52],   // 外側（高く、いちばん薄い）
+    [-0.6, 0.4, 0.88, 5.2, 0.60],   // 中
+    [0.5, -0.3, 0.46, 3.2, 0.75],   // 芯（低く小さい）
+  ];
+  spec.forEach(([dx, dz, r, h, o], i) => {
+    const hh = h * s * (0.7 + fr(i) * 0.7);
+    const rr = r * s * (0.85 + fr(i + 7) * 0.35);
+    const tilt = (fr(i + 5) - 0.5) * 0.34;
+    const m = tongue(x + dx * s, z + dz * s, rr, hh, o, tilt);
+    flames.push({ m, ph: fr(i + 3) * 6.28, rate: 5.2 + fr(i + 11) * 4.4,
+                  sy: m.scale.y, sx: rr, x: m.position.x, tilt });
+  });
+}
+
+// 炎の列をまとめて置き、ところどころに点光源と火の粉を添える
+function fireRow(x0, x1, z, s, step, n0) {
+  let n = n0;
+  for (let x = x0; x < x1; x += step * (0.7 + ((n * 7) % 5) / 5)) {
+    const fr = Math.abs(Math.sin(n * 7.13) * 10) % 1;
+    n++;
+    if (fr < 0.16) continue;                                   // 抜け（一列に揃えない）
+    fire(x, z + (fr - 0.5) * 8, s * (0.72 + fr * 0.7), n);
+    if (fireLights.length < 5 && n % 4 === 0) {
+      const l = new THREE.PointLight(0xff6a1e, 2.4, 190, 2);
+      l.position.set(x, 9, z);
+      scenery.add(l);
+      fireLights.push({ l, ph: fr * 6.28, base: 2.4 });
+    }
+    for (let k = 0; k < 2; k++) {                              // 昇る火の粉
+      const m = new THREE.Mesh(emberGeo, new THREE.MeshBasicMaterial({
+        color: hex(k ? '#ffd24a' : '#ff8a3a'), transparent: true, opacity: 0.9, fog: false }));
+      m.position.set(x, 2, z);
+      scenery.add(m);
+      embers.push({ m, x, z, vy: 11 + fr * 12, t: fr * 3 + k, life: 2.6 + fr * 1.6 });
+    }
+  }
+}
+
+function updateFlames(dt, t) {
+  for (const f of flames) {
+    const w = Math.sin(t * f.rate + f.ph);
+    f.m.scale.y = f.sy * (1 + w * 0.3);                        // 伸び縮み
+    const k = f.sx * (1 - w * 0.14);
+    f.m.scale.x = k; f.m.scale.z = k;                          // 伸びたぶん細る
+    f.m.position.x = f.x + Math.sin(t * f.rate * 0.6 + f.ph) * 0.5 * f.sx;   // 揺らぎ
+    f.m.rotation.z = f.tilt + Math.sin(t * f.rate * 0.45 + f.ph) * 0.14;     // 先がなびく
+  }
+  for (const g of fireLights) {
+    g.l.intensity = g.base * (0.62 + 0.38 * Math.abs(Math.sin(t * 7.3 + g.ph) * Math.sin(t * 3.1)));
+  }
+  for (const e of embers) {
+    e.t += dt;
+    if (e.t > e.life) { e.t = 0; e.m.position.set(e.x + (Math.random() - 0.5) * 5, 2, e.z + (Math.random() - 0.5) * 5); }
+    const p = e.t / e.life;
+    e.m.position.y = 2 + e.vy * e.t;
+    e.m.position.x += Math.sin(t * 2.2 + e.vy) * dt * 3;       // ゆらゆら横に流れる
+    e.m.material.opacity = 0.9 * (1 - p) * (p < 0.08 ? p / 0.08 : 1);
+    const sc = 1 - p * 0.6;
+    e.m.scale.set(sc, sc, sc);
+  }
+}
+
 function clearScenery() {
+  flames.length = 0; fireLights.length = 0; embers.length = 0;
   for (const m of [...scenery.children]) {
     scenery.remove(m);
     // Group を混ぜると geometry が無くてここで落ちる。入れ子でも確実に捨てる。
@@ -799,23 +920,12 @@ function buildHellfire(W, halfD) {
     t.rotation.z = 0.35;                                       // 片側が外れて斜めに垂れる
   }
 
-  // 床の残り火。手前と奥のゾーンにだけ置いて歩行帯は空けておく。
-  // 同じ箱を等間隔に並べると燃えている物ではなく荷物に見えるので、
-  // 幅を変えながら3段に細らせ、位置も間隔もずらす。
-  const rnd = (n) => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
-  let seed = 0;
-  for (let x = -6; x < W + 20; x += 11 + rnd(seed++) * 9) {
-    for (const z0 of [-halfD - 22, -halfD - 7, halfD + 9, halfD + 28]) {
-      const r = rnd(seed++);
-      if (r < 0.3) continue;                                     // 抜け（炎の列が揃わないように）
-      const z = z0 + (rnd(seed++) - 0.5) * 7;
-      const w = 3.2 + r * 3.4, h = 3.0 + rnd(seed++) * 6;
-      box(w + 1.6, 0.6, w + 1.6, '#120a08', x, 0.3, z, { receive: false });            // 焦げた跡
-      box(w, h * 0.5, w * 0.9, '#c2340c', x, h * 0.25, z, { emissive: '#c2340c', receive: false });
-      box(w * 0.68, h * 0.4, w * 0.6, R.ember, x, h * 0.62, z, { emissive: R.ember, receive: false });
-      box(w * 0.34, h * 0.34, w * 0.3, R.emberHot, x, h * 0.9, z, { emissive: R.emberHot, receive: false });
-    }
-  }
+  // 床の炎。歩行帯は空けて、手前と奥にだけ置く。
+  // 奥ほど小さく、手前ほど大きくして、画面の下側が燃えているように見せる。
+  fireRow(-6, W + 20, -halfD - 24, 1.0, 26, 3);
+  fireRow(-6, W + 20, -halfD - 8, 0.8, 24, 61);
+  fireRow(-6, W + 20, halfD + 11, 1.1, 25, 127);
+  fireRow(-6, W + 20, halfD + 32, 1.45, 30, 211);
 
   // 焼け残った壁ぎわのキャビネットと、倒れた机
   for (let x = -14; x < W + 24; x += 24) {
@@ -830,6 +940,10 @@ function buildHellfire(W, halfD) {
     const f = box(24, 1.1, 12, R.desk, x + 12, 3.0, halfD + 26, { cast: true });
     f.rotation.z = 0.22;
   }
+
+  // 壁の下半分を炎で焼けた色にする（炎だけ明るくて壁が無関係な色だと嘘に見える）
+  box(W + 80, 16, 0.6, '#5a1e08', W / 2, 7, BACK + 0.2, { emissive: '#2a0c04', receive: false });
+  box(W + 80, 5, 0.6, '#8a2c0c', W / 2, 2.5, BACK + 0.4, { emissive: '#4a1404', receive: false });
 
   // 非常灯（緑）と、壁に残った誘導標識
   for (let x = 34; x < W; x += 112) {                          // 非常灯（煙の中で唯一の緑）
@@ -1254,6 +1368,7 @@ const WEAPON_OF = {
   pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp',
   // 生産企画課長（中村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
   seikikaku: 'bottle', shitennou_nmura: 'bottle',
+  shitennou_hno: 'wrench',   // H野は速い詰め役。振りの速い得物を持たせる
   maou: 'pipe',   // 魔王Y下は鉄パイプ。投げ切ってもまた拾ってくる、という体
 };
 const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
@@ -2016,6 +2131,7 @@ function loop(now) {
   }
 
   updateAudio();
+  if (flames.length) updateFlames(frame, now / 1000);
   // 詠唱中は床の印に加えて画面全体をうっすら赤くし、揺らして圧をかける
   const cast = stage.entities.some((e) => e.alive && e.state === 'cast');
   casting += ((cast ? 1 : 0) - casting) * Math.min(1, frame * 5);

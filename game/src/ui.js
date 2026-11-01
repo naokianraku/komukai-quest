@@ -228,7 +228,7 @@ export function drawEnding(ctx, game, t) {
   ctx.fillStyle = '#0c0a12'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
   center(ctx, '小 向 司 令 官', 88, 'bold 30px system-ui, sans-serif', '#c79a3a');
   center(ctx, '技術部長・技師長・工場長・事業部長を倒し、その先へ。', 122, '10px system-ui, sans-serif', INK);
-  center(ctx, '業火の60号7階Aゾーンで「Y下四天王」と魔王Y下を討ち果たした。', 138, '10px system-ui, sans-serif', INK);
+  center(ctx, '業火の60号7階Aゾーンで「Y下5人衆」と魔王Y下を討ち果たした。', 138, '10px system-ui, sans-serif', INK);
   center(ctx, '数々の困難と理不尽、そして裏切りを越え、小向の頂点に立った。', 156, '10px system-ui, sans-serif', SUB);
   center(ctx, '小向戦士の伝説、ここに完結。', 172, '10px system-ui, sans-serif', SUB);
   center(ctx, 'FINAL SCORE  ' + String(game.score).padStart(6, '0'), 198, 'bold 14px ui-monospace, monospace', ACCENT);
