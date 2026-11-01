@@ -1,0 +1,121 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>場面リンク（確認用）</title>
+<!--
+  確認用のページ。遊びたい場面を1つ選んで、そこから直接プレイできる。
+  通しで進めなくても、中ボスやボス、メテオだけを何度でも試せる。
+  ゲーム本体からは参照していないので、消しても本編の動作は変わらない。
+-->
+<style>
+  :root { color-scheme: dark; --accent:#ff7f0e; }
+  body { margin: 0 auto; padding: 22px 18px 60px; max-width: 980px;
+         background: #0f1216; color: #d8dde3;
+         font: 14px/1.7 system-ui, -apple-system, "Hiragino Sans", sans-serif; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.note { margin: 0 0 18px; color: #8a929c; font-size: 12px; }
+  h2 { font-size: 12px; letter-spacing: .18em; color: #8a929c;
+       margin: 22px 0 8px; font-weight: 700; }
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  a.pick { display: block; text-decoration: none; color: #e6e9ec;
+           background: #171b21; border: 1px solid #2a2f36; border-radius: 10px;
+           padding: 11px 13px; transition: border-color .12s ease, background .12s ease; }
+  a.pick:hover { border-color: var(--accent); background: #1c2129; }
+  a.pick b { display: block; font-size: 14px; }
+  a.pick i { font-style: normal; font-size: 11px; color: #8a929c; }
+  a.pick.hot b { color: var(--accent); }
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+         background: #171b21; border: 1px solid #2a2f36; border-radius: 10px;
+         padding: 10px 13px; margin-bottom: 6px; }
+  .bar span.l { font-size: 12px; color: #8a929c; }
+  .bar button { font: inherit; font-size: 13px; cursor: pointer; color: #d8dde3;
+                background: #11151a; border: 1px solid #2a2f36; border-radius: 7px; padding: 5px 13px; }
+  .bar button.sel { background: var(--accent); border-color: var(--accent); color: #15171a; font-weight: 700; }
+  table.sw { border-collapse: collapse; font-size: 12px; margin-top: 6px; width: 100%; }
+  table.sw th, table.sw td { border: 1px solid #2a2f36; padding: 5px 9px; text-align: left; vertical-align: top; }
+  table.sw th { background: #171b21; color: #aeb6c0; width: 11em; font-weight: 700; }
+  table.sw code { color: #ffb066; }
+</style>
+
+<h1>場面リンク（確認用）</h1>
+<p class="note">遊びたい場面を選ぶと、そこから直接プレイできます。波とボスは出た状態で、前進ロックは外してあります。</p>
+
+<div class="bar">
+  <span class="l">難易度</span>
+  <button data-d="easy">かんたん</button>
+  <button data-d="normal" class="sel">ふつう</button>
+  <button data-d="hell">地獄</button>
+  <span class="l" id="cur"></span>
+</div>
+
+<h2>第 1 章 — 60号7階Cゾーン（技術部）</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=1&demo=380"><b>道中（前半）</b><i>先輩戦士・スタッフ部門</i></a>
+  <a class="pick" href="index.html?stage=1&demo=1180"><b>道中（設計審査委員）</b><i>徒党で来る</i></a>
+  <a class="pick" href="index.html?stage=1&boss=1"><b>ボス 技術部長</b><i>ボスゲージの確認</i></a>
+</div>
+
+<h2>第 2 章 — 技術管理部フロア</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=2&demo=380"><b>道中（前半）</b><i>スタッフ部門・客</i></a>
+  <a class="pick" href="index.html?stage=2&demo=1000"><b>中ボス 管理担当K</b><i>中ボスゲージの確認</i></a>
+  <a class="pick" href="index.html?stage=2&demo=1200"><b>道中（輸出管理）</b><i>徒党で来る</i></a>
+  <a class="pick" href="index.html?stage=2&boss=1"><b>ボス 技師長</b><i>書類を投げてくる</i></a>
+</div>
+
+<h2>第 3 章 — 60号5階（生産管理・生産企画）</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=3&demo=380"><b>道中（前半）</b><i>ベンダー・客</i></a>
+  <a class="pick" href="index.html?stage=3&demo=800"><b>道中（携行ミサイル兵）</b><i>誘導弾。ジャンプで回避</i></a>
+  <a class="pick hot" href="index.html?stage=3&demo=1000"><b>中ボス 生産企画課長（中村）</b><i>一升瓶を投げる</i></a>
+  <a class="pick" href="index.html?stage=3&demo=1250"><b>PMR 審査会</b><i>部長5名</i></a>
+  <a class="pick" href="index.html?stage=3&boss=1"><b>ボス 工場長</b><i>構内の稲荷社へ場面が変わる</i></a>
+</div>
+
+<h2>出向 — 62号6階（関連会社）</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=shukkou&demo=360"><b>道中</b><i>関連会社社員</i></a>
+  <a class="pick" href="index.html?stage=shukkou&demo=780"><b>出向先上長</b><i>強敵</i></a>
+</div>
+
+<h2>第 4 章 — 本社 事業部フロア</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=4&demo=380"><b>道中（前半）</b><i>ベンダー・客</i></a>
+  <a class="pick" href="index.html?stage=4&demo=1300"><b>道中（後半）</b><i>ミサイル兵が増える</i></a>
+  <a class="pick" href="index.html?stage=4&boss=1"><b>ボス 事業部長</b><i>企画部長が同時に出る</i></a>
+</div>
+
+<h2>裏 — 業火の60号7階Aゾーン</h2>
+<div class="grid">
+  <a class="pick" href="index.html?stage=ura&demo=480"><b>Y下四天王</b><i>N村・K目・S田・H本</i></a>
+  <a class="pick hot" href="index.html?stage=ura&meteor=1"><b>ボス 魔王Y下（メテオ）</b><i>間合いを開けた状態で、すぐメテオを撃つ</i></a>
+  <a class="pick" href="index.html?stage=ura&boss=1"><b>ボス 魔王Y下（通常）</b><i>密着から始まる</i></a>
+</div>
+
+<h2>そのほかの確認用スイッチ</h2>
+<table class="sw">
+  <tr><th><code>?scene=キー</code></th><td>背景だけ差し替える。<code>office_win / office / meeting / kanren / boardroom / hellfire / shrine / shokudo / yard / gate</code></td></tr>
+  <tr><th><code>?cast=1</code></th><td>登場人物を並べて見る</td></tr>
+  <tr><th><code>?looks=1</code></th><td>同じ種別の個体差を並べて見る（<a href="models.html">models.html</a> もある）</td></tr>
+  <tr><th><code>?walk=角度</code></th><td>歩行の脚の開きを固定する（ラジアン）</td></tr>
+  <tr><th><code>?atk=1 / 2</code></th><td>攻撃の瞬間で止める。1=空振り、2=命中</td></tr>
+  <tr><th><code>?nosheet=1</code></th><td>タイトルの書類を出さず、背景の構図だけ見る</td></tr>
+  <tr><th><code>?noshadow=1</code></th><td>影を切る（重いとき）</td></tr>
+  <tr><th><code>?dbg=1</code></th><td>画面下に状態を出す</td></tr>
+  <tr><th><code>?shot=秒</code></th><td>その秒数ぶん進めて1枚だけ描き、止める（スクリーンショット用）</td></tr>
+</table>
+
+<script>
+  // 選んだ難易度を、すべてのリンクに ?diff= として付け直す
+  const cur = document.getElementById('cur');
+  function apply(d) {
+    for (const a of document.querySelectorAll('a.pick')) {
+      const u = new URL(a.getAttribute('href'), location.href);
+      if (d === 'normal') u.searchParams.delete('diff'); else u.searchParams.set('diff', d);
+      a.setAttribute('href', u.pathname + u.search);
+    }
+    for (const b of document.querySelectorAll('.bar button')) b.classList.toggle('sel', b.dataset.d === d);
+    cur.textContent = d === 'hell' ? '雑魚が2倍・有休 2' : d === 'easy' ? '有休 12・自分も飛び道具' : '有休 4';
+  }
+  for (const b of document.querySelectorAll('.bar button')) b.addEventListener('click', () => apply(b.dataset.d));
+  apply('normal');
+</script>

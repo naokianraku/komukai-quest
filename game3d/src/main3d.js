@@ -2082,6 +2082,16 @@ if (new URLSearchParams(location.search).get('looks') === '1') {
   game.state = 'playing'; hideScreen();
 }
 
+// ?diff=easy|normal|hell … 難易度を指定して始める（場面へ直接飛ぶときの確認用）。
+// タイトルを通らないと既定の「ふつう」のままになるため、ここで残機ごと合わせる。
+{
+  const d = Q.get('diff');
+  if (d === 'easy' || d === 'normal' || d === 'hell') {
+    game.difficulty = d;
+    game.lives = d === 'easy' ? 12 : d === 'hell' ? 2 : 4;
+  }
+}
+
 // ?stage=N … 第Nステージから始める（場面の確認用）
 {
   const sg = new URLSearchParams(location.search).get('stage') || '';
