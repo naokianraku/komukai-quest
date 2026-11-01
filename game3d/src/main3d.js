@@ -133,6 +133,9 @@ function hex(c) { return new THREE.Color(c); }
 // 背景は group にまとめる。ボス戦で場面を切り替えるときにまとめて捨てられるようにするため。
 const scenery = new THREE.Group();
 scene.add(scenery);
+// ?dbg=1 のときだけ外から覗けるようにする。背景の箱が同一平面に重なっていないか
+// （z-fighting＝点滅の原因）を、スクリプトから総当たりで確かめるため。
+if (Q.get('dbg') === '1') { window.__scene = scene; window.__scenery = scenery; }
 
 function box(w, h, d, color, x, y, z, opts = {}) {
   const m = new THREE.Mesh(
@@ -934,7 +937,7 @@ function buildHellfire(W, halfD) {
 
   // 床の炎。歩行帯は空けて、手前と奥にだけ置く。
   // 奥ほど小さく、手前ほど大きくして、画面の下側が燃えているように見せる。
-  fireRow(-6, W + 20, -halfD - 38, 1.2, 24, 907);
+  fireRow(-6, W + 20, -halfD - 30, 1.2, 24, 907);   // 奥の壁に接しない位置まで手前に
   fireRow(-6, W + 20, -halfD - 22, 1.0, 20, 3);
   fireRow(-6, W + 20, -halfD - 7, 0.82, 19, 61);
   fireRow(-6, W + 20, halfD + 10, 1.15, 20, 127);
@@ -1009,7 +1012,7 @@ function buildGate(W, halfD) {
   for (const sd of [-1, 1]) {
     const x = gx + sd * (GW + 4.5);
     box(9, 40, 9, R.post, x, 20, FZ, { cast: true });
-    box(11, 3, 11, R.base, x, 41.5, FZ);                                  // 笠木
+    box(11, 3, 11, R.base, x, 41.3, FZ);                                  // 笠木（柱の天端に食い込ませる）
     box(9.4, 3, 9.4, R.plate, x, 2, FZ);                                  // 足元の黒い帯
     box(9.4, 1.6, 9.4, R.plate, x, 33, FZ);                               // 上の目地
     box(2.2, 2.2, 0.8, R.accent, x, 28, FZ + 4.7, { receive: false });    // 門灯
@@ -1025,33 +1028,40 @@ function buildGate(W, halfD) {
       rail.rotation.y = -sd * th;
     }
   }
-  box(26, 9, 1.4, R.plate, gx + GW + 4.5, 27, FZ + 5.2, { receive: false });   // 社名板
+  box(26, 9, 1.4, R.plate, gx + GW + 4.5, 27, FZ + 5.4, { receive: false });   // 社名板（柱の前面に食い込ませる）
   box(21, 1.8, 0.6, '#b9c3cc', gx + GW + 4.5, 28.6, FZ + 6.0, { receive: false });
   box(15, 1.4, 0.6, '#b9c3cc', gx + GW + 2.5, 25.4, FZ + 6.0, { receive: false });
 
   // 守衛所。開口を塞がないよう門柱の外側に置く
   const bx = gx + GW + 16;
-  box(21, 16, 15, R.booth, bx, 8, FZ + 12, { cast: true });
-  box(24, 1.6, 18, R.boothRoof, bx, 16.7, FZ + 12, { cast: true });
-  box(15, 7.5, 0.7, R.glassWin, bx, 10.5, FZ + 19.7, { receive: false });
+  box(21, 16, 15, R.booth, bx, 8, FZ + 13, { cast: true });               // 門柱の前面へ少し食い込ませる
+  box(24, 1.6, 18, R.boothRoof, bx, 16.7, FZ + 13, { cast: true });
+  box(15, 7.5, 1.4, R.glassWin, bx, 10.5, FZ + 20.8, { receive: false }); // 窓は壁から突き出す
   for (const x of [gx - GW - 13, gx + GW + 13]) box(0.9, 13, 0.9, R.pole, x, 6.5, FZ + 21, { cast: true });
 
   // 柵の向こう: 左の白い高層棟（窓グリッド）／右のガラス低層棟／連絡通路
+  //
+  // 重ねる箱は「面どうしを同じ位置に置かない」。壁とぴったり同じ平面に窓を貼ると、
+  // どちらが手前か決まらず、見える面が毎フレーム入れ替わって点滅する（z-fighting）。
+  // 窓は必ず壁へ食い込ませ、かつ手前へ突き出す。
   const BZ = FZ - 78;
+  const HF = BZ + 13;                                                     // 高層棟の前面
   box(132, 58, 26, R.bldg, cx - 76, 29, BZ, { cast: true });
-  box(16, 58, 26, R.bldgSide, cx - 14, 29, BZ);                           // 側面の濃い帯
-  box(134, 3, 28, R.bldgSide, cx - 76, 59, BZ);                           // パラペット
+  box(16, 56, 27, R.bldgSide, cx - 14, 29, BZ);                           // 側面の濃い帯（本体より薄く・厚く）
+  box(134, 3, 28, R.bldgSide, cx - 76, 59.2, BZ);                         // パラペット
   for (let y = 10; y < 54; y += 7.4) {
-    for (let x = cx - 136; x < cx - 22; x += 11) box(7.6, 4.6, 0.8, R.bldgWin, x, y, BZ + 13.4, { receive: false });
+    for (let x = cx - 136; x < cx - 22; x += 11) box(7.6, 4.6, 2.0, R.bldgWin, x, y, HF + 0.4, { receive: false });
   }
+  const GF = BZ + 20;                                                     // ガラス棟の前面
   box(118, 28, 24, R.glass, cx + 112, 14, BZ + 8, { cast: true });
-  box(120, 2.6, 26, R.bldgSide, cx + 112, 29, BZ + 8);
+  box(120, 2.6, 26, R.bldgSide, cx + 112, 29.2, BZ + 8);
   for (let y = 6; y < 26; y += 6.4) {
-    box(112, 4.0, 0.8, R.glassWin, cx + 112, y, BZ + 20.4, { receive: false });
-    box(112, 1.2, 1.0, '#7fadba', cx + 112, y - 1.8, BZ + 20.5, { receive: false });
+    box(112, 4.0, 1.6, R.glassWin, cx + 112, y, GF + 0.5, { receive: false });
+    box(112, 1.2, 1.2, '#7fadba', cx + 112, y - 1.8, GF + 1.1, { receive: false });
   }
+  const RF = BZ + 11.5;                                                   // 連絡通路の前面
   box(44, 9, 11, R.bridge, cx + 34, 33, BZ + 6, { cast: true });          // 連絡通路
-  for (let x = cx + 15; x < cx + 53; x += 5.5) box(3.2, 5.4, 0.8, R.bldgWin, x, 34, BZ + 11.8, { receive: false });
+  for (let x = cx + 15; x < cx + 53; x += 5.5) box(3.2, 5.4, 1.6, R.bldgWin, x, 34, RF + 0.5, { receive: false });
 
   // 旗竿と植栽。門の手前に縦の要素があると構図が締まる
 
