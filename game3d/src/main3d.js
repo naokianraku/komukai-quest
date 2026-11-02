@@ -2206,25 +2206,31 @@ screenEl.addEventListener('click', (ev) => {
 });
 const confirmed = () => Input.confirm || screenTap;
 
-const hint = (t) => `<p class="k">${t}</p>`;
+// 画面下の案内。指で遊ぶ端末に「Enter キー」と出しても押せないので、言い回しを変える。
+const hint = (t, touch) => `<p class="k">${Input.controlsActive() ? (touch || t) : t}</p>`;
 function renderScreen() {
   // 出向・裏ステージは STAGES に入っていないので、今読み込んでいるステージのデータを使う
   const ch = (stage && stage.data) || STAGES[game.stageIndex];
   switch (game.state) {
     case 'title': {
       const cur = DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1];
+      // 指で遊ぶ端末では、キーの名前を出しても押すものが無い。
+      // 「どこか押せば始まる」は伝わらないので、押すものをはっきり置く。
+      const touch = Input.controlsActive();
       showScreen(`<div class="sheet title">
         <div class="eyebrow">小向工場 業務支援システム　Ver 2.4</div>
         <h1>KOMUKAI QUEST</h1>
         <div class="jp">小 向 ク エ ス ト</div>
         <p class="lead">小向戦士となり、小向工場を生き残れ。</p>
         <div class="diffwrap">
-          <div class="difflabel">難易度を選ぶ（押す／← → キー／1・2・3 キー）</div>
+          <div class="difflabel">${touch ? '① 難易度を選ぶ' : '難易度を選ぶ（押す／← → キー／1・2・3 キー）'}</div>
           <div class="diffrow">${DIFFS.map(([k, name, key]) =>
-            `<button class="dbtn${k === cur[0] ? ' sel' : ''}" data-diff="${k}"><b>${name}</b><i>${key} キー</i></button>`).join('')}</div>
+            `<button class="dbtn${k === cur[0] ? ' sel' : ''}" data-diff="${k}"><b>${name}</b>${touch ? '' : `<i>${key} キー</i>`}</button>`).join('')}</div>
           <p class="diffdesc${cur[0] === 'hell' ? ' hell' : ''}">${cur[1]}: ${cur[3]}</p>
         </div>
-        ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）')}
+        ${touch ? '<button class="startbtn">② ▶ はじめる</button>' : ''}
+        ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）',
+               '画面のどこを押しても始まります')}
       </div>`, true);
       break;
     }
@@ -2238,7 +2244,7 @@ function renderScreen() {
           <tr><th>難易度</th><td>${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[1]}　<span style="color:#6c737c">${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[3]}</span></td></tr>
           <tr><th>指示事項</th><td>${(ch.intro || '').replace(/\n/g, '<br>')}</td></tr>
         </table>
-        ${hint('Enter で作業開始')}
+        ${hint('Enter で作業開始', '画面を押して作業開始')}
       </div>`);
       break;
     case 'clear':
@@ -2250,7 +2256,7 @@ function renderScreen() {
           <tr><th>結果</th><td>所定の作業を完了した</td></tr>
           <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter で次の作業へ')}
+        ${hint('Enter で次の作業へ', '画面を押して次の作業へ')}
       </div>`);
       break;
     case 'gameover':
@@ -2261,7 +2267,7 @@ function renderScreen() {
           <tr><th>事由</th><td>組織に敗れたため</td></tr>
           <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter でタイトルへ')}
+        ${hint('Enter でタイトルへ', '画面を押してタイトルへ')}
       </div>`);
       break;
     case 'ending':
@@ -2272,7 +2278,7 @@ function renderScreen() {
         <table class="form">
           <tr><th>最終評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter でタイトルへ')}
+        ${hint('Enter でタイトルへ', '画面を押してタイトルへ')}
       </div>`);
       break;
     default: hideScreen();
