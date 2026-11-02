@@ -2202,6 +2202,15 @@ const DIFFS = [
 screenEl.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-diff]');
   if (b) { game.difficulty = b.dataset.diff; renderScreen(); return; }
+  // ブラウザは最初のユーザー操作がないと音を鳴らせない。タイトルで「どこを押しても開始」に
+  // していると、スマホでは最初のタップが音の解禁と開始を兼ねてしまい、
+  // オープニングのファンファーレが一度も鳴らないまま場面が変わる。
+  // 指で遊ぶ端末のタイトルだけは「はじめる」を押したときに限って開始する。
+  // 空振りのタップは音を解禁するだけなので、そこでファンファーレが鳴り出す。
+  if (Input.controlsActive() && game.state === 'title' && !ev.target.closest('.startbtn')) {
+    Audio.resume();
+    return;
+  }
   screenTap = true;
 });
 const confirmed = () => Input.confirm || screenTap;
@@ -2230,7 +2239,7 @@ function renderScreen() {
         </div>
         ${touch ? '<button class="startbtn">② ▶ はじめる</button>' : ''}
         ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）',
-               '画面のどこを押しても始まります')}
+               '画面を押すと音が出ます（🔊 で BGM 入／切）')}
       </div>`, true);
       break;
     }
