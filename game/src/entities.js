@@ -195,7 +195,9 @@ export class Player extends Entity {
       this.combo = (this.combo + 1) % 3;
       const kb = this.combo === 2 ? 220 : 150; // 3段目は強ノックバック
       this.attackData = { reach: 27 * CHAR_SCALE, dmg: 1, kb, hitSet: new Set() };
-      if (this.ranged && stage.spawnPlayerProjectile) stage.spawnPlayerProjectile(this);
+      // かんたんモードの工具。毎回投げると近接と飛び道具が常に二重に当たって強すぎたので、
+      // コンボの3段目（締め）だけにする。振りの3回に1回＝連打しても約0.9秒に1本。
+      if (this.ranged && this.combo === 2 && stage.spawnPlayerProjectile) stage.spawnPlayerProjectile(this);
       Audio.sfxSwing(); // 攻撃の振り音
     }
 
