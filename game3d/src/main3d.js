@@ -3,7 +3,7 @@
 // ゲームロジックは一切変更していない。既存の Stage をそのまま動かし、
 // 描画だけ three.js に差し替えている（x=横 / y=奥行き / z=高さ の3軸がもともとあるため）。
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { PLAY, setPlay, playMid } from '../../game/src/config.js';
+import { PLAY, setPlay, playMid, LIVES } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { Char } from '../../game/src/entities.js';
 import { Stage } from '../../game/src/main.js';
@@ -1256,7 +1256,7 @@ function buildScenery(data) {
 
 // ===== ゲーム本体（ロジックは2D版そのまま）=====
 const game = {
-  difficulty: 'normal', score: 0, lives: 4, over: false,
+  difficulty: 'normal', score: 0, lives: LIVES.normal, over: false,
   state: 'title', stageIndex: 0, screenT: 0,
   toGameOver() { this.state = 'gameover'; this.screenT = 0; },
 };
@@ -2086,8 +2086,11 @@ function updateHUD(dt) {
   hud.hpFill.style.width = (hpShown * 100).toFixed(1) + '%';
   hud.hpFill.style.background = hpShown < 0.3 ? '#c73333' : hpShown < 0.6 ? '#e0a030' : '#389451';
   hud.hpNum.textContent = Math.max(0, Math.round(p.hp)) + ' / ' + p.maxhp;
+  // 有休残は点で出す。点は5つ＝ふつうの持ち玉ぶんで、かんたんの24日は並べきれないので、
+  // 5を超えているあいだだけ日数を横に添える（点が振り切れたまま動かないのを避ける）。
   hud.lives.innerHTML = Array.from({ length: 5 }, (_, i) =>
-    `<i class="${i < game.lives ? 'on' : ''}"></i>`).join('');
+    `<i class="${i < game.lives ? 'on' : ''}"></i>`).join('')
+    + (game.lives > 5 ? `<b>${game.lives}</b>` : '');
   hud.score.textContent = String(Math.round(scoreShown)).padStart(6, '0');
 
   // ボスと中ボスのゲージ。中ボス（管理担当K・生産企画課長）は stage.boss ではないので、
@@ -2132,9 +2135,9 @@ function hideScreen() { screenEl.style.display = 'none'; }
 // スマホだと難易度も選べず開始もできないため、クリック/タップをここで拾う。
 let screenTap = false;
 const DIFFS = [
-  ['easy',   'かんたん', '1', '残機多め（有休 12）＋自分も飛び道具'],
-  ['normal', 'ふつう',   '2', '標準ルール（有休 4）'],
-  ['hell',   '地獄',     '3', '雑魚が2倍＋残機少なめ（有休 2）'],
+  ['easy',   'かんたん', '1', `残機多め（有休 ${LIVES.easy}）＋自分も飛び道具`],
+  ['normal', 'ふつう',   '2', `標準ルール（有休 ${LIVES.normal}）`],
+  ['hell',   '地獄',     '3', `雑魚が2倍＋残機少なめ（有休 ${LIVES.hell}）`],
 ];
 screenEl.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-diff]');
@@ -2280,7 +2283,7 @@ function loop(now) {
         if (confirmed()) {
           Audio.resume();
           game.score = 0;
-          game.lives = game.difficulty === 'easy' ? 12 : game.difficulty === 'hell' ? 2 : 4;
+          game.lives = LIVES[game.difficulty];
           game.stageIndex = 0; loadStage(0);
           game.state = 'intro'; game.screenT = 0; renderScreen();
         } else if (step || Input.pressed('Digit1', 'Digit2', 'Digit3')) renderScreen();
@@ -2442,7 +2445,7 @@ if (new URLSearchParams(location.search).get('looks') === '1') {
   const d = Q.get('diff');
   if (d === 'easy' || d === 'normal' || d === 'hell') {
     game.difficulty = d;
-    game.lives = d === 'easy' ? 12 : d === 'hell' ? 2 : 4;
+    game.lives = LIVES[d];
   }
 }
 

@@ -2,7 +2,7 @@
 //
 // エンジン（Stage の波/カメラ/背景描画、entities、combat、sprites、input、audio）は1から継承・共有する。
 // 1のブートは canvas#game を見て起動するので、こちらは canvas#game2 を使い二重起動を避けている。
-import { VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, PLAY, clamp } from '../../game/src/config.js';
+import { VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, PLAY, LIVES, clamp } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { buildSprites, registerPalettes, registerTypeMeta } from '../../game/src/sprites.js';
 import { Char } from '../../game/src/entities.js';
@@ -284,7 +284,7 @@ class Game2 {
     this.state = 'title';
     this.time = 0; this.screenT = 0;
     this.chapterIndex = 0;
-    this.score = 0; this.lives = 3;
+    this.score = 0; this.lives = LIVES.normal;
     this.difficulty = 'normal';
     this.paused = false;
     this.stage = null;
@@ -301,7 +301,7 @@ class Game2 {
   startRun() {
     this.chapterIndex = 0;
     this.score = 0;
-    this.lives = this.difficulty === 'easy' ? 12 : this.difficulty === 'hell' ? 2 : 4;
+    this.lives = LIVES[this.difficulty];
     this.roster = [];
     this.kouki = this.koukiMax; this.genka = 0; this.letter = 0;
     this.loadChapter(0);

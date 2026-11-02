@@ -115,7 +115,7 @@
       a.setAttribute('href', u.pathname + u.search);
     }
     for (const b of document.querySelectorAll('.bar button')) b.classList.toggle('sel', b.dataset.d === d);
-    cur.textContent = d === 'hell' ? '雑魚が2倍・有休 2' : d === 'easy' ? '有休 12・自分も飛び道具' : '有休 4';
+    cur.textContent = d === 'hell' ? '雑魚が2倍・有休 2' : d === 'easy' ? '有休 24・自分も飛び道具' : '有休 5';
   }
   for (const b of document.querySelectorAll('.bar button')) b.addEventListener('click', () => apply(b.dataset.d));
   apply('normal');

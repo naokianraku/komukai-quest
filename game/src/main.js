@@ -1,6 +1,6 @@
 // Komukai Quest — 起動・ゲームループ・状態機械・ステージ進行
 import {
-  VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, PLAY, clamp, dist2,
+  VIEW_W, VIEW_H, FLOOR_TOP, FLOOR_BOTTOM, PLAY, LIVES, clamp, dist2,
 } from './config.js';
 import { Input } from './input.js';
 import { buildSprites } from './sprites.js';
@@ -562,7 +562,7 @@ export class Game {
     this.screenT = 0;
     this.stageIndex = 0;
     this.score = 0;
-    this.lives = 3;
+    this.lives = LIVES.normal;
     this.stage = null;
     this.savedStage = null; // 出向中に本社(Stage3)を退避
     this.difficulty = 'normal'; // 'normal' | 'easy'
@@ -606,7 +606,7 @@ export class Game {
 
   start() {
     this.stageIndex = 0; this.score = 0;
-    this.lives = this.difficulty === 'easy' ? 12 : this.difficulty === 'hell' ? 2 : 3;
+    this.lives = LIVES[this.difficulty];
     this.loadStage(0);
     this.state = 'intro'; this.screenT = 0;
   }
