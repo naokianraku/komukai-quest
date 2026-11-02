@@ -1962,6 +1962,9 @@ function syncLabels() {
   // 潰れて読めなくなる。この1フレームで置いた名札の矩形を覚えておき、
   // 同じ文字の名札がぶつかるときは後から来たほうを出さない（1枚だけ残す）。
   const placed = [];
+  // セリフの吹き出しも、置いた矩形を覚えて重なりを避ける。敵が増えて口数も増えたので、
+  // そのまま出すと重なって読めなくなる。ボスと中ボスだけは必ず出す（会話の主役なので）。
+  const placedBubbles = [];
   for (const e of stage.entities) {
     if (!e.alive) continue;
     seen.add(e.id);
@@ -2042,6 +2045,18 @@ function syncLabels() {
       const halfW = Math.min(maxW, wantW) / 2;
       const by = Math.max(fs * 1.35 * rows + fs * 0.7 + 8, tagY - tagH - 9);
       const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
+      const bh = fs * 1.35 * rows + fs * 0.7;
+      const must = !!(e.isBoss || e.midboss);
+      let hidden = false;
+      if (!must) {
+        for (const q of placedBubbles) {
+          if (Math.abs(q.cx - bxp) < q.half + halfW && Math.abs(q.cy - by) < (q.h + bh) / 2) {
+            bubble.style.display = 'none'; hidden = true; break;
+          }
+        }
+      }
+      if (hidden) continue;
+      placedBubbles.push({ cx: bxp, cy: by, half: halfW, h: bh });
       bubble.style.transform = `translate(-50%,-100%) translate(${bxp}px,${by}px)`;
     } else bubble.style.display = 'none';
   }

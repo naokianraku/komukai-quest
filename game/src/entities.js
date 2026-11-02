@@ -310,7 +310,7 @@ export class Char extends Entity {
     this.wanderT = 0.4 + (this.id % 7) * 0.3; // mob の徘徊タイマ
     this.dmgTakenMul = 1;               // 被ダメ倍率（代理店が間に立つと下がる）
     this.fumbleT = 7 + (this.id % 6); // 味方のうっかり攻撃までの時間
-    this.chatterT = 1.2 + (this.id % 6) * 0.6; // 攻撃以外でしゃべるまでの時間
+    this.chatterT = 0.6 + (this.id % 6) * 0.35; // 攻撃以外でしゃべるまでの時間
   }
 
   setTaunt(extra = 0.4) {
@@ -337,8 +337,10 @@ export class Char extends Entity {
     if (this.team === 'enemy' && this.tauntCat) {
       this.chatterT -= dt;
       if (this.chatterT <= 0 && this.tauntT <= 0) {
-        this.setTaunt(0.9);
-        this.chatterT = 3.5 + (this.id % 4) + Math.random() * 2.5;
+        // 吹き出しは長めに出し、次の一言までの間も詰める。
+        // 乱戦中は1秒で消えて数秒黙る作りだったので、ほとんど無言に見えていた。
+        this.setTaunt(1.6);
+        this.chatterT = 1.5 + (this.id % 4) * 0.4 + Math.random() * 1.5;
       }
     }
 

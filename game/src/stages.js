@@ -104,9 +104,9 @@ export const STAGES = [
     width: 1700,
     bg: { scene: 'office_win', wall: '#36404c', floor: '#5a6470', detail: '#1d2530', accent: '#8a96a4' },
     waves: [
-      { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'senpai', count: 1 }] },
-      { x: 760, enemies: [{ type: 'senpai', count: 1 }, { type: 'staff', count: 2 }] },
-      { x: 1180, label: '設計審査（ランクB）出現！', enemies: [{ type: 'dr', count: 5 }] },
+      { x: 380, enemies: [{ type: 'staff', count: 3 }, { type: 'senpai', count: 2 }, { type: 'buka', count: 1 }] },
+      { x: 760, enemies: [{ type: 'senpai', count: 2 }, { type: 'staff', count: 3 }, { type: 'buka', count: 1 }] },
+      { x: 1180, label: '設計審査（ランクB）出現！', enemies: [{ type: 'dr', count: 7 }] },
     ],
     allies: [{ type: 'ally', x: 120, betrayer: false }, { type: 'ally', x: 175, betrayer: false }, { type: 'ally', x: 230, betrayer: false }],
     boss: { type: 'boss_gijutsubu', x: 1500 },
@@ -120,10 +120,10 @@ export const STAGES = [
     width: 1700,
     bg: { scene: 'office', wall: '#3a4450', floor: '#5a6470', detail: '#2a323c', accent: '#8a96a4' },
     waves: [
-      { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
-      { x: 780, enemies: [{ type: 'staff', count: 1 }, { type: 'buka', count: 2 }] },
+      { x: 380, enemies: [{ type: 'staff', count: 3 }, { type: 'kyaku', count: 2 }, { type: 'buka', count: 1 }] },
+      { x: 780, enemies: [{ type: 'staff', count: 2 }, { type: 'buka', count: 3 }, { type: 'senpai', count: 1 }] },
       { x: 1000, label: '中ボス 管理担当K 出現！', enemies: [{ type: 'kanrik', count: 1 }] },
-      { x: 1200, label: '輸出管理チーム出現！', enemies: [{ type: 'exctrl', count: 5 }] },
+      { x: 1200, label: '輸出管理チーム出現！', enemies: [{ type: 'exctrl', count: 7 }] },
     ],
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'x', value: 820 } }, // 他部署に引き抜かれ裏切る
@@ -149,8 +149,8 @@ export const STAGES = [
     bg: { scene: 'meeting', wall: '#3c4640', floor: '#566058', detail: '#28302a', accent: '#8aa090' },
     door: { x: 1050 }, // 「出向」の札（2D＝壁の扉／3D＝稲荷の鳥居。触れると関連会社サブステージへ）
     waves: [
-      { x: 380, enemies: [{ type: 'vendor', count: 1 }, { type: 'staff', count: 2 }, { type: 'kyaku', count: 1 }] },
-      { x: 800, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'missile', count: 1 }] },
+      { x: 380, enemies: [{ type: 'vendor', count: 2 }, { type: 'staff', count: 3 }, { type: 'kyaku', count: 2 }] },
+      { x: 800, enemies: [{ type: 'staff', count: 3 }, { type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'buka', count: 1 }] },
       { x: 1000, label: '中ボス 生産企画課長 出現！', enemies: [{ type: 'seikikaku', count: 1 }] },
       { x: 1250, label: 'プロジェクトマネージメント審査会（PMR）', enemies: [
         { type: 'pmr_seisan', count: 1 }, { type: 'pmr_seizou', count: 1 }, { type: 'pmr_choutatsu', count: 1 },
@@ -180,9 +180,9 @@ export const STAGES = [
     width: 1850,
     bg: { scene: 'boardroom', wall: '#1c1726', floor: '#2c2640', detail: '#120d1a', accent: '#c79a3a' },
     waves: [
-      { x: 380, enemies: [{ type: 'staff', count: 2 }, { type: 'vendor', count: 1 }, { type: 'kyaku', count: 1 }] },
-      { x: 820, enemies: [{ type: 'vendor', count: 2 }, { type: 'missile', count: 1 }, { type: 'staff', count: 1 }] },
-      { x: 1300, enemies: [{ type: 'kyaku', count: 2 }, { type: 'missile', count: 2 }, { type: 'vendor', count: 1 }] },
+      { x: 380, enemies: [{ type: 'staff', count: 3 }, { type: 'vendor', count: 2 }, { type: 'kyaku', count: 2 }] },
+      { x: 820, enemies: [{ type: 'vendor', count: 3 }, { type: 'missile', count: 2 }, { type: 'staff', count: 2 }] },
+      { x: 1300, enemies: [{ type: 'kyaku', count: 3 }, { type: 'missile', count: 2 }, { type: 'vendor', count: 2 }, { type: 'senpai', count: 1 }] },
     ],
     allies: [
       { type: 'ally', x: 120, betrayer: true, trigger: { type: 'time', value: 16 } }, // 最後の味方も裏切る
@@ -207,8 +207,8 @@ export const SHUKKOU_STAGE = {
   // 3D版だけ、本社と同じ造りで色だけ古い関連会社の執務室にする
   scenes3d: [{ x: 0, scene: 'kanren' }],
   waves: [
-    { x: 360, enemies: [{ type: 'kanren', count: 3 }] },
-    { x: 780, label: '出向先上長 登場', enemies: [{ type: 'kanren', count: 2 }, { type: 'shukkou', count: 1 }] },
+    { x: 360, enemies: [{ type: 'kanren', count: 5 }] },
+    { x: 780, label: '出向先上長 登場', enemies: [{ type: 'kanren', count: 4 }, { type: 'shukkou', count: 1 }] },
   ],
   allies: [],
   boss: { type: 'shacho', x: 1400 },
