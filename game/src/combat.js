@@ -10,7 +10,7 @@ export function sameSide(a, b) {
 
 // 攻撃対象になり得るか。mob（通行人・傍観者）は誰からも狙われない。
 // sameSide が2値（enemy かどうか）なので、mob は敵からは「別陣営」に見えてしまう。ここで弾く。
-export function targetable(t) { return t.team !== 'mob'; }
+export function targetable(t) { return t.team !== 'mob' && !t.dying; }
 
 // 投げ物が砕けたときの破片の色・数・音
 const DEBRIS = {
@@ -32,7 +32,19 @@ export function applyHit(t, dir, dmg, kb, fx) {
   fx.hit(t.x, t.y - 9, t.isBoss ? '#ff7f0e' : '#ffd24a');
   const shown = Math.round(eff * 10) / 10;
   fx.text(t.x, t.y - SPRITE_H, '-' + shown, '#ffe39a');
-  if (t.hp <= 0) { t.hp = 0; t.alive = false; }
+  if (t.hp <= 0) {
+    t.hp = 0;
+    // 捨てセリフ持ちは、消える前に膝をついて一言残す。倒した瞬間に画面が切り替わると
+    // あっけないので、ここで間を作る。言い終わるまでステージクリアも待つ（main.js）。
+    if (t.lastLine && !t.dying) {
+      t.dying = true; t.downT = t.downDur ?? 2.8; t.downMax = t.downT;
+      t.taunt = t.lastLine; t.tauntT = t.downT;
+      t.hitstun = 0; t.kbx = 0; t.attack = null; t.attackActive = false;
+      fx.boom ? fx.boom(t.x, t.y - 14) : fx.hit(t.x, t.y - 14, '#ffd24a');
+    } else {
+      t.alive = false;
+    }
+  }
 }
 
 // 近接攻撃の解決: attackActive な攻撃者の前方ボックスと敵対エンティティを照合
@@ -40,8 +52,11 @@ export function resolveMelee(entities, fx) {
   for (const a of entities) {
     if (!a.attackActive || !a.attack) continue;
     const { reach, dmg, kb, hitSet } = a.attack;
-    const minX = a.facing > 0 ? a.x : a.x - reach;
-    const maxX = a.facing > 0 ? a.x + reach : a.x;
+    // back/depth は大振り（振り回し）用。指定が無ければ従来どおり「正面・通常の奥行き」。
+    const back = a.attack.back || 0;
+    const depth = a.attack.depth ?? PLAY.depthTol;
+    const minX = a.facing > 0 ? a.x - back : a.x - reach;
+    const maxX = a.facing > 0 ? a.x + reach : a.x + back;
     for (const t of entities) {
       if (t === a || !t.alive) continue;
       if (!targetable(t)) continue;
@@ -50,7 +65,7 @@ export function resolveMelee(entities, fx) {
       if (t.invuln > 0) continue;
       const half = t.w / 2;
       if (t.x + half < minX || t.x - half > maxX) continue;  // x重なり
-      if (Math.abs(a.y - t.y) > PLAY.depthTol) continue;          // 奥行き近接
+      if (Math.abs(a.y - t.y) > depth) continue;             // 奥行き近接
       if (Math.abs(a.z - t.z) > Z_TOL) continue;             // 高さ重なり
       hitSet.add(t.id);
       applyHit(t, a.facing, dmg, kb, fx);
@@ -67,7 +82,9 @@ export function resolveProjectiles(projectiles, entities, fx) {
       if (!p.grounded) continue;
       const cx = p.mx ?? p.x, cy = p.my ?? p.y;      // 斜めに来るので中心は着地点
       for (const t of entities) {
-        if (!t.alive || t.invuln > 0 || !targetable(t) || sameSide(p, t)) continue;
+        if (!t.alive || t.invuln > 0 || !targetable(t)) continue;
+        // ff のメテオは味方も巻き込む。降らせた本人だけは除く（自分の頭上には落とさない）。
+        if (p.ff ? (p.owner != null && t.id === p.owner) : sameSide(p, t)) continue;
         if (Math.hypot(cx - t.x, (cy - t.y) * 1.6) > p.aoe) continue;     // 奥行きは詰めて判定
         applyHit(t, sign(t.x - cx) || 1, p.dmg, p.kb, fx);
       }

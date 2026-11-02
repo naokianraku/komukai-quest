@@ -72,7 +72,10 @@ export class Stage {
 
   aliveEnemies() {
     let n = 0;
-    for (const e of this.entities) if (e.team === 'enemy' && e.alive && !e.isBoss) n++;
+    // 倒れかけは「残っている敵」に数えない（進行が止まらないように）。
+    // ただし跡継ぎがいる相手は数える。先に進行ロックが解けると、歩き去った背後で
+    // 息子が湧くことになるため。
+    for (const e of this.entities) if (e.team === 'enemy' && e.alive && !e.isBoss && (!e.dying || e.heir)) n++;
     return n;
   }
 
@@ -114,7 +117,7 @@ export class Stage {
   }
 
   // 彗星（魔王Y下のメテオ）。高いところから落ちてきて、着地点を中心に範囲で当たる。
-  spawnMeteor(x, y, team, m, delay) {
+  spawnMeteor(x, y, team, m, delay, owner) {
     const Z0 = 240, fall = m.fall || 1.2;
     // 真下に落とすと岩が湧いたように見える。斜めに流し込んで、落ちる場所へ収束させる。
     // 画面の右奥から左手前へ、全部そろった向きで降らせる（流星群らしく見せる）。
@@ -123,6 +126,7 @@ export class Stage {
       kind: 'meteor', look: 'meteor', dmg: m.dmg, kb: m.kb || 190, w: 10,
       vz: 0, gz: 2 * Z0 / (fall * fall), floorZ: 0, aoe: m.radius,
       mx: x, my: y, delay, life: delay + fall + 1.5,
+      ff: !!m.ff, owner: owner ? owner.id : null,
     });
     p.z = Z0;
     this.projectiles.push(p);
@@ -215,8 +219,22 @@ export class Stage {
       if (!this.spawned[this.currentWave] && this.player.x > w.x - 130) {
         this.spawnWave(w);
         this.spawned[this.currentWave] = true;
+        this.waveSpawnT = this.time;
         this.lockX = w.x;
         if (w.label) { this.banner = w.label; this.bannerColor = 'rgba(120,16,16,0.88)'; this.bannerT = 2.6; } // 徒党出現バナー
+      }
+      // 裏ステージだけ: 5人衆を片付けるのを待たずに、少し経つと魔王が降りてくる。
+      // 以降は5人衆と魔王が同じ床に立ち、メテオが敵味方の区別なく降る。
+      const join = this.data.bossJoinsAfter;
+      if (join != null && this.spawned[this.currentWave]
+          && this.currentWave === this.data.waves.length - 1
+          && this.time - this.waveSpawnT >= join) {
+        this.startBoss();
+        if (this.data.bossJoinLabel) {
+          this.banner = this.data.bossJoinLabel;
+          this.bannerColor = 'rgba(150,20,20,0.92)'; this.bannerT = 2.8;
+        }
+        return;
       }
       if (this.spawned[this.currentWave] && this.aliveEnemies() === 0) {
         this.currentWave++;
@@ -231,11 +249,22 @@ export class Stage {
 
   sweepDead() {
     const live = [];
+    const heirs = [];   // 倒されると跡を継ぐ者（管理担当K → その息子）
     for (const e of this.entities) {
       if (e === this.player || e.alive) { live.push(e); continue; }
       if (e.team === 'enemy') this.game.score += e.score || 100; // 撃破スコア（裏切り者含む）
+      if (e.heir) heirs.push(e);
     }
     this.entities = live;
+    // 倒れたその場で、同じ向きのまま代替わりする。倒したと思った瞬間に出てくるのが肝なので、
+    // 間は置かない。跡継ぎ自身は heir を持たないので、延々と続くことはない。
+    for (const e of heirs) {
+      const h = new Char(e.x, e.y, defFor(e.heir));
+      h.facing = e.facing;
+      const def = defFor(e.heir);
+      if (def.firstLine) { h.taunt = def.firstLine; h.tauntT = 3.2; h.chatterT = 3.8; }
+      this.entities.push(h);
+    }
   }
 
   updateCamera() {
@@ -693,6 +722,8 @@ export class Game {
     if (this.state === 'title') track = 'title';
     else if (this.state === 'ending') track = 'ending';
     else if (this.state === 'gameover') track = 'gameover';
+    // 裏ステージは業火の中なので、道中からボス戦までずっと地獄の曲でいく
+    else if (this.state === 'playing' && this.stage && this.stage.data.id === 'ura') track = 'hell';
     else if (this.state === 'playing' && this.stage && this.stage.boss && this.stage.boss.alive) track = 'boss';
     Audio.play(track);
   }

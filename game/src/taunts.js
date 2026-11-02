@@ -269,6 +269,10 @@ export const TAUNTS = {
   kanrik: [
     '俺が黒目だ！',
   ],
+  // 管理担当K（息子）
+  kanrik_son: [
+    '俺が黒目だ！',
+  ],
   // 魔王Y下
   maou: [
     'まったくだらしない',

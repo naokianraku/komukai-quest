@@ -1267,6 +1267,10 @@ buildTitleScenery();
 let hitstop = 0, shake = 0, bossSceneApplied = false;
 const origHit = stage.fx.hit.bind(stage.fx);
 stage.fx.hit = (x, y, color) => { origHit(x, y, color); hitstop = 0.06; shake = 1.1; burst(x, y, color); };
+// ボスを倒した瞬間。通常のヒットより長く止めて、強く揺らす。
+// 倒したのに画面が静かだとあっけないので、手応えはここで出す。
+const origBoom = stage.fx.boom.bind(stage.fx);
+stage.fx.boom = (x, y) => { origBoom(x, y); hitstop = 0.22; shake = 2.6; burst(x, y, '#ffd24a'); };
 // ダメージ数字は2D用のテキストではなく、投影したDOMで出す
 const origText = stage.fx.text.bind(stage.fx);
 stage.fx.text = (x, y, str, color) => { origText(x, y, str, color); addFloat(x, y, 0, str, color); };
@@ -1468,13 +1472,31 @@ function syncEntities(dt) {
     r.body.rotation.y = face + r.amp * WALK.twist * Math.sin(r.ph);
     r.legA.rotation.y = r.legB.rotation.y = face;
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
-    r.body.rotation.x = e.state === 'cast' ? -0.34
+    // 倒れかけ（捨てセリフ中）は、膝から崩れるように前のめりへ倒していく。
+    const fall = e.dying ? Math.min(1, 1 - (e.downT / (e.downMax || e.downDur || 2.8))) : 0;
+    r.body.rotation.x = e.dying ? 0.16 + fall * 0.9
+      : e.state === 'cast' ? -0.34
       : e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
-    r.body.scale.set(sx, sy, sx);
-    r.legA.scale.set(sx, sy, sx);
-    r.legB.scale.set(sx, sy, sx);
+    // 崩れ方: 前半は言わせたいので形を保ち、後半で一気に縮んで消える。
+    // 横にも潰すので、瓦礫になって落ちていくように見える。
+    const crumble = Math.max(0, (fall - 0.45) / 0.55);
+    const sink = e.dying ? (1 - fall * 0.42) * (1 - crumble * 0.9) : 1;
+    const squash = e.dying ? 1 - crumble * 0.75 : 1;
+    r.body.scale.set(sx * squash, sy * sink, sx * squash);
+    r.legA.scale.set(sx * squash, sy * sink, sx * squash);
+    r.legB.scale.set(sx * squash, sy * sink, sx * squash);
+    // ガラガラと瓦礫を落としながら崩れる。崩れが進むほど頻度を上げる。
+    if (e.dying) {
+      const now = performance.now();
+      if (!e._crumbleT || now - e._crumbleT > 90 + (1 - fall) * 240) {
+        e._crumbleT = now;
+        burst(e.x + (Math.random() - 0.5) * 14 * sc, e.y + (Math.random() - 0.5) * 10, '#8d7f6d');
+        shake = Math.max(shake, 0.45 + crumble * 0.8);
+      }
+    }
 
-    r.root.visible = !(e.invuln > 0 && Math.floor(performance.now() / 60) % 2 === 0);
+    // 倒れかけは点滅させない（捨てセリフを読ませたいので）
+    r.root.visible = e.dying || !(e.invuln > 0 && Math.floor(performance.now() / 60) % 2 === 0);
     const mt = e.hitstun > 0 ? charMatHit : (e.state === 'telegraph' ? charMatTele : charMat);
     r.body.material = mt; r.legA.material = mt; r.legB.material = mt;
   }
@@ -1532,7 +1554,7 @@ const WEAPON_OF = {
   buka: 'roll', senpai: 'roll', dr: 'roll', staff: 'binder', exctrl: 'stamp',
   kyaku: 'binder', vendor: 'binder', missile: 'wrench', kanren: 'wrench', shukkou: 'binder',
   pmr_seisan: 'binder', pmr_seizou: 'wrench', pmr_choutatsu: 'binder',
-  pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp',
+  pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp', kanrik_son: 'stamp',
   // 生産企画課長（中村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
   seikikaku: 'bottle', shitennou_nmura: 'bottle',
   shitennou_hno: 'wrench',   // H野は速い詰め役。振りの速い得物を持たせる
@@ -1584,8 +1606,22 @@ function syncWeapons() {
     const sc = (e.scale || 3) / 3;
     const dir = e.facing >= 0 ? 1 : -1;
     // 太い相手は腕も外に出るので、得物の位置を横幅に合わせてずらす
-    const px = wx(e.x) + 9.5 * sc * (e.bodyW || 1) * dir, py = wy(e.z) + 10 * sc * (e.bodyH || 1), pz = wz(e.y);
+    let px = wx(e.x) + 9.5 * sc * (e.bodyW || 1) * dir;
+    const py = wy(e.z) + 10 * sc * (e.bodyH || 1);
+    let pz = wz(e.y), yaw = 0;
+    // 大振り（中村の一升瓶）は、体のまわりを横薙ぎに回す。
+    // 通常の殴りは前へ突き出すだけなので、振り回しているとひと目で分かるようにする。
+    const sw = (e.attack && e.attack.swing) ? e.attack : null;
+    if (sw && sw.dur > 0) {
+      const prog = Math.max(0, Math.min(1, 1 - e.stateT / sw.dur));
+      const a = -2.5 + prog * 3.6;                      // 後ろから前へ薙ぎ払う
+      const R = 13 * sc * (e.bodyW || 1);
+      px = wx(e.x) + Math.cos(a) * R * dir;
+      pz = wz(e.y) + Math.sin(a) * R * 0.7;             // 奥行きは少し潰して見やすく
+      yaw = -a;
+    }
     r.group.position.set(px, py, pz);
+    r.group.rotation.y = yaw;
     r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
     r.group.visible = true;
     // 閃光は「当たったとき」だけ出す。attackActive の間ずっと出していると、
@@ -1926,8 +1962,11 @@ function syncLabels() {
     // 文字の大きさはキャラの体格に合わせる。ボスは1.5〜2.3倍の体格があるので、
     // 同じ級数だと相対的に小さく見えてしまう。
     const sr = (e.scale || 3) / 3;
-    // 名札とセリフも箱と一緒に縮めるが、読めなくなる手前で止める（CSSの max() と同じ考え）
-    const tagPx = Math.max(10, Math.min(26, 16 * (1 + (sr - 1) * 0.55)) * uiScale);
+    // 見かけの大きさを2D版にそろえる。2D版は幅480pxの画面に、名札8px・セリフ11px で描いている
+    // （ボスは体格ぶん大きくなる）。3Dは箱の幅が可変なので、その比率から級数を出す。
+    // こうすると、どの画面幅でも2D版と同じ大きさに見える。
+    const px2D = stageEl.clientWidth / 480;
+    const tagPx = Math.max(9, Math.min(17 * px2D, 8 * px2D * (1 + (sr - 1) * 0.55)));
 
     // 頭上の役職ラベル（ボスとプレイヤーは出さない。2D版と同じ）
     const label = e === stage.player ? null
@@ -1969,10 +2008,15 @@ function syncLabels() {
       bubble.style.display = 'block';
       // 大きいボスほど吹き出しが高く上がるので、画面の外へ出してしまわないよう内側に寄せる。
       // offsetWidth を読むと毎フレーム再レイアウトが走るため、級数と文字数から見積もる。
-      const fs = Math.max(14, Math.min(42, 21 * (1 + (sr - 1) * 0.85)) * uiScale);
+      const fs = Math.max(12, Math.min(26 * px2D, 11 * px2D * (1 + (sr - 1) * 0.85)));
       bubble.style.fontSize = fs.toFixed(1) + 'px';
-      const halfW = (e.taunt.length * fs + fs * 1.5) / 2;
-      const by = Math.max(fs * 1.95 + 8, tagY - tagH - 9);
+      // 長い一言は折り返す。上限は箱の7割強。そのぶん背が伸びるので、行数ぶん持ち上げる。
+      const maxW = stageEl.clientWidth * 0.72;
+      bubble.style.maxWidth = maxW.toFixed(0) + 'px';
+      const wantW = e.taunt.length * fs + fs * 1.5;
+      const rows = Math.max(1, Math.ceil(wantW / maxW));
+      const halfW = Math.min(maxW, wantW) / 2;
+      const by = Math.max(fs * 1.35 * rows + fs * 0.7 + 8, tagY - tagH - 9);
       const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
       bubble.style.transform = `translate(-50%,-100%) translate(${bxp}px,${by}px)`;
     } else bubble.style.display = 'none';
@@ -2282,6 +2326,8 @@ function updateAudio() {
   if (game.state === 'title') track = 'title';
   else if (game.state === 'ending') track = 'ending';
   else if (game.state === 'gameover') track = 'gameover';
+  // 裏ステージは業火の中なので、道中からボス戦までずっと地獄の曲でいく
+  else if (game.state === 'playing' && stage && stage.data.id === 'ura') track = 'hell';
   else if (game.state === 'playing' && stage && stage.boss && stage.boss.alive) track = 'boss';
   Audio.play(track);
 }
@@ -2456,6 +2502,8 @@ if (new URLSearchParams(location.search).get('cast') === '1') {
     ['1', 'ally'], ['1', 'buka'], ['1', 'senpai'], ['1', 'staff'], ['1', 'dr'],
     ['2', 'douki_sekkei'], ['2', 'douki_genba'], ['2', 'douki_hinsho'],
     ['2', 'gr_seizo'], ['2', 'm_gisou'], ['1', 'kyaku'],
+    // 中ボスも並べる。見分けがつくか（特に管理担当Kとその息子）をここで確かめられる
+    ['1', 'kanrik'], ['1', 'kanrik_son'], ['1', 'seikikaku'],
   ];
   const baseX = stage.player.x + 46;
   cast.forEach(([which, type], i) => {
@@ -2505,15 +2553,21 @@ if (new URLSearchParams(location.search).get('looks') === '1') {
   const d = parseFloat(new URLSearchParams(location.search).get('demo') || '0');
   if (d > 0) {
     game.state = 'playing'; hideScreen();
-    // 進行ロック(lockX)を外してから移動する。Player.update が maxX=lockX で引き戻すため、
-    // 外さないと指定した地点までカメラが行かない。
-    stage.currentWave = stage.data.waves.length;
-    stage.lockX = stage.width - 40;
     stage.player.x = d;
-    // 指定地点にいちばん近い波を出す。常に waves[0] だと中ボスの波が確認できない
-    let pick = stage.data.waves[0];
-    for (const w of stage.data.waves) if ((w.x || 0) <= d) pick = w;
-    stage.spawnWave(pick);
+    if (stage.data.bossJoinsAfter != null) {
+      // 裏ステージは「5人衆が出てしばらくすると魔王が降りてくる」進行そのものが見どころ。
+      // 波を飛ばすと魔王が降りてこないので、ここだけ通常どおり進ませる（歩けば波が出る）。
+      stage.lockX = stage.data.waves[0].x;
+    } else {
+      // 進行ロック(lockX)を外してから移動する。Player.update が maxX=lockX で引き戻すため、
+      // 外さないと指定した地点までカメラが行かない。
+      stage.currentWave = stage.data.waves.length;
+      stage.lockX = stage.width - 40;
+      // 指定地点にいちばん近い波を出す。常に waves[0] だと中ボスの波が確認できない
+      let pick = stage.data.waves[0];
+      for (const w of stage.data.waves) if ((w.x || 0) <= d) pick = w;
+      stage.spawnWave(pick);
+    }
     camPos.x = wx(d); camLook.x = wx(d);
   }
 }

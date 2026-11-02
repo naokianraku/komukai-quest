@@ -265,6 +265,18 @@ export class Char extends Entity {
     // メテオ（魔王Y下の大技）。def に無ければ一切撃たない＝他のキャラの挙動は変わらない。
     this.meteorDef = def.meteor || null;
     this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
+    // 倒されると跡を継ぐ者（管理担当K → 息子）。def に無ければ誰も出てこない。
+    this.heir = def.heir || null;
+    // 捨てセリフ。これがある相手は、HPが尽きても即座には消えず、膝をついて一言残してから倒れる。
+    // 無ければ従来どおりその場で消える（雑魚の倒れ方は変わらない）。
+    this.lastLine = def.lastLine || null;
+    // 崩れ落ちる時間。ボスは「ガラガラと」見せたいので長め、中ボスは短め。
+    this.downDur = def.downDur ?? (def.boss ? 3.4 : 2.6);
+    this.dying = false; this.downT = 0;
+    // 大振り（中村の一升瓶の振り回し）。これも def に無ければ一切出さない。
+    this.swingDef = def.swing || null;
+    this.swingT = this.swingDef ? (this.swingDef.first ?? 3.0) : 0;
+    this.swinging = false;
     // 3D版の体型の倍率。2D版はドット絵が固定なので参照しない（未指定なら1＝従来と同じ）。
     this.bodyW = def.bodyW || 1;
     this.bodyH = def.bodyH || 1;
@@ -307,6 +319,15 @@ export class Char extends Entity {
 
   update(dt, stage) {
     this.attackActive = false;
+    // 倒れかけ: 捨てセリフを言い終わるまでその場に残る。攻撃も移動もしない。
+    if (this.dying) {
+      this.downT -= dt;
+      this.tauntT = Math.max(this.tauntT, 0.1);   // 消えるまで吹き出しを出し続ける
+      this.state = 'idle'; this.moving = false; this.attack = null;
+      this.integrate(dt);
+      if (this.downT <= 0) this.alive = false;
+      return;
+    }
     this.advanceFSM(dt);
     if (this.team === 'ally' && !this.betrayed && !this.noFumble) this.tryFumble(dt, stage);
     if (!this.isBoss && this.hitstun <= 0) this.separate(dt, stage); // 間隔保持（固まり防止）
@@ -352,6 +373,7 @@ export class Char extends Entity {
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
     this.throwT -= dt;
+    if (this.swingDef) this.swingT -= dt;
     // ミサイルは誘導、投げ物（一升瓶や鉄アレイ）は山なりに落とすので、どちらも奥行きのズレを許す
     const lobbed = !!THROWS[this.projKind] || this.projKind === 'junk';
     const aligned = this.projKind === 'missile' ? true
@@ -367,7 +389,8 @@ export class Char extends Entity {
     // （攻撃間合い≈リーチ70pxで止まると、進行ロック中のプレイヤーが届かず詰む）
     const passiveClose = this.passive && Math.abs(dx) <= 22 && Math.abs(dy) <= PLAY.depthTol;
     if (inRange && !this.passive) {
-      this.startAttack();
+      if (this.swingDef && this.swingT <= 0) this.startSwing();
+      else this.startAttack();
     } else if (passiveClose) {
       this.moving = false;
     } else if (this.projKind === 'missile' && !this.passive && Math.abs(dx) < 130) {
@@ -462,6 +485,17 @@ export class Char extends Entity {
     if (this.tauntCat) this.setTaunt(); // 攻撃時にしゃべる（味方の掛け声もここ）
   }
 
+  // 大振り（中村の一升瓶の振り回し）。大きく振りかぶって横薙ぎに払う。
+  // 通常の殴りより遅く・広く・重い。背後まで薙ぐので、すれ違いざまに抜けても当たる。
+  // 振りかぶりが長いぶん、見てから離れれば必ずかわせる。
+  startSwing() {
+    const w = this.swingDef;
+    this.state = 'telegraph'; this.stateT = w.telegraph ?? 0.62; this.moving = false;
+    this.swinging = true;
+    this.swingT = (w.every ?? 4.5) + (this.id % 3) * 0.5;
+    if (this.tauntCat) this.setTaunt();
+  }
+
   // メテオ: 狙った床に印を出してから、彗星を順番に落とす。
   // 印は落ちきるまで出しっぱなしなので、走れば必ず逃げられる（理不尽にしない）。
   startMeteor(stage, target) {
@@ -471,12 +505,17 @@ export class Char extends Entity {
     if (this.tauntCat) this.setTaunt(m.cast + 0.4);
     const half = (PLAY.bottom - PLAY.top) / 2;
     const mid = (PLAY.top + PLAY.bottom) / 2;
+    // 着弾点は最大±160px散るので、端に寄られると画面の外に出る。外へ出た弾は
+    // main.js の画面外カリングが黙って消すため、端に立つだけで5発中2発が降らなくなっていた
+    //（＝端が安全地帯）。画面の中に収めて、どこに立っていても同じ数だけ降らせる。
+    const lo = stage.camera.x + 26, hi = stage.camera.x + VIEW_W - 26;
     for (let i = 0; i < m.n; i++) {
       // 1発目は足元へ落とす。棒立ちは必ず痛い目を見る
-      const tx = i === 0 ? target.x
+      const raw = i === 0 ? target.x
         : target.x + (((i * 97) % 2 ? 1 : -1)) * (50 + ((i * 53) % 110));
+      const tx = clamp(raw, Math.min(lo, hi), Math.max(lo, hi));
       const ty = i === 0 ? target.y : mid + (((i * 71) % 100) / 100 - 0.5) * 2 * half * 0.9;
-      stage.spawnMeteor(tx, clamp(ty, PLAY.top, PLAY.bottom), this.team, m, i * 0.24);
+      stage.spawnMeteor(tx, clamp(ty, PLAY.top, PLAY.bottom), this.team, m, i * 0.24, this);
     }
   }
 
@@ -508,11 +547,26 @@ export class Char extends Entity {
       return;
     }
     if (this.state === 'telegraph' && this.stateT <= 0) {
-      this.state = 'attack'; this.stateT = this.active;
-      this.attack = { reach: this.atkReach, dmg: this.atkDmg, kb: this.atkKb, hitSet: new Set() };
+      const w = this.swinging ? this.swingDef : null;
+      this.state = 'attack'; this.stateT = w ? (w.active ?? 0.34) : this.active;
+      this.attack = w
+        ? {
+            reach: this.atkReach * (w.reachMul ?? 1.5),   // プレイヤーの間合い(81)の1.5倍強。離れれば必ずかわせる
+            back: this.atkReach * (w.backMul ?? 0.55),   // 背後まで薙ぐ
+            depth: PLAY.depthTol * (w.depthMul ?? 1.8),  // 奥行きも広い
+            dmg: w.dmg ?? this.atkDmg + 1,
+            kb: w.kb ?? this.atkKb * 1.8,
+            swing: true, dur: this.stateT, hitSet: new Set(),
+          }
+        : { reach: this.atkReach, dmg: this.atkDmg, kb: this.atkKb, hitSet: new Set() };
+      if (w) Audio.sfxSwing();
     } else if (this.state === 'attack') {
       this.attackActive = true;
-      if (this.stateT <= 0) { this.state = 'recover'; this.stateT = this.cooldown; this.attack = null; }
+      if (this.stateT <= 0) {
+        this.state = 'recover';
+        this.stateT = this.swinging ? (this.swingDef.recover ?? this.cooldown * 1.7) : this.cooldown;
+        this.attack = null; this.swinging = false;
+      }
     } else if (this.state === 'recover' && this.stateT <= 0) {
       this.state = 'idle';
     }
@@ -550,7 +604,7 @@ export const HAND_Z = 10;
 // 弧の頂点はどれも当たり判定の高さ許容(Z_TOL=20)の内側。頭上を素通りして当たらない事故が起きない。
 export const THROWS = {
   sake:     { vx: 205, vz: 72, gz: 150, dmg: 2, kb: 110, w: 7 },  // 一升瓶（中村）
-  pipe:     { vx: 240, vz: 0,  gz: 0,   dmg: 2, kb: 130, w: 7 },  // 鉄パイプ: 低く速い
+  pipe:     { vx: 240, vz: 0,  gz: 28,  dmg: 2, kb: 130, w: 7 },  // 鉄パイプ: 低く速い（投げ上げない。約200px先で落ちる）
   dumbbell: { vx: 175, vz: 62, gz: 130, dmg: 3, kb: 175, w: 7 },  // 鉄アレイ: 高く重く、一番痛い
   pc:       { vx: 195, vz: 44, gz: 95,  dmg: 2, kb: 155, w: 9 },  // パソコン
 };
@@ -632,6 +686,9 @@ export class Projectile {
     // 斜めに降るので、いま居る場所と落ちる場所は別。印と範囲判定はこちらを使う。
     this.mx = opts.mx ?? x;
     this.my = opts.my ?? y;
+    // ff=true: 敵味方の区別なく当たる（魔王のメテオ）。owner は降らせた本人＝自分だけは巻き込まない。
+    this.ff = !!opts.ff;
+    this.owner = opts.owner ?? null;
     this.floorZ = opts.floorZ ?? -HAND_Z;
     // 投げ上げ（一升瓶や鉄アレイのような山なりの投擲）。未指定なら従来どおり高さは動かない。
     this.vz = opts.vz || 0;

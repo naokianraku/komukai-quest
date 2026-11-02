@@ -4,12 +4,40 @@
 const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
 
 // 各曲: step=1ステップのms, len=ステップ数, lead/bass=MIDI(0=休符), drum=キック有無, once=一回のみ
-const TRACKS = {
-  title: { // 不気味な行進（半音の揺れ＋トライトーン）
-    step: 196, len: 16,
-    lead: [57, 0, 58, 57, 0, 0, 53, 0, 56, 0, 57, 56, 0, 0, 0, 0],
-    bass: [45, 0, 45, 0, 45, 0, 51, 0, 44, 0, 44, 0, 51, 0, 45, 45],
-    drum: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+// 音符は数値(1ステップぶん)のほか [MIDI, 長さ(ステップ数)] でも書ける。伸ばす音に使う。
+// harm は lead に重ねる第2声部（和音）。*Type/*Gain/*Voices/*Detune/*Atk/*Cut は任意で、
+// 省略すると従来どおり（鋸波0.24 / 三角波0.5・1声・フィルタなし）＝既存曲の響きは変わらない。
+export const TRACKS = {
+  // 冒険の始まりのファンファーレ（ニ長調）。呼びかけ（短・短・長）→ 下りながらの応答 →
+  // 駆け上がって頂点で伸ばす、の3段。金管の合奏に寄せたいので、
+  // 鋸波を3声わずかにずらして重ね、低域通過フィルタで角を落とし、3度下の第2声部を添えている。
+  // 勢いはベースと太鼓で出す: ベースは root とオクターブ上を刻み続け、
+  // 太鼓は裏も打って、最後だけ連打で締める。伸ばす音の裏でも足が止まらないようにする。
+  title: {
+    step: 130, len: 48,
+    leadType: 'sawtooth', leadGain: 0.155, leadVoices: 3, leadDetune: 9, leadAtk: 0.024, leadCut: 3000,
+    harmGain: 0.085, harmVoices: 2, harmDetune: 7, harmAtk: 0.03, harmCut: 2200,
+    bassType: 'triangle', bassGain: 0.33,
+    lead: [
+      69, 0, 69, 69, [74, 2], 0, 74, 76,   [78, 2], 0, [81, 2], 81, [86, 3], 0, 0, 83,
+      [83, 2], 0, 81, 81, [79, 2], 0, 78, 79,   [76, 2], 0, 78, 79, [81, 3], 0, 81, 83,
+      74, 76, 78, 79, [81, 2], 0, 83, 85,   [86, 6], 0, 0, 0, 0, 0, 83, 86,
+    ],
+    harm: [
+      66, 0, 66, 66, [69, 2], 0, 69, 73,   [74, 2], 0, [78, 2], 78, [81, 3], 0, 0, 79,
+      [79, 2], 0, 78, 78, [76, 2], 0, 74, 76,   [73, 2], 0, 74, 76, [78, 3], 0, 78, 79,
+      71, 73, 74, 76, [78, 2], 0, 79, 81,   [81, 6], 0, 0, 0, 0, 0, 79, 81,
+    ],
+    bass: [
+      38, 50, 38, 50, 38, 50, 38, 50,   38, 50, 38, 50, 45, 57, 45, 57,
+      35, 47, 35, 47, 31, 43, 31, 43,   33, 45, 33, 45, 33, 45, 33, 45,
+      38, 50, 38, 50, 33, 45, 33, 45,   [38, 6], 0, 0, 0, 0, 0, 38, 45,
+    ],
+    drum: [
+      1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1,
+      1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1,
+      1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+    ],
   },
   stage: { // 暗く緊張したオスティナート
     step: 150, len: 16,
@@ -28,6 +56,22 @@ const TRACKS = {
     lead: [57, 60, 64, 69, 68, 64, 60, 57, 59, 62, 67, 71, 69, 67, 64, 60],
     bass: [45, 45, 52, 52, 44, 44, 52, 52, 47, 47, 55, 55, 57, 57, 45, 45],
     drum: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1],
+  },
+  hell: { // 業火の60号7階Aゾーン。半音ずつ沈むベースの上に、常に三全音が乗る。
+    // 前半は鐘のように重く、後半は半音で駆け上がって追い詰める。
+    step: 142, len: 32, leadGain: 0.26, bassType: 'sawtooth', bassGain: 0.46,
+    lead: [68, 0, 67, 0, 66, 0, 65, 0,
+           64, 0, 63, 0, 62, 0, 61, 0,
+           80, 0, 79, 78, 77, 0, 76, 75,
+           74, 0, 73, 72, 71, 70, 69, 68],
+    bass: [38, 38, 37, 37, 36, 36, 35, 35,
+           34, 34, 33, 33, 32, 32, 31, 31,
+           38, 38, 37, 37, 36, 36, 35, 35,
+           34, 34, 33, 33, 32, 32, 31, 31],
+    drum: [1, 0, 0, 1, 1, 0, 0, 1,
+           1, 0, 0, 1, 1, 0, 0, 1,
+           1, 0, 1, 0, 1, 0, 1, 0,
+           1, 1, 1, 1, 1, 1, 1, 1],
   },
   gameover: { // 沈み込む
     step: 240, len: 8, once: true,
@@ -95,25 +139,52 @@ export const Audio = {
     this._tick(t);
   },
 
+  // 数値 → {n, len:1} / [MIDI, 長さ] → {n, len}
+  _at(arr, i) {
+    const v = arr && arr[i];
+    if (!v) return null;
+    return Array.isArray(v) ? { n: v[0], len: v[1] || 1 } : { n: v, len: 1 };
+  },
+
   _tick(t) {
     if (!this.ctx) return;
     const i = this._step % t.len;
-    if (t.lead[i]) this._note(midi(t.lead[i]), t.step / 1000 * 0.95, 'sawtooth', 0.24);
-    if (t.bass[i]) this._note(midi(t.bass[i]), t.step / 1000 * 1.8, 'triangle', 0.5);
+    const L = this._at(t.lead, i), H = this._at(t.harm, i), B = this._at(t.bass, i);
+    const v = (pre) => ({
+      voices: t[pre + 'Voices'] || 1, detune: t[pre + 'Detune'] || 0,
+      atk: t[pre + 'Atk'], cut: t[pre + 'Cut'],
+    });
+    if (L) this._note(midi(L.n), t.step / 1000 * 0.95 * L.len, t.leadType || 'sawtooth', t.leadGain ?? 0.24, v('lead'));
+    if (H) this._note(midi(H.n), t.step / 1000 * 0.95 * H.len, t.harmType || t.leadType || 'sawtooth', t.harmGain ?? 0.12, v('harm'));
+    if (B) this._note(midi(B.n), t.step / 1000 * 1.8 * B.len, t.bassType || 'triangle', t.bassGain ?? 0.5, v('bass'));
     if (t.drum && t.drum[i]) this._kick();
     this._step++;
     if (t.once && this._step >= t.len) { clearInterval(this._timer); this._timer = null; } // _trackは保持＝再生しない
   },
 
-  _note(freq, dur, type, g) {
-    const c = this.ctx, o = c.createOscillator(), gn = c.createGain();
-    o.type = type; o.frequency.value = freq;
-    const now = c.currentTime;
+  // opts.voices>1 で少しずつ音程をずらした同じ音を重ねる（厚みが出る）。
+  // opts.cut を入れると低域通過フィルタを通す（鋸波の角を落として管楽器寄りにする）。
+  _note(freq, dur, type, g, opts = {}) {
+    const c = this.ctx, now = c.currentTime;
+    const voices = Math.max(1, opts.voices || 1);
+    const atk = opts.atk ?? 0.012;
+    const gn = c.createGain();
     gn.gain.setValueAtTime(0.0001, now);
-    gn.gain.linearRampToValueAtTime(g, now + 0.012);
+    gn.gain.linearRampToValueAtTime(g, now + atk);
     gn.gain.exponentialRampToValueAtTime(0.0008, now + dur);
-    o.connect(gn); gn.connect(this.master);
-    o.start(now); o.stop(now + dur + 0.03);
+    let tail = gn;
+    if (opts.cut) {
+      const f = c.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = opts.cut; f.Q.value = 0.6;
+      gn.connect(f); tail = f;
+    }
+    tail.connect(this.master);
+    for (let i = 0; i < voices; i++) {
+      const o = c.createOscillator();
+      o.type = type; o.frequency.value = freq;
+      if (opts.detune) o.detune.value = (i - (voices - 1) / 2) * opts.detune;
+      o.connect(gn); o.start(now); o.stop(now + dur + 0.03);
+    }
   },
 
   // 攻撃の振り（ヒュッ）
