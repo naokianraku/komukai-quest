@@ -129,7 +129,8 @@ export const CHAR_PALETTES = {
   // 中ボス
   seikikaku: { map: 'worker', h: '#2a8a5a' }, // 生産企画課長: 緑ヘルメット
   kanrik:    { map: 'worker', h: '#20202a' }, // 管理担当K: 黒ヘルメット
-  kanrik_son:{ map: 'worker', h: '#2e2e44' }, // 管理担当K（息子）: 父ゆずりの黒ヘルメット（少し明るい）
+  // K目息子: 小学生。ヘルメットではなく黄色い通学帽（cap型のドット絵はここで初めて使う）
+  kanrik_son:{ map: 'cap', h: '#f2c230', b: '#f2f5f8', a: '#dde3ea', p: '#2f3a52', t: '#f2f5f8' },
   // 裏ステージ（業火の60号7階Aゾーン）— Y下5人衆（一人ずつ別キャラ）
   shitennou_nmura: { map: 'worker', h: '#2a8a5a' }, // N村（生産企画課長 再登場・緑ヘルメット）
   shitennou_kme:   { map: 'worker', h: '#20202a' }, // K目（管理担当K 再登場・黒ヘルメット）
@@ -144,14 +145,14 @@ export const TYPE_LABEL = {
   buka: '部下', senpai: '先輩', staff: 'スタッフ', dr: '設計審査', exctrl: '輸出管理', missile: 'ミサイル', kyaku: '客', vendor: 'ベンダー', ally: 'PJメンバ',
   pmr_seisan: '生産部長', pmr_seizou: '製造部長', pmr_choutatsu: '調達部長', pmr_gijutsu: '技術管理部長', pmr_hinshou: '品証部長',
   kanren: '関連社員', shukkou: '出向先上長', seisan: '生産部長', kikakubucho: '企画部長',
-  seikikaku: '生産企画課長', kanrik: '管理担当K', kanrik_son: '管理担当K・息子',
+  seikikaku: '生産企画課長', kanrik: '管理担当K', kanrik_son: 'K目息子',
   shitennou_nmura: 'N村', shitennou_kme: 'K目', shitennou_sda: 'S田', shitennou_hmoto: 'H本', shitennou_hno: 'H野',
 };
 export const TYPE_COLOR = {
   buka: '#cfe6f5', senpai: '#f2c53d', staff: '#aab0b8', dr: '#ff5a5a', exctrl: '#8c9eff', missile: '#c2cf5e', kyaku: '#e0736a', vendor: '#7fa8d0', ally: '#46c47e',
   pmr_seisan: '#6a9ad8', pmr_seizou: '#5cc28a', pmr_choutatsu: '#d8a45c', pmr_gijutsu: '#9a8ce0', pmr_hinshou: '#d87ab0',
   kanren: '#9ad8b8', shukkou: '#d8b07a', seisan: '#6a9ad8', kikakubucho: '#9aa6cc',
-  seikikaku: '#5cd29a', kanrik: '#b0a8e0', kanrik_son: '#cabff5',
+  seikikaku: '#5cd29a', kanrik: '#b0a8e0', kanrik_son: '#ffd34d',
   shitennou_nmura: '#5cd29a', shitennou_kme: '#b0a8e0', shitennou_sda: '#d8d28a', shitennou_hmoto: '#8aaad0', shitennou_hno: '#e09a86',
 };
 

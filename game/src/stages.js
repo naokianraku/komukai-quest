@@ -50,14 +50,16 @@ export const UNIT_TYPES = {
                heir: 'kanrik_son', score: 700 }, // Stage2 中ボス。言い終わって崩れたあと、息子が出てくる
   // 管理担当Kの息子。父を倒したその場に現れる。若いぶん速いが、体力は父より軽い。
   // セリフは本人ゆずりの一言だけ（増やすときは セリフ一覧.md の kanrik_son に追記）。
-  kanrik_son:{ name: '管理担当K（息子）', sprite: 'kanrik_son', taunts: 'kanrik_son', midboss: true, scale: 1.45, hp: 14, speed: 58, reach: 28, dmg: 2, kb: 120, cooldown: 0.58, telegraph: 0.36,
-               firstLine: '俺が黒目だ！', score: 500 },
+  // K目息子。小学生。通学帽とランドセルで、父（黒ヘルメットの作業着）と対になる。
+  // 体は大人より小さいぶん速い。背負い物は3D版だけ（2D版はドット絵なので帽子までで表現）。
+  kanrik_son:{ name: 'K目息子', sprite: 'kanrik_son', taunts: 'kanrik_son', midboss: true, scale: 0.8, hp: 14, speed: 58, reach: 26, dmg: 2, kb: 110, cooldown: 0.58, telegraph: 0.36,
+               satchel: true, firstLine: '俺が黒目だ！', score: 500 },
   // 生産企画課長（中村）: 一升瓶を山なりに投げる。投げるのは近すぎない間合いのときだけ。
   // 間合いに入られたら瓶を振り回す（swing）。遅くて広くて重い、見てからかわす大振り。
   seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
                thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.5,
                swing: { first: 2.6, every: 4.4, telegraph: 0.62, active: 0.34, recover: 0.95, dmg: 3, kb: 215 },
-               lastLine: '鹿嶋田のエンジェルで待っている',
+               lastLine: '鹿島田のエンジェルで待っている',
                score: 700 }, // Stage3 中ボス
 
   // 裏ステージ（事業部長撃破後の真・最終決戦／業火の60号7階Aゾーン）

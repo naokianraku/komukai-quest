@@ -267,6 +267,8 @@ export class Char extends Entity {
     this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
     // 倒されると跡を継ぐ者（管理担当K → 息子）。def に無ければ誰も出てこない。
     this.heir = def.heir || null;
+    // ランドセル。3D版だけ背中に足す（2D版のドット絵には出ない）。
+    this.satchel = !!def.satchel;
     // 捨てセリフ。これがある相手は、HPが尽きても即座には消えず、膝をついて一言残してから倒れる。
     // 無ければ従来どおりその場で消える（雑魚の倒れ方は変わらない）。
     this.lastLine = def.lastLine || null;

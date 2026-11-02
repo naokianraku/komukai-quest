@@ -1398,6 +1398,7 @@ function makeRig(e) {
   const hipA = new THREE.Group(), hipB = new THREE.Group();
   hipA.add(legA); hipB.add(legB);
   root.add(body); root.add(hipA); root.add(hipB);
+  if (e.satchel) body.add(makeSatchel());   // 小学生のランドセル（K目息子）
   for (const m of [body, legA, legB]) { m.castShadow = true; m.receiveShadow = false; }
   scene.add(root);
   // 位相は個体ごとにずらす。全員が同じ足から踏み出すと行進に見える
@@ -1561,6 +1562,29 @@ const WEAPON_OF = {
   maou: 'pipe',   // 魔王Y下は鉄パイプ。投げ切ってもまた拾ってくる、という体
 };
 const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
+
+// ランドセル。胴のボクセルは x:-20..20 / y:0..60 / z:-12..12（+zが正面）なので、
+// 背中は -z 側。胴の子にすると、向きも崩れ落ちも一緒に動く。
+function makeSatchel() {
+  const g = new THREE.Group();
+  // 胴より横に張り出させる。胴の幅に収めると背中へ完全に隠れて、
+  // 斜め前から見るこのカメラではほぼ見えない（赤がちらつくだけになる）。
+  const box = new THREE.Mesh(new THREE.BoxGeometry(27, 22, 10), mat('#b4342c'));
+  const flap = new THREE.Mesh(new THREE.BoxGeometry(27.6, 13, 2.2), mat('#8e241d'));
+  flap.position.set(0, 4.2, -6.1);
+  const clasp = new THREE.Mesh(new THREE.BoxGeometry(4, 2.6, 1.8), mat('#d8b24a'));
+  clasp.position.set(0, -3.4, -6.6);
+  g.add(box); g.add(flap); g.add(clasp);
+  // 肩ベルト。胴の外側を通して、前から見ても背負っているのが分かるようにする
+  for (const sx of [-8.5, 8.5]) {
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3, 30), mat('#8e241d'));
+    belt.position.set(sx, 11.5, 9);
+    g.add(belt);
+  }
+  for (const m of g.children) { m.castShadow = true; m.receiveShadow = false; }
+  g.position.set(0, 24, -15.5);
+  return g;
+}
 
 const weapons = new Map();   // entity.id → {group, flash, kind}
 const armMat = mat('#a8c4de');   // 作業着の袖
