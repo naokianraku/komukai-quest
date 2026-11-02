@@ -71,3 +71,18 @@ body {
   #hint { display: none; }
   #game2 { width: min(100%, calc(100dvh * 16 / 9)); max-height: 100%; }
 }
+
+/* 縦持ち: 16:9の画面を縦長の端末に入れると高さの26%しか使えない。
+   3D版と同じく、画面ごと90°回して縦画面いっぱいに出す。横スクロールのゲームなので向きは横で固定。
+   タッチ判定は offsetX/offsetY（要素自身の座標系）で取っているため回してもずれない。 */
+@media (orientation: portrait) and (pointer: coarse) {
+  #frame { position: relative; gap: 0; }
+  #game2 {
+    position: absolute; left: 50%; top: 50%;
+    --w: min(100dvh, 100vw * 16 / 9);
+    width: var(--w); height: calc(var(--w) * 9 / 16);
+    max-width: none; max-height: none;
+    transform: translate(-50%, -50%) rotate(90deg);
+    border-radius: 0; border: 0;
+  }
+}

@@ -51,7 +51,15 @@ export const Input = {
   },
 
   _toLogical(e) {
-    const r = this._canvas.getBoundingClientRect();
+    const c = this._canvas;
+    // 縦持ちのスマホでは画面ごと90°回している（game3d/index.html）。
+    // getBoundingClientRect は回転後の外接矩形を返すので、そこからの引き算では
+    // 縦と横が入れ替わって判定が90°ずれる。offsetX/offsetY は要素自身の座標系
+    // （回転を戻したもの）なので、そのまま割れば向きに関係なく正しい。
+    if (e.offsetX != null && c.clientWidth > 0 && c.clientHeight > 0) {
+      return { x: (e.offsetX / c.clientWidth) * VIEW_W, y: (e.offsetY / c.clientHeight) * VIEW_H };
+    }
+    const r = c.getBoundingClientRect();
     return {
       x: ((e.clientX - r.left) / r.width) * VIEW_W,
       y: ((e.clientY - r.top) / r.height) * VIEW_H,

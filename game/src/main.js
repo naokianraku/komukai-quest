@@ -728,9 +728,11 @@ function boot() {
   // 内部解像度を「表示サイズ × デバイス画素比」に合わせて高精細化（文字・図形がくっきり）
   function fitCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const r = canvas.getBoundingClientRect();
-    const w = Math.max(VIEW_W, Math.round((r.width || VIEW_W) * dpr));
-    const h = Math.max(VIEW_H, Math.round((r.height || VIEW_H) * dpr));
+    // 縦持ちのスマホでは canvas ごと90°回しているので、getBoundingClientRect では
+    // 縦横が入れ替わって絵が潰れる。clientWidth/Height は回す前の自分の大きさ。
+    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    const w = Math.max(VIEW_W, Math.round((cw || VIEW_W) * dpr));
+    const h = Math.max(VIEW_H, Math.round((ch || VIEW_H) * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   }
   fitCanvas();

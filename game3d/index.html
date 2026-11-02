@@ -16,13 +16,25 @@
   /* 2D版(game/style.css)と同じ枠。画面上の表示サイズを揃えて見比べられるようにする */
   #frame{width:100%;height:100%;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:8px}
+  /* --u = HUDの倍率。箱の幅に追従して main3d.js の resize() が書き込む。
+     ここを画面幅のメディアクエリでやると、横持ちのスマホ（画面は874pxあるのに
+     箱は高さに縛られて663pxしかない）で「PCだ」と誤判定して文字があふれる。 */
   #stage{position:relative;overflow:hidden;background:#000;
+    --u:1;
     aspect-ratio:16/9;
     width:min(100%, calc((100dvh - 1.8rem) * 16 / 9));
     max-width:100%;max-height:calc(100% - 1.8rem);
     border-radius:10px;border:1px solid #2a2e34;
     box-shadow:0 8px 32px rgba(0,0,0,.5)}
-  #c3d{width:100%;height:100%;display:block}
+  /* 指で操作するので、ブラウザのスクロール/ズーム判定に取られないようにする。
+     これが無いとスティックを倒した瞬間に pointercancel が飛び、指を離した扱いになって
+     スマホで一歩も歩けない（2D版の #game には最初から入っていた）。 */
+  /* スマホの操作UI（スティックと攻撃/跳ボタン）を描く板。2D版と同じ Input.drawControls を
+     そのまま使いたいので、3Dの上に2Dのキャンバスを1枚重ねる。指は下の #c3d で受ける。 */
+  #pad{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #c3d{width:100%;height:100%;display:block;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent}
   #hint{flex:0 0 auto;font-size:13px;color:#8b9097;text-align:center}
 
   /* 吹き出し・頭上ラベル・ダメージ数字。3Dの中に文字を置くとボケるので、
@@ -52,19 +64,20 @@
   #labels .bubble.boss::after{border-top-color:#ff7f0e}
   /* 鳥居の扁額「出向」。朱の地に金の縁。縦書きにすると扁額の板から溢れるので横書き */
   #labels .plate{position:absolute;left:0;top:0;white-space:nowrap;
-    font:700 15px/1 system-ui,sans-serif;letter-spacing:.16em;
+    font:700 max(11px, 15px * var(--u))/1 system-ui,sans-serif;letter-spacing:.16em;
     color:#fff2dc;background:rgba(150,32,14,.95);
     border:1px solid #e2c179;border-radius:2px;padding:3px 6px 3px 8px;
     text-shadow:0 1px 2px rgba(0,0,0,.7);box-shadow:0 2px 7px rgba(0,0,0,.55)}
   #labels .float{position:absolute;left:0;top:0;
-    font:700 13px/1 ui-monospace,monospace;
+    font:700 max(10px, 13px * var(--u))/1 ui-monospace,monospace;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
   /* 頭上のHPバー（2D版の drawHpBar と同じ役割）。中ボスは .mid で一段大きくする */
-  #labels .ehp{position:absolute;left:0;top:0;width:32px;height:4px;
+  #labels .ehp{position:absolute;left:0;top:0;
+    width:calc(32px * var(--u));height:calc(4px * var(--u));
     border-radius:999px;background:rgba(0,0,0,.6);overflow:hidden;
     box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.6)}
   #labels .ehp > i{display:block;height:100%;width:100%;background:#49a862;border-radius:999px}
-  #labels .ehp.mid{width:64px;height:7px;box-shadow:0 0 0 1px rgba(255,120,110,.5), 0 2px 6px rgba(0,0,0,.7)}
+  #labels .ehp.mid{width:calc(64px * var(--u));height:calc(7px * var(--u));box-shadow:0 0 0 1px rgba(255,120,110,.5), 0 2px 6px rgba(0,0,0,.7)}
 
   /* 画面（タイトル/作業指示書/作業報告書/休職願/辞令）。社内システムの書類を模す */
   #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
@@ -74,12 +87,12 @@
     backdrop-filter:blur(1px)}
   /* タイトルは書類を細くして、左右に背景の正門を見せる（位置は中央のまま） */
   #screen.soft .sheet{background:rgba(246,247,249,.96);box-shadow:0 24px 70px rgba(0,0,0,.72);
-    min-width:0;width:min(470px,78vw);padding:22px 26px}
+    min-width:0;width:min(470px,78%);padding:22px 26px}
   #screen .sheet{background:#f6f7f9;color:#1b1e23;border-radius:14px;
-    padding:26px 30px;min-width:min(560px,86vw);max-width:86vw;
+    padding:26px 30px;min-width:min(560px,86%);max-width:86%;
     box-shadow:0 20px 60px rgba(0,0,0,.6);border-top:5px solid var(--accent)}
   #screen .eyebrow{font-size:11px;letter-spacing:.32em;color:#6c737c;margin-bottom:12px}
-  #screen h1{font-size:clamp(26px,5vw,42px);color:var(--accent);letter-spacing:.02em;line-height:1}
+  #screen h1{font-size:clamp(20px,calc(42px * var(--u)),42px);color:var(--accent);letter-spacing:.02em;line-height:1}
   #screen h2{font-size:22px;margin:4px 0 12px}
   #screen h2.ok{color:#1f7a44} #screen h2.ng{color:#b3261e}
   #screen .jp{font-size:14px;letter-spacing:.34em;margin-top:8px;color:#3a3f46}
@@ -110,76 +123,99 @@
   #screen .title{text-align:center}
 
   /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
+  /* 箱（余白・バーの長さ・点の大きさ）は --u でそのまま縮める。
+     文字だけは max() で下限を持たせる。縮めきると6px台になって読めなくなるため。
+     --u=1 のPCでは max() が元の値を返すので、見た目は従来どおり。 */
   #hud{position:absolute;inset:0;pointer-events:none;
-    padding:12px 14px;
-    display:flex;flex-direction:column;gap:14px}
+    padding:calc(12px * var(--u)) calc(14px * var(--u));
+    display:flex;flex-direction:column;gap:calc(14px * var(--u))}
 
   /* 社内システムのヘッダ（案B） */
-  .sysbar{display:flex;align-items:center;gap:12px;
-    background:var(--pane);backdrop-filter:blur(10px);
-    border:1px solid var(--line);border-radius:12px;padding:8px 14px;
+  /* 折り返すと2行ぶんの帯になって画面を食うので、ここは何があっても1行に保つ */
+  .sysbar{display:flex;align-items:center;gap:calc(12px * var(--u));
+    background:var(--pane);backdrop-filter:blur(10px);white-space:nowrap;
+    border:1px solid var(--line);border-radius:calc(12px * var(--u));
+    padding:calc(8px * var(--u)) calc(14px * var(--u));
     box-shadow:0 6px 24px rgba(0,0,0,.35)}
-  .sysbar .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
-  .sysbar .name{font-size:12px;font-weight:700;letter-spacing:.04em}
-  .sysbar .ver{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .sysbar .dot{width:calc(8px * var(--u));height:calc(8px * var(--u));
+    border-radius:999px;background:var(--accent);flex:0 0 auto}
+  .sysbar .name{font-size:max(10px, 12px * var(--u));font-weight:700;letter-spacing:.04em}
+  .sysbar .ver{font-size:max(9px, 11px * var(--u));color:var(--sub);font-variant-numeric:tabular-nums}
   /* 現在の難易度。プレイ中に確認する手段がどこにも無かったので、ここに常時出す */
-  .sysbar .diff{font-size:11px;font-weight:700;letter-spacing:.06em;
-    border-radius:999px;padding:2px 9px;border:1px solid}
+  .sysbar .diff{font-size:max(9px, 11px * var(--u));font-weight:700;letter-spacing:.06em;
+    border-radius:999px;padding:calc(2px * var(--u)) calc(9px * var(--u));border:1px solid}
   .sysbar .diff.easy{color:#8fe0ab;border-color:rgba(143,224,171,.45);background:rgba(56,148,81,.18)}
   .sysbar .diff.normal{color:#d8dde3;border-color:rgba(216,221,227,.35);background:rgba(255,255,255,.07)}
   .sysbar .diff.hell{color:#ff9b9b;border-color:rgba(255,120,120,.55);background:rgba(199,51,51,.22)}
   /* BGMのミュート切替。Mキーでも切り替わるが、スマホ用に押せるものを置く */
-  .sysbar .mute{font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;
-    padding:2px 7px;border-radius:5px;border:1px solid rgba(255,255,255,.22);
+  /* #hud は pointer-events:none。押せるのはこのボタンだけなので、ここだけ戻す。
+     スマホにはキーボードが無いので、これが死んでいるとBGMを切る手段がなくなる。 */
+  .sysbar .mute{pointer-events:auto;font-size:max(9px, 11px * var(--u));font-weight:700;letter-spacing:.04em;cursor:pointer;
+    padding:calc(2px * var(--u)) calc(7px * var(--u));
+    border-radius:calc(5px * var(--u));border:1px solid rgba(255,255,255,.22);
     background:rgba(255,255,255,.07);color:#d8dde3;user-select:none}
   .sysbar .mute.off{color:#8b9199;border-color:rgba(255,255,255,.12);background:transparent}
   .sysbar .spacer{flex:1}
-  .sysbar .loc{font-size:11px;color:var(--sub)}
+  /* 現在地。狭いと真っ先に溢れるので、入らないときは省略する（赤い横断幕でも出る） */
+  .sysbar .loc{font-size:max(9px, 11px * var(--u));color:var(--sub);
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
 
-  .row{display:flex;gap:14px;align-items:flex-start}
+  .row{display:flex;gap:calc(14px * var(--u));align-items:flex-start}
 
   .card{background:var(--pane);backdrop-filter:blur(10px);
-    border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:calc(14px * var(--u));
+    padding:calc(12px * var(--u)) calc(14px * var(--u));
     box-shadow:0 6px 24px rgba(0,0,0,.35)}
 
   .badge{display:inline-block;background:var(--accent);color:#15171a;
-    font-size:12px;font-weight:700;border-radius:999px;padding:3px 12px;letter-spacing:.03em}
+    font-size:max(10px, 12px * var(--u));font-weight:700;border-radius:999px;
+    padding:calc(3px * var(--u)) calc(12px * var(--u));letter-spacing:.03em}
 
-  .label{font-size:10px;color:var(--sub);letter-spacing:.08em;margin-bottom:5px}
-  .meter{width:220px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .label{font-size:max(9px, 10px * var(--u));color:var(--sub);letter-spacing:.08em;
+    margin-bottom:calc(5px * var(--u))}
+  .meter{width:calc(220px * var(--u));height:calc(8px * var(--u));
+    border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
   .meter > i{display:block;height:100%;width:100%;background:var(--ok);
     border-radius:999px;transition:background .25s ease}
-  .num{font:700 12px/1 ui-monospace,SFMono-Regular,monospace;color:var(--ink);
+  .num{font:700 max(10px, 12px * var(--u))/1 ui-monospace,SFMono-Regular,monospace;color:var(--ink);
     font-variant-numeric:tabular-nums}
-  .pair{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .pair{display:flex;align-items:center;gap:calc(10px * var(--u));margin-top:calc(6px * var(--u))}
 
-  .dots{display:flex;align-items:center;gap:5px;margin-top:2px}
-  .dots i{width:9px;height:9px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .dots{display:flex;align-items:center;gap:calc(5px * var(--u));margin-top:calc(2px * var(--u))}
+  .dots i{width:calc(9px * var(--u));height:calc(9px * var(--u));
+    border-radius:999px;background:rgba(255,255,255,.14)}
   .dots i.on{background:var(--accent)}
   /* 点は5つ＝「ふつう」の持ち玉ぶん。かんたんの24日は並べきれないので日数を添える */
-  .dots b{font-size:11px;font-weight:700;line-height:1;color:var(--accent);margin-left:1px}
+  .dots b{font-size:max(9px, 11px * var(--u));font-weight:700;line-height:1;
+    color:var(--accent);margin-left:1px}
 
   .right{margin-left:auto;text-align:right}
-  .right .num{font-size:19px}
+  .right .num{font-size:max(14px, 19px * var(--u))}
 
   /* ボスゲージ: 下中央のパネル。
      画面最上部の3pxの線だと、足元を見て戦っている最中はまず目に入らない。
      中ボスもここに出す（stage.boss ではないので、拾わないとゲージが1本も出ない）。 */
-  #bossWrap{position:absolute;left:50%;bottom:14px;width:min(540px,84%);
+  /* 見えていない（opacity:0）ときも当たり判定は残るので、指を吸ってしまう。
+     画面下中央はスティックを出す場所でもあるため、必ず素通りさせる。 */
+  #bossWrap{pointer-events:none;
+    position:absolute;left:50%;bottom:calc(14px * var(--u));width:min(540px,84%);
     transform:translateX(-50%) translateY(10px);
     background:rgba(16,12,14,.80);backdrop-filter:blur(10px);
-    border:1px solid rgba(255,120,110,.36);border-radius:12px;padding:8px 12px 10px;
+    border:1px solid rgba(255,120,110,.36);border-radius:calc(12px * var(--u));
+    padding:calc(8px * var(--u)) calc(12px * var(--u)) calc(10px * var(--u));
     box-shadow:0 10px 30px rgba(0,0,0,.55);
     opacity:0;transition:opacity .28s ease, transform .28s ease}
   #bossWrap.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  #bossWrap .head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
-  #bossKind{flex:0 0 auto;background:#c02a22;color:#fff;font-size:10px;font-weight:700;
-    letter-spacing:.14em;border-radius:5px;padding:3px 8px}
-  #bossName{font-size:14px;font-weight:700;letter-spacing:.06em;color:#ffe4e0;
-    text-shadow:0 2px 8px rgba(0,0,0,.9)}
-  #bossNum{margin-left:auto;font:700 12px/1 ui-monospace,monospace;color:#ffc2bc;
+  #bossWrap .head{display:flex;align-items:center;gap:calc(9px * var(--u));
+    margin-bottom:calc(7px * var(--u));white-space:nowrap}
+  #bossKind{flex:0 0 auto;background:#c02a22;color:#fff;font-size:max(9px, 10px * var(--u));font-weight:700;
+    letter-spacing:.14em;border-radius:calc(5px * var(--u));
+    padding:calc(3px * var(--u)) calc(8px * var(--u))}
+  #bossName{font-size:max(11px, 14px * var(--u));font-weight:700;letter-spacing:.06em;color:#ffe4e0;
+    overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  #bossNum{margin-left:auto;font:700 max(10px, 12px * var(--u))/1 ui-monospace,monospace;color:#ffc2bc;
     font-variant-numeric:tabular-nums}
-  #bossWrap .line{position:relative;height:13px;border-radius:999px;
+  #bossWrap .line{position:relative;height:calc(13px * var(--u));border-radius:999px;
     background:rgba(0,0,0,.6);overflow:hidden;
     box-shadow:inset 0 1px 4px rgba(0,0,0,.7)}
   #bossWrap .line > i{display:block;height:100%;width:100%;border-radius:999px;
@@ -193,18 +229,32 @@
   #bossWrap.low .line > i{animation:bosslow .72s ease-in-out infinite}
   @keyframes bosslow{50%{filter:brightness(1.6)}}
 
+  /* 赤い横断幕。左上のHUDカードと高さがぶつかっていたので、少し下げて中央寄せにする */
   #banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-6px);
-    font-size:17px;font-weight:700;letter-spacing:.06em;
-    background:rgba(150,20,20,.92);border-radius:10px;padding:8px 20px;
+    max-width:76%;text-align:center;
+    font-size:max(13px, 17px * var(--u));font-weight:700;letter-spacing:.06em;
+    background:rgba(150,20,20,.92);border-radius:calc(10px * var(--u));
+    padding:calc(8px * var(--u)) calc(20px * var(--u));
     opacity:0;transition:opacity .22s ease, transform .22s ease;
     box-shadow:0 8px 30px rgba(0,0,0,.5)}
   #banner.show{opacity:1;transform:translate(-50%,0)}
 
   #hint b{color:var(--sub);font-weight:600}
-  @media (max-width:620px){
-    .meter{width:150px} #hint{display:none}
-    #bossWrap{width:92%;bottom:10px;padding:6px 10px 8px}
-    #bossName{font-size:12px} #bossWrap .line{height:11px}
+  /* HUDの大きさは --u が面倒を見るので、ここでやるのはキーボードの案内を消すことだけ。
+     指で遊ぶ端末に「移動: ←↑↓→」と出しても意味がない。 */
+  @media (max-width:620px), (pointer:coarse){ #hint{display:none} }
+
+  /* 縦持ちのスマホ。16:9の画面を縦長の端末に入れると高さの26%しか使えないので、
+     箱ごと90°回して縦画面いっぱいに出す。横スクロールのゲームなので向きは横で固定。
+     タッチ判定は offsetX/offsetY（要素自身の座標系）で取っているため回してもずれない。 */
+  @media (orientation:portrait) and (pointer:coarse){
+    #frame{position:relative;gap:0}
+    #stage{position:absolute;left:50%;top:50%;
+      --w:min(100dvh, 100vw * 16 / 9);
+      width:var(--w);height:calc(var(--w) * 9 / 16);
+      max-width:none;max-height:none;
+      transform:translate(-50%,-50%) rotate(90deg);
+      border-radius:0;border:0}
   }
 </style>
 </head>
@@ -212,6 +262,7 @@
   <div id="frame">
     <div id="stage">
       <canvas id="c3d"></canvas>
+      <canvas id="pad"></canvas>
       <pre id="err" style="position:absolute;left:12px;bottom:12px;z-index:99;color:#ff8a8a;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70%"></pre>
       <div id="bossWrap">
         <div class="head">

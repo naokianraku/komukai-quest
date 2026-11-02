@@ -318,6 +318,8 @@ class Game2 {
   update(dt) {
     this.time += dt; this.screenT += dt;
     const ch = CHAPTERS[this.chapterIndex];
+    // 1の Game.update と同じ。立てないとスマホでスティックが出ず、歩けない
+    Input.gameplayActive = this.state === 'playing' && !this.paused;
 
     switch (this.state) {
       case 'title':
@@ -406,9 +408,11 @@ function boot2() {
 
   function fitCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const r = canvas.getBoundingClientRect();
-    const w = Math.max(VIEW_W, Math.round((r.width || VIEW_W) * dpr));
-    const h = Math.max(VIEW_H, Math.round((r.height || VIEW_H) * dpr));
+    // 縦持ちのスマホでは canvas ごと90°回しているので、getBoundingClientRect では
+    // 縦横が入れ替わって絵が潰れる。clientWidth/Height は回す前の自分の大きさ。
+    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    const w = Math.max(VIEW_W, Math.round((cw || VIEW_W) * dpr));
+    const h = Math.max(VIEW_H, Math.round((ch || VIEW_H) * dpr));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   }
   fitCanvas();

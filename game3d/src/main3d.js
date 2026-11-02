@@ -3,7 +3,7 @@
 // ゲームロジックは一切変更していない。既存の Stage をそのまま動かし、
 // 描画だけ three.js に差し替えている（x=横 / y=奥行き / z=高さ の3軸がもともとあるため）。
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { PLAY, setPlay, playMid, LIVES } from '../../game/src/config.js';
+import { PLAY, setPlay, playMid, LIVES, VIEW_W, VIEW_H } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { Char } from '../../game/src/entities.js';
 import { Stage } from '../../game/src/main.js';
@@ -1898,6 +1898,10 @@ function syncLabels() {
     return;
   }
   const seen = new Set();
+  // 同じ役職が固まって立っていると名札が重なり、「PJメンバ」が「PJメシバ」のように
+  // 潰れて読めなくなる。この1フレームで置いた名札の矩形を覚えておき、
+  // 同じ文字の名札がぶつかるときは後から来たほうを出さない（1枚だけ残す）。
+  const placed = [];
   for (const e of stage.entities) {
     if (!e.alive) continue;
     seen.add(e.id);
@@ -1922,7 +1926,8 @@ function syncLabels() {
     // 文字の大きさはキャラの体格に合わせる。ボスは1.5〜2.3倍の体格があるので、
     // 同じ級数だと相対的に小さく見えてしまう。
     const sr = (e.scale || 3) / 3;
-    const tagPx = Math.min(26, 16 * (1 + (sr - 1) * 0.55));
+    // 名札とセリフも箱と一緒に縮めるが、読めなくなる手前で止める（CSSの max() と同じ考え）
+    const tagPx = Math.max(10, Math.min(26, 16 * (1 + (sr - 1) * 0.55)) * uiScale);
 
     // 頭上の役職ラベル（ボスとプレイヤーは出さない。2D版と同じ）
     const label = e === stage.player ? null
@@ -1932,13 +1937,24 @@ function syncLabels() {
     // 画面の端に居る相手の名前が切れないよう、内側に寄せる。
     // #labels は overflow:hidden なので、はみ出すと名前ごと消える。
     const putTag = (text, color) => {
+      const half = text.length * tagPx * 0.55;
+      const tx = Math.min(Math.max(p.x, half + 6), stageEl.clientWidth - half - 6);
+      const ty = Math.max(tagPx + 4, tagY);
+      // 同じ文字の名札と重なるなら出さない。違う役職どうしは重なっても両方残す
+      //（誰が何なのかは読めたほうがいいので、多少ぶつかるのは許す）。
+      for (const q of placed) {
+        if (q.text !== text) continue;
+        if (Math.abs(q.cx - tx) < q.half + half && Math.abs(q.cy - ty) < tagPx) {
+          tag.style.display = 'none';
+          return;
+        }
+      }
       tag.textContent = text;
       tag.style.color = color;
       tag.style.fontSize = tagPx.toFixed(1) + 'px';
       tag.style.display = 'block';
-      const half = text.length * tagPx * 0.55;
-      const tx = Math.min(Math.max(p.x, half + 6), stageEl.clientWidth - half - 6);
-      tag.style.transform = `translate(-50%,-100%) translate(${tx}px,${Math.max(tagPx + 4, tagY)}px)`;
+      tag.style.transform = `translate(-50%,-100%) translate(${tx}px,${ty}px)`;
+      placed.push({ text, cx: tx, cy: ty, half });
       tagH = tagPx;
     };
     if (label) putTag(label, e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de'));
@@ -1953,7 +1969,7 @@ function syncLabels() {
       bubble.style.display = 'block';
       // 大きいボスほど吹き出しが高く上がるので、画面の外へ出してしまわないよう内側に寄せる。
       // offsetWidth を読むと毎フレーム再レイアウトが走るため、級数と文字数から見積もる。
-      const fs = Math.min(42, 21 * (1 + (sr - 1) * 0.85));
+      const fs = Math.max(14, Math.min(42, 21 * (1 + (sr - 1) * 0.85)) * uiScale);
       bubble.style.fontSize = fs.toFixed(1) + 'px';
       const halfW = (e.taunt.length * fs + fs * 1.5) / 2;
       const by = Math.max(fs * 1.95 + 8, tagY - tagH - 9);
@@ -2220,9 +2236,15 @@ function renderScreen() {
 }
 
 // ===== ループ =====
+// HUDと頭上の文字の倍率。1100px幅の箱を基準にして、箱が小さいぶんだけ一緒に縮める。
+// 画面幅で判定してはいけない: 横持ちのスマホは画面が874pxあっても、16:9の箱は
+// 高さに縛られて663pxしかない。文字だけ原寸のまま残ると箱からあふれる。
+let uiScale = 1;
 function resize() {
   const box = document.getElementById('stage');
   const w = Math.max(16, box.clientWidth), h = Math.max(9, box.clientHeight);
+  uiScale = Math.min(1, Math.max(0.52, w / 1100));
+  box.style.setProperty('--u', uiScale.toFixed(3));
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.setSize(w, h, false);
   camera.aspect = 16 / 9;   // 枠自体が16:9なので固定（2D版と画角を揃えるため）
@@ -2233,6 +2255,22 @@ resize();
 
 Input.init();
 Input.initTouch(document.getElementById('c3d'));
+
+// スマホの操作UI。2D版は canvas に直接描いているが、3D版には描く場所が無かったので、
+// 3Dの上に2Dのキャンバスを重ねて同じ Input.drawControls を呼ぶ。これが無いと、
+// 押す場所が一切見えないまま「どこを触っても何も起きない」ように見える。
+const padEl = document.getElementById('pad');
+const padCtx = padEl.getContext('2d');
+function drawPad() {
+  if (!Input.controlsActive()) return;   // キーボードの端末では一切触らない
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const bw = Math.max(1, Math.round(padEl.clientWidth * dpr));
+  const bh = Math.max(1, Math.round(padEl.clientHeight * dpr));
+  if (padEl.width !== bw || padEl.height !== bh) { padEl.width = bw; padEl.height = bh; }
+  padCtx.setTransform(bw / VIEW_W, 0, 0, bh / VIEW_H, 0, 0);
+  padCtx.clearRect(0, 0, VIEW_W, VIEW_H);
+  if (game.state === 'playing') Input.drawControls(padCtx);
+}
 hud.mute.addEventListener('click', () => { Audio.resume(); Audio.toggleMute(); renderMute(); });
 renderMute();
 addEventListener('keydown', () => Audio.resume(), { once: true });
@@ -2270,6 +2308,10 @@ function loop(now) {
   try {
   while (acc >= STEP) {
     game.screenT += STEP;
+    // タッチのフローティングスティックはプレイ中だけ出す（メニューでの誤作動を防ぐため）。
+    // 2D版は Game.update で立てている。3D版は game オブジェクトが別なので、ここで立てないと
+    // スマホで一歩も動けない（攻撃と跳躍だけ効く）状態になる。
+    Input.gameplayActive = game.state === 'playing';
     switch (game.state) {
       case 'title': {
         const step = (Input.pressed('ArrowRight', 'KeyD') ? 1 : 0) - (Input.pressed('ArrowLeft', 'KeyA') ? 1 : 0);
@@ -2388,6 +2430,7 @@ function loop(now) {
   updateParts(frame);
   syncLabels();
   syncDoorPlate();
+  drawPad();   // 固定ステップの中ではなく、描画1回につき1回でよい
   updateFloats(frame);
   if (!window.__once && Q.get('dbg') === '1') { window.__once = 1; window.__dbg && window.__dbg(
     'OK frame1 / meshes=' + meshes.size + ' / children=' + scene.children.length +
