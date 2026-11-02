@@ -10,11 +10,25 @@ const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Spa
 // スティックはフローティング式（左半分のどこを押してもそこが中心に）。固定ブロブが敵に隠れない。
 const STICK = { r: 36, knobR: 14, active: false, ox: 56, oy: 212 }; // ox/oy = 押した位置（生きた原点）
 const STICK_HOME = { cx: 56, cy: 212 }; // 待機時のホームヒント位置（左下・親指が届く所）
-const BTN_A = { cx: 451, cy: 226, r: 23 };  // 攻撃（右端の列・下）
-const BTN_B = { cx: 451, cy: 192, r: 18 };  // 跳（攻撃の真上・一部フロア帯より上＝足元が来にくい所）
-const BTN_C = { cx: 451, cy: 158, r: 18 };  // 奥の手Ｋ（跳のさらに上。1回きりなので誤爆しにくい所に置く）
+
+// 倒し幅 → 速さ。以前は8px(半径の22%)を超えた瞬間に最大速度の4方向デジタルだったので、
+// 立ち位置の微調整ができなかった。いまは倒し幅がそのまま速さの倍率になる。
+const DEAD = 8;        // 不感帯。この中は中立
+const FULL = 25;       // ここまで倒せば全速。ノブの可動域(r=36)より内側で飽和させて反応を軽くする
+const WALK_MIN = 0.42; // 不感帯を出た瞬間の速さ。これ未満にはしない（じわっと動かせる下限）
+const AXIS_SNAP = 2.0; // 片方がもう片方の2倍を超えたら弱い方を切る＝まっすぐ歩ける／まっすぐ奥へ行ける
+
+// ボタンは親指の弧に沿わせた扇形。以前は右端 x=451 の縦一列で、攻撃の右リムが画面端から
+// 論理6px＝親指の付け根に当たり、奥の手Ｋは画面の高さの58%＝かなり上にあった。
+// 攻撃を手前に、跳はそこから外へ伸ばした先（指を滑らせれば出る）、Ｋは横へ払った先に置く。
+const BTN_A = { cx: 437, cy: 231, r: 25 };  // 攻撃（いちばん使う＝いちばん近く・いちばん大きく）
+const BTN_B = { cx: 415, cy: 188, r: 20 };  // 跳（攻撃から外へ伸ばした位置）
+const BTN_C = { cx: 383, cy: 237, r: 19 };  // 奥の手Ｋ（横へ払った位置。1回きりなので最後に判定）
+const BTN_PAD = 7;                          // 実際の当たりは見た目より少し広く取る
 
 const touchDir = { left: false, right: false, up: false, down: false };
+const stickVec = { x: 0, y: 0 };   // 移動ベクトル（大きさ＝速さの倍率 0〜1）
+const mv = { x: 0, y: 0 };         // moveVec の戻り値（毎フレームの確保を避ける使い回し）
 const knob = { x: STICK_HOME.cx, y: STICK_HOME.cy };
 const pointers = new Map(); // pointerId -> 'stick'|'attack'|'jump'|'special'|'tap'
 let lastTap = null;          // 直近タップの論理座標（メニューのヒットテスト用）
@@ -68,18 +82,31 @@ export const Input = {
     };
   },
 
+  // その座標にあるボタン（無ければ 'tap'）。攻撃→跳→Ｋの順に見るので、
+  // 当たりが重なる所では「いちばん使うボタン」が勝つ。
+  _btnAt(x, y) {
+    if (dist(x, y, BTN_A.cx, BTN_A.cy) < BTN_A.r + BTN_PAD) return 'attack';
+    if (dist(x, y, BTN_B.cx, BTN_B.cy) < BTN_B.r + BTN_PAD) return 'jump';
+    if (this.specialReady && dist(x, y, BTN_C.cx, BTN_C.cy) < BTN_C.r + BTN_PAD) return 'special';
+    return 'tap';
+  },
+
+  _code(role) {
+    return role === 'attack' ? 'TouchAttack' : role === 'jump' ? 'TouchJump'
+      : role === 'special' ? 'TouchSpecial' : null;
+  },
+
+  _pressBtn(role) { const c = this._code(role); if (c) { pressed.add(c); held.add(c); } },
+  _releaseBtn(role) { const c = this._code(role); if (c) held.delete(c); },
+
   _onDown(e) {
     e.preventDefault();
     const { x, y } = this._toLogical(e);
     lastTap = { x, y };
-    let role = 'tap';
     // 右側ボタンを先に判定 → 残りの左半分はフローティングスティック
-    if (dist(x, y, BTN_A.cx, BTN_A.cy) < BTN_A.r + 10) {
-      role = 'attack'; pressed.add('TouchAttack'); held.add('TouchAttack');
-    } else if (dist(x, y, BTN_B.cx, BTN_B.cy) < BTN_B.r + 10) {
-      role = 'jump'; pressed.add('TouchJump'); held.add('TouchJump');
-    } else if (this.specialReady && dist(x, y, BTN_C.cx, BTN_C.cy) < BTN_C.r + 10) {
-      role = 'special'; pressed.add('TouchSpecial'); held.add('TouchSpecial');
+    let role = this._btnAt(x, y);
+    if (role !== 'tap') {
+      this._pressBtn(role);
     } else if (this.gameplayActive && x < VIEW_W * 0.5 && y > 26) {
       // プレイ中のみ・上部HUD/一時停止ボタン帯(y<=26)を除いた左半分でスティック発動
       role = 'stick'; STICK.active = true; STICK.ox = x; STICK.oy = y;
@@ -90,33 +117,55 @@ export const Input = {
   },
 
   _onMove(e) {
-    if (pointers.get(e.pointerId) !== 'stick') return;
+    const role = pointers.get(e.pointerId);
+    if (role === undefined) return;
     e.preventDefault();
     const { x, y } = this._toLogical(e);
-    this._updateStick(x, y);
+    if (role === 'stick') { this._updateStick(x, y); return; }
+    // ボタンの上で指を滑らせたら押し替える（格ゲーのパッドと同じ）。
+    // 狙いが少しずれて置いた指をそのまま直せるし、攻撃→跳も指を伸ばすだけで出る。
+    // 移動中のスティックは別。歩いている途中でボタンに化けては困る。
+    const next = this._btnAt(x, y);
+    if (next !== role) {
+      this._releaseBtn(role);
+      this._pressBtn(next);
+      pointers.set(e.pointerId, next);
+    }
   },
 
   _onUp(e) {
     const role = pointers.get(e.pointerId);
     pointers.delete(e.pointerId);
     if (role === 'stick') this._resetStick();
-    else if (role === 'attack') held.delete('TouchAttack');
-    else if (role === 'jump') held.delete('TouchJump');
-    else if (role === 'special') held.delete('TouchSpecial');
+    else this._releaseBtn(role);
   },
 
   _updateStick(x, y) {
-    const dx = x - STICK.ox, dy = y - STICK.oy; // フローティング原点からの変位
-    const dead = 8;
-    touchDir.left = dx < -dead; touchDir.right = dx > dead;
-    touchDir.up = dy < -dead; touchDir.down = dy > dead;
-    const m = Math.hypot(dx, dy) || 1;
-    const c = Math.min(m, STICK.r) / m;
+    let dx = x - STICK.ox, dy = y - STICK.oy; // フローティング原点からの変位
+    const len = Math.hypot(dx, dy);
+    // ノブは指そのまま（可動域でクランプするだけ）。指より遅れて動くと直感に反する
+    const c = len > STICK.r ? STICK.r / len : 1;
     knob.x = STICK.ox + dx * c; knob.y = STICK.oy + dy * c;
+    if (len <= DEAD) { this._clearDir(); return; }
+    // 軸スナップ。斜めに少し入っただけで奥行きへ流れていくのを止める
+    if (Math.abs(dx) > Math.abs(dy) * AXIS_SNAP) dy = 0;
+    else if (Math.abs(dy) > Math.abs(dx) * AXIS_SNAP) dx = 0;
+    // 倒し幅 → 速さ。不感帯の縁で WALK_MIN、FULL まで倒して 1.0
+    const sp = WALK_MIN + (1 - WALK_MIN) * clamp((len - DEAD) / (FULL - DEAD), 0, 1);
+    const n = Math.hypot(dx, dy) || 1;
+    stickVec.x = (dx / n) * sp; stickVec.y = (dy / n) * sp;
+    // 向きの真偽値はベクトルと必ず一致させる（軸スナップで切った側は false）
+    touchDir.left = dx < 0; touchDir.right = dx > 0;
+    touchDir.up = dy < 0; touchDir.down = dy > 0;
+  },
+
+  _clearDir() {
+    touchDir.left = touchDir.right = touchDir.up = touchDir.down = false;
+    stickVec.x = 0; stickVec.y = 0;
   },
 
   _resetStick() {
-    touchDir.left = touchDir.right = touchDir.up = touchDir.down = false;
+    this._clearDir();
     STICK.active = false;
     knob.x = STICK_HOME.cx; knob.y = STICK_HOME.cy;
   },
@@ -128,7 +177,25 @@ export const Input = {
   get right()   { return this.down('ArrowRight', 'KeyD') || touchDir.right; },
   get up()      { return this.down('ArrowUp', 'KeyW') || touchDir.up; },
   get down_()   { return this.down('ArrowDown', 'KeyS') || touchDir.down; },
+
+  // 移動ベクトル。大きさがそのまま速さの倍率になる。
+  // タッチは倒し幅（歩き〜走りが地続き）、キーボードは押すか押さないかなので常に全速。
+  // 斜めが速くならないよう、キーボードの斜めは 1/√2 に落とす。
+  get moveVec() {
+    if (stickVec.x || stickVec.y) { mv.x = stickVec.x; mv.y = stickVec.y; return mv; }
+    let x = 0, y = 0;
+    if (this.down('ArrowLeft', 'KeyA')) x -= 1;
+    if (this.down('ArrowRight', 'KeyD')) x += 1;
+    if (this.down('ArrowUp', 'KeyW')) y -= 1;
+    if (this.down('ArrowDown', 'KeyS')) y += 1;
+    if (x && y) { x *= Math.SQRT1_2; y *= Math.SQRT1_2; }
+    mv.x = x; mv.y = y;
+    return mv;
+  },
+
   get attack()  { return this.pressed('KeyJ', 'KeyZ', 'TouchAttack'); },
+  // 押しっぱなし。押した瞬間だけでは連打が要るので、持っている間はコンボを繋げる
+  get attackHeld() { return this.down('KeyJ', 'KeyZ', 'TouchAttack'); },
   get jump()    { return this.pressed('KeyK', 'KeyX', 'TouchJump'); },
   // 奥の手。スマホは画面の「Ｋ」ボタン。キーボードは K がジャンプで埋まっているので L を当てる。
   // 1回しか使えないので、押せるのは残っているときだけ（specialReady はゲーム側が立てる）

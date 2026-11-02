@@ -2367,6 +2367,8 @@ addEventListener('resize', resize);
 resize();
 
 Input.init();
+// ?touch=1 … パソコンでもタッチ操作UIを出す（配置の確認用。2D版と同じ指定）
+if (Q.get('touch') === '1') Input.forceTouch = true;
 Input.initTouch(document.getElementById('c3d'));
 
 // スマホの操作UI。2D版は canvas に直接描いているが、3D版には描く場所が無かったので、

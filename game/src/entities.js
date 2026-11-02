@@ -110,6 +110,9 @@ export class Entity {
     this.alive = true;
     this.invuln = 0; this.hitstun = 0;
     this.animT = 0; this.moving = false;
+    // 歩行アニメの位相。時間ではなく「実際に動いた距離」で進める（3D版の脚と同じ考え方）。
+    // 時間で進めると、ゆっくり歩いているのに脚だけ全速で動いて氷の上を滑って見える。
+    this.walkT = 0; this._px = x; this._py = y;
     this.state = 'idle'; this.stateT = 0;
     this.attackActive = false; this.attack = null;
     this.isBoss = false;
@@ -138,12 +141,17 @@ export class Entity {
     this.tauntT = Math.max(0, this.tauntT - dt);
     if (this.tauntT === 0) this.taunt = null;
     this.animT += dt;
+    // 進んだ距離で歩行位相を進める。0.115 は「全速(86px/s)なら従来どおり10Hzで踏む」倍率。
+    // ステージ読み込みの瞬間移動で位相が飛ばないよう、1フレームぶんを抑える。
+    const moved = Math.hypot(this.x - this._px, this.y - this._py);
+    this._px = this.x; this._py = this.y;
+    this.walkT += Math.min(moved, 12) * 0.115;
   }
 
   draw(ctx, camX) {
     const sx = this.x - camX;
     // 歩行の上下バウンド
-    const bob = this.moving && this.z === 0 ? (Math.floor(this.animT * 10) % 2) : 0;
+    const bob = this.moving && this.z === 0 ? (Math.floor(this.walkT) % 2) : 0;
     const footY = this.y - this.z - bob;
     drawShadow(ctx, sx, this.y, this.w * this.scale);
     const blink = this.invuln > 0 && Math.floor(this.animT * 30) % 2 === 0;
@@ -162,6 +170,13 @@ export class Entity {
   drawTag() {}
 }
 
+// 押しっぱなしで次の振りに移るまでの間。振り自体が0.30秒なので、持っていると0.35秒ごと＝
+// 完璧な連打よりわずかに遅い。楽をしたい人は押しっぱなし、速さが欲しい人は連打で済む。
+const ATK_GAP = 0.05;
+// 押しっぱなしで出せる回数。3段コンボぶんで止める。無制限にすると、親指をボタンに
+// 置いたまま歩こうとしたときに振り続けて動けず、「歩けない」と感じてしまう。
+const ATK_HOLD = 3;
+
 export class Player extends Entity {
   constructor(x, y) {
     super(x, y);
@@ -173,24 +188,32 @@ export class Player extends Entity {
     this.speed = 86;
     this.combo = 0;
     this.attackData = null;
+    this.atkGap = 0;     // 押しっぱなしで次の振りに移るまでの間（上の ATK_GAP）
+    this.holdHits = 0;   // いま押している間に出した振りの数。離すと0に戻る
     this.ranged = false; // かんたんモードで true: 攻撃時に飛び道具も出す
   }
 
   update(dt, stage) {
     this.maxX = stage.lockX;
     this.attackActive = false;
+    this.atkGap = Math.max(0, this.atkGap - dt);
 
     if (this.state === 'attack') {
       this.stateT -= dt;
       this.attackActive = this.stateT < 0.20 && this.stateT > 0.06;
       this.attack = this.attackActive ? this.attackData : null;
-      if (this.stateT <= 0) { this.state = 'idle'; this.attack = null; }
+      if (this.stateT <= 0) { this.state = 'idle'; this.attack = null; this.atkGap = ATK_GAP; }
     }
 
     if (this.hitstun > 0) { this.integrate(dt); return; }
 
-    // 攻撃開始（接地時のみ）
-    if (Input.attack && this.state !== 'attack' && this.z === 0) {
+    // 攻撃開始（接地時のみ）。押した瞬間は即、押しっぱなしなら振りが終わって ATK_GAP
+    // だけ置いてから次へ。これで連打しなくても3段コンボが出る（スマホの連打疲れ対策）。
+    // 連打のほうがわずかに速いままなので、かんたんモードの工具が飛ぶ間隔はほぼ変わらない。
+    if (!Input.attackHeld) this.holdHits = 0;
+    const swing = Input.attack || (Input.attackHeld && this.atkGap <= 0 && this.holdHits < ATK_HOLD);
+    if (swing && this.state !== 'attack' && this.z === 0) {
+      this.holdHits++;
       this.state = 'attack'; this.stateT = 0.30;
       this.combo = (this.combo + 1) % 3;
       const kb = this.combo === 2 ? 220 : 150; // 3段目は強ノックバック
@@ -204,18 +227,13 @@ export class Player extends Entity {
     // ジャンプ
     if (Input.jump && this.z === 0 && this.state !== 'attack') this.vz = 205;
 
-    // 移動（攻撃中は不可）
+    // 移動（攻撃中は不可）。ベクトルの大きさがそのまま速さの倍率になるので、
+    // タッチはスティックを軽く倒せば歩き、いっぱい倒せば走りになる。キーボードは常に全速。
     let mx = 0, my = 0;
-    if (this.state !== 'attack') {
-      if (Input.left) mx -= 1;
-      if (Input.right) mx += 1;
-      if (Input.up) my -= 1;
-      if (Input.down_) my += 1;
-    }
+    if (this.state !== 'attack') { const v = Input.moveVec; mx = v.x; my = v.y; }
     if (mx || my) {
-      const n = Math.hypot(mx, my) || 1;
-      this.x += (mx / n) * this.speed * dt;
-      this.y += (my / n) * this.speed * dt;
+      this.x += mx * this.speed * dt;
+      this.y += my * this.speed * dt;
       if (mx) this.facing = sign(mx);
       this.moving = true;
     } else {
