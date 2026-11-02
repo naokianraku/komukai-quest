@@ -199,6 +199,13 @@
   .dots b{font-size:max(9px, 11px * var(--u));font-weight:700;line-height:1;
     color:var(--accent);margin-left:1px}
 
+  /* 奥の手（K田）の残り。1回きりなので、使ったら灰色に落として「もう無い」と分かるようにする */
+  .kbadge{display:inline-block;font-size:max(10px, 12px * var(--u));font-weight:700;
+    line-height:1;padding:calc(3px * var(--u)) calc(8px * var(--u));
+    border-radius:calc(6px * var(--u));letter-spacing:.06em;
+    color:#15171a;background:#e8a030;box-shadow:0 0 0 1px rgba(255,200,120,.45)}
+  .kbadge.used{color:#6b7076;background:transparent;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+
   .right{margin-left:auto;text-align:right}
   .right .num{font-size:max(14px, 19px * var(--u))}
 
@@ -307,6 +314,10 @@
                 <div class="label">有休残</div>
                 <div class="dots" id="lives"></div>
               </div>
+              <div style="margin-left:auto">
+                <div class="label">奥の手</div>
+                <div class="kbadge" id="special">Ｋ</div>
+              </div>
             </div>
           </div>
           <div class="card right">
@@ -320,7 +331,7 @@
       <div id="screen"></div>
       <div id="banner"></div>
     </div>
-    <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　決定: Enter / Space</p>
+    <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　奥の手: L（1回だけ）　決定: Enter / Space</p>
   </div>
   <script>
     (function(){

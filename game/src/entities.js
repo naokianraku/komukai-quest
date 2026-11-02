@@ -267,6 +267,10 @@ export class Char extends Entity {
     this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
     // 倒されると跡を継ぐ者（管理担当K → 息子）。def に無ければ誰も出てこない。
     this.heir = def.heir || null;
+    // 奥の手のK田。両腕を回しながら突っ切るだけの専用の動き。def に無ければ一切関係ない。
+    this.spinDef = def.spin || null;
+    this.spinT = this.spinDef ? this.spinDef.dur : 0;
+    this.hitClear = 0;
     // ランドセル。3D版だけ背中に足す（2D版のドット絵には出ない）。
     this.satchel = !!def.satchel;
     // 捨てセリフ。これがある相手は、HPが尽きても即座には消えず、膝をついて一言残してから倒れる。
@@ -321,6 +325,29 @@ export class Char extends Entity {
 
   update(dt, stage) {
     this.attackActive = false;
+    // 奥の手のK田。索敵も硬直もしない。ただ回りながら前へ突っ切る。
+    // 判定は一定間隔で作り直して、通り抜けざまに何度でも当たるようにする。
+    if (this.spinDef) {
+      const w = this.spinDef;
+      this.spinT -= dt;
+      this.invuln = 0.2;                 // 殴られても止まらない
+      if (this.spinT <= 0) { this.alive = false; return; }
+      this.moving = true;
+      this.x += this.facing * w.speed * dt;
+      this.hitClear -= dt;
+      if (!this.attack || this.hitClear <= 0) {
+        this.attack = {
+          reach: this.atkReach * (w.reachMul ?? 1.35),
+          back: this.atkReach * 0.85,                      // 回っているので背後にも当たる
+          depth: PLAY.depthTol * (w.depthMul ?? 2.8),      // 奥行きいっぱいを薙ぐ
+          dmg: w.dmg, kb: w.kb, spin: true, hitSet: new Set(),
+        };
+        this.hitClear = w.hitEvery ?? 0.22;
+      }
+      this.attackActive = true;
+      this.integrate(dt);
+      return;
+    }
     // 倒れかけ: 捨てセリフを言い終わるまでその場に残る。攻撃も移動もしない。
     if (this.dying) {
       this.downT -= dt;

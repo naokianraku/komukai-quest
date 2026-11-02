@@ -163,6 +163,20 @@ export class Stage {
     }
   }
 
+  // 奥の手。K田がプレイヤーの後ろから現れて、向いている方へ突っ切る。
+  // 1回きりの管理は Game 側（game.specialUsed）が持つ。
+  callKta() {
+    const p = this.player;
+    const dir = p.facing || 1;
+    const k = new Char(p.x - dir * 130, p.y, defFor('kta'));
+    k.facing = dir;
+    k._v = { hair: 2, glasses: 0, beard: 1, skin: 1, hairColor: 0, build: 3 }; // 小柄で太め
+    this.entities.push(k);
+    this.banner = '奥の手 — K田、参戦';
+    this.bannerColor = 'rgba(150,90,10,0.92)'; this.bannerT = 2.4;
+    return k;
+  }
+
   startBoss() {
     this.bossStarted = true;
     const bossDef = defFor(this.data.boss.type);
@@ -188,7 +202,7 @@ export class Stage {
     // ボスが一言目（固定フレーズ）を話したあたりで PJメンバは全員裏切る（少し間を置く）
     const nearBoss = this.bossSpokeAt != null && (this.time - this.bossSpokeAt) >= 1.5;
     for (const e of this.entities) {
-      if (e.team !== 'ally' || e.betrayed) continue;
+      if (e.team !== 'ally' || e.betrayed || e.spinDef) continue;   // K田は裏切らない
       let fire = nearBoss;
       const tr = e.betrayTrigger;
       if (!fire && e.betrayer && tr) {
@@ -592,6 +606,7 @@ export class Game {
     this.stageIndex = 0;
     this.score = 0;
     this.lives = LIVES.normal;
+    this.specialUsed = false;
     this.stage = null;
     this.savedStage = null; // 出向中に本社(Stage3)を退避
     this.difficulty = 'normal'; // 'normal' | 'easy'
@@ -635,6 +650,7 @@ export class Game {
 
   start() {
     this.stageIndex = 0; this.score = 0;
+    this.specialUsed = false;   // 奥の手は1周につき1回
     this.lives = LIVES[this.difficulty];
     this.loadStage(0);
     this.state = 'intro'; this.screenT = 0;
@@ -646,6 +662,9 @@ export class Game {
   update(dt) {
     this.time += dt; this.screenT += dt;
     Input.gameplayActive = this.state === 'playing' && !this.paused; // タッチスティックはプレイ中のみ発動
+    // 奥の手（画面の「Ｋ」ボタン / Lキー）。残っているときだけボタンを出す
+    Input.specialReady = !this.specialUsed && Input.gameplayActive;
+    if (Input.special) { this.specialUsed = true; this.stage.callKta(); }
     if (Input.pressed('KeyM')) Audio.toggleMute(); // どの画面でもMでミュート切替
     switch (this.state) {
       case 'title': {

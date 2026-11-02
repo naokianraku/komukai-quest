@@ -1256,7 +1256,7 @@ function buildScenery(data) {
 
 // ===== ゲーム本体（ロジックは2D版そのまま）=====
 const game = {
-  difficulty: 'normal', score: 0, lives: LIVES.normal, over: false,
+  difficulty: 'normal', score: 0, lives: LIVES.normal, over: false, specialUsed: false,
   state: 'title', stageIndex: 0, screenT: 0,
   toGameOver() { this.state = 'gameover'; this.screenT = 0; },
 };
@@ -1470,7 +1470,10 @@ function syncEntities(dt) {
     // 符号に注意: Y軸回転 θ で正面(+Z)は x=sin(θ) へ向く。右(+X)を向かせるには θ>0。
     // 脚には ひねり を足さない（振りの軸をワールドのx方向＝進行方向に合わせるため）。
     const face = dir * 0.55;
-    r.body.rotation.y = face + r.amp * WALK.twist * Math.sin(r.ph);
+    // 奥の手のK田は体ごと回る。腕（得物）だけ回しても「ぐるぐる回っている」とは見えない。
+    r.body.rotation.y = (e.attack && e.attack.spin)
+      ? performance.now() / 1000 * 11
+      : face + r.amp * WALK.twist * Math.sin(r.ph);
     r.legA.rotation.y = r.legB.rotation.y = face;
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
     // 倒れかけ（捨てセリフ中）は、膝から崩れるように前のめりへ倒していく。
@@ -1556,6 +1559,7 @@ const WEAPON_OF = {
   kyaku: 'binder', vendor: 'binder', missile: 'wrench', kanren: 'wrench', shukkou: 'binder',
   pmr_seisan: 'binder', pmr_seizou: 'wrench', pmr_choutatsu: 'binder',
   pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp', kanrik_son: 'stamp',
+  kta: 'fist',   // K田は素手。回っている腕そのものが見せ場
   // 生産企画課長（中村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
   seikikaku: 'bottle', shitennou_nmura: 'bottle',
   shitennou_hno: 'wrench',   // H野は速い詰め役。振りの速い得物を持たせる
@@ -1635,6 +1639,14 @@ function syncWeapons() {
     let pz = wz(e.y), yaw = 0;
     // 大振り（中村の一升瓶）は、体のまわりを横薙ぎに回す。
     // 通常の殴りは前へ突き出すだけなので、振り回しているとひと目で分かるようにする。
+    // 奥の手のK田は、止まらずぐるぐる回し続ける（振り回しの一振りとは別物）
+    if (e.attack && e.attack.spin) {
+      const a = performance.now() / 1000 * 11;
+      const R = 15 * sc * (e.bodyW || 1);
+      px = wx(e.x) + Math.cos(a) * R * dir;
+      pz = wz(e.y) + Math.sin(a) * R * 0.7;
+      yaw = -a;
+    }
     const sw = (e.attack && e.attack.swing) ? e.attack : null;
     if (sw && sw.dur > 0) {
       const prog = Math.max(0, Math.min(1, 1 - e.stateT / sw.dur));
@@ -1962,8 +1974,10 @@ function syncLabels() {
   // 潰れて読めなくなる。この1フレームで置いた名札の矩形を覚えておき、
   // 同じ文字の名札がぶつかるときは後から来たほうを出さない（1枚だけ残す）。
   const placed = [];
-  // セリフの吹き出しも、置いた矩形を覚えて重なりを避ける。敵が増えて口数も増えたので、
-  // そのまま出すと重なって読めなくなる。ボスと中ボスだけは必ず出す（会話の主役なので）。
+  // セリフの吹き出しは、重なったら上へ積む。敵は群がってくるので、重なったぶんを
+  // 隠すと「一人が喋っているあいだ他は黙る」ように見えてしまう。全員の声を出したまま
+  // 読めるようにするため、下から順に段を重ねる。画面の上に出るものだけは諦める。
+  // 各要素は { cx, bottom, half, h }。bottom は吹き出しの下辺（translate -100% のため）。
   const placedBubbles = [];
   for (const e of stage.entities) {
     if (!e.alive) continue;
@@ -2043,20 +2057,19 @@ function syncLabels() {
       const wantW = e.taunt.length * fs + fs * 1.5;
       const rows = Math.max(1, Math.ceil(wantW / maxW));
       const halfW = Math.min(maxW, wantW) / 2;
-      const by = Math.max(fs * 1.35 * rows + fs * 0.7 + 8, tagY - tagH - 9);
-      const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
       const bh = fs * 1.35 * rows + fs * 0.7;
-      const must = !!(e.isBoss || e.midboss);
-      let hidden = false;
-      if (!must) {
-        for (const q of placedBubbles) {
-          if (Math.abs(q.cx - bxp) < q.half + halfW && Math.abs(q.cy - by) < (q.h + bh) / 2) {
-            bubble.style.display = 'none'; hidden = true; break;
-          }
-        }
+      const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
+      let by = Math.max(bh + 8, tagY - tagH - 9);
+      // ぶつかる相手の真上へ逃がす。数回繰り返して、空いた段に収める。
+      for (let guard = 0; guard < 8; guard++) {
+        const hit = placedBubbles.find((q) =>
+          Math.abs(q.cx - bxp) < q.half + halfW && by > q.bottom - q.h && by - bh < q.bottom);
+        if (!hit) break;
+        by = hit.bottom - hit.h - 5;
       }
-      if (hidden) continue;
-      placedBubbles.push({ cx: bxp, cy: by, half: halfW, h: bh });
+      // 積み上げて画面の上へ出てしまうぶんだけは出さない（ボスと中ボスは必ず出す）
+      if (by - bh < 2 && !(e.isBoss || e.midboss)) { bubble.style.display = 'none'; continue; }
+      placedBubbles.push({ cx: bxp, bottom: by, half: halfW, h: bh });
       bubble.style.transform = `translate(-50%,-100%) translate(${bxp}px,${by}px)`;
     } else bubble.style.display = 'none';
   }
@@ -2154,6 +2167,7 @@ const hud = {
   hpFill: document.getElementById('hpFill'),
   hpNum: document.getElementById('hpNum'),
   lives: document.getElementById('lives'),
+  special: document.getElementById('special'),
   score: document.getElementById('score'),
   bossWrap: document.getElementById('bossWrap'),
   bossKind: document.getElementById('bossKind'),
@@ -2190,6 +2204,7 @@ function updateHUD(dt) {
   hud.lives.innerHTML = Array.from({ length: 5 }, (_, i) =>
     `<i class="${i < game.lives ? 'on' : ''}"></i>`).join('')
     + (game.lives > 5 ? `<b>${game.lives}</b>` : '');
+  hud.special.className = 'kbadge' + (game.specialUsed ? ' used' : '');
   hud.score.textContent = String(Math.round(scoreShown)).padStart(6, '0');
 
   // ボスと中ボスのゲージ。中ボス（管理担当K・生産企画課長）は stage.boss ではないので、
@@ -2412,6 +2427,9 @@ function loop(now) {
     // 2D版は Game.update で立てている。3D版は game オブジェクトが別なので、ここで立てないと
     // スマホで一歩も動けない（攻撃と跳躍だけ効く）状態になる。
     Input.gameplayActive = game.state === 'playing';
+    // 奥の手（スマホは画面の「Ｋ」ボタン / PCは L キー）。1周につき1回だけ。
+    Input.specialReady = !game.specialUsed && Input.gameplayActive;
+    if (Input.special) { game.specialUsed = true; stage.callKta(); }
     switch (game.state) {
       case 'title': {
         const step = (Input.pressed('ArrowRight', 'KeyD') ? 1 : 0) - (Input.pressed('ArrowLeft', 'KeyA') ? 1 : 0);
@@ -2426,6 +2444,7 @@ function loop(now) {
           Audio.resume();
           game.score = 0;
           game.lives = LIVES[game.difficulty];
+          game.specialUsed = false;   // 奥の手は1周につき1回
           game.stageIndex = 0; loadStage(0);
           game.state = 'intro'; game.screenT = 0; renderScreen();
         } else if (step || Input.pressed('Digit1', 'Digit2', 'Digit3')) renderScreen();

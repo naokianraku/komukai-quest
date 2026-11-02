@@ -12,10 +12,11 @@ const STICK = { r: 36, knobR: 14, active: false, ox: 56, oy: 212 }; // ox/oy = �
 const STICK_HOME = { cx: 56, cy: 212 }; // 待機時のホームヒント位置（左下・親指が届く所）
 const BTN_A = { cx: 451, cy: 226, r: 23 };  // 攻撃（右端の列・下）
 const BTN_B = { cx: 451, cy: 192, r: 18 };  // 跳（攻撃の真上・一部フロア帯より上＝足元が来にくい所）
+const BTN_C = { cx: 451, cy: 158, r: 18 };  // 奥の手Ｋ（跳のさらに上。1回きりなので誤爆しにくい所に置く）
 
 const touchDir = { left: false, right: false, up: false, down: false };
 const knob = { x: STICK_HOME.cx, y: STICK_HOME.cy };
-const pointers = new Map(); // pointerId -> 'stick'|'attack'|'jump'|'tap'
+const pointers = new Map(); // pointerId -> 'stick'|'attack'|'jump'|'special'|'tap'
 let lastTap = null;          // 直近タップの論理座標（メニューのヒットテスト用）
 
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
@@ -24,6 +25,7 @@ export const Input = {
   isTouch: false,
   forceTouch: false,
   gameplayActive: false, // プレイ中(かつ一時停止していない)のみ true。フローティングスティックの誤作動防止
+  specialReady: false,   // 奥の手が残っているか。ボタンを出すかどうかもこれで決める
   _canvas: null,
 
   init() {
@@ -76,6 +78,8 @@ export const Input = {
       role = 'attack'; pressed.add('TouchAttack'); held.add('TouchAttack');
     } else if (dist(x, y, BTN_B.cx, BTN_B.cy) < BTN_B.r + 10) {
       role = 'jump'; pressed.add('TouchJump'); held.add('TouchJump');
+    } else if (this.specialReady && dist(x, y, BTN_C.cx, BTN_C.cy) < BTN_C.r + 10) {
+      role = 'special'; pressed.add('TouchSpecial'); held.add('TouchSpecial');
     } else if (this.gameplayActive && x < VIEW_W * 0.5 && y > 26) {
       // プレイ中のみ・上部HUD/一時停止ボタン帯(y<=26)を除いた左半分でスティック発動
       role = 'stick'; STICK.active = true; STICK.ox = x; STICK.oy = y;
@@ -98,6 +102,7 @@ export const Input = {
     if (role === 'stick') this._resetStick();
     else if (role === 'attack') held.delete('TouchAttack');
     else if (role === 'jump') held.delete('TouchJump');
+    else if (role === 'special') held.delete('TouchSpecial');
   },
 
   _updateStick(x, y) {
@@ -125,6 +130,9 @@ export const Input = {
   get down_()   { return this.down('ArrowDown', 'KeyS') || touchDir.down; },
   get attack()  { return this.pressed('KeyJ', 'KeyZ', 'TouchAttack'); },
   get jump()    { return this.pressed('KeyK', 'KeyX', 'TouchJump'); },
+  // 奥の手。スマホは画面の「Ｋ」ボタン。キーボードは K がジャンプで埋まっているので L を当てる。
+  // 1回しか使えないので、押せるのは残っているときだけ（specialReady はゲーム側が立てる）
+  get special() { return this.specialReady && this.pressed('KeyL', 'TouchSpecial'); },
   get confirm() { return this.pressed('Enter', 'Space', 'KeyJ', 'KeyZ', 'TouchAttack', 'TouchConfirm'); },
 
   endFrame() { pressed.clear(); },
@@ -164,6 +172,8 @@ export const Input = {
     // ボタン
     this._btn(ctx, BTN_A, '攻撃', held.has('TouchAttack'));
     this._btn(ctx, BTN_B, '跳', held.has('TouchJump'));
+    // 奥の手は使い切ったら消す。押せないボタンが残っていると迷わせる
+    if (this.specialReady) this._btn(ctx, BTN_C, 'Ｋ', held.has('TouchSpecial'));
     ctx.restore();
   },
 

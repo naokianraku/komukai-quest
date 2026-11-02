@@ -87,6 +87,16 @@ export const UNIT_TYPES = {
                score: 12000 },
 };
 
+// 奥の手「Ｋ」で呼ぶK田。とんでもない太っちょが両腕をぐるぐる回しながら突っ切る。
+// 味方として走るので敵だけを薙ぎ倒す。殴られても止まらず、走り切ったら消える。
+// セリフは本人が書くまで無し（taunts を持たせていないので喋らない）。
+UNIT_TYPES.kta = {
+  name: 'K田', sprite: 'kta', team: 'ally', scale: 2.15, bodyW: 1.5, bodyH: 1.0,
+  hp: 999, speed: 0, reach: 40, dmg: 3, kb: 320, cooldown: 0.2, telegraph: 0.1,
+  spin: { dur: 2.8, speed: 215, reachMul: 1.35, depthMul: 2.8, dmg: 3, kb: 320, hitEvery: 0.22 },
+  score: 0,
+};
+
 export function defFor(type) {
   const base = UNIT_TYPES[type];
   if (!base) throw new Error('unknown unit type: ' + type);
