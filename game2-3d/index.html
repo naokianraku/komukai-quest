@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>小向クエスト2 ゴールデンエイジ編 — 3D</title>
+<style>
+  :root{
+    --bg:#15171a; --ink:#f0f3f5; --sub:#9aa0a8; --accent:#ff7f0e;
+    --ok:#389451; --warn:#c73333; --line:rgba(255,255,255,.10);
+    --pane:rgba(18,20,24,.72);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:var(--ink)}
+  /* 2D版(game/style.css)と同じ枠。画面上の表示サイズを揃えて見比べられるようにする */
+  #frame{width:100%;height:100%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:8px}
+  /* --u = HUDの倍率。箱の幅に追従して main3d.js の resize() が書き込む。
+     ここを画面幅のメディアクエリでやると、横持ちのスマホ（画面は874pxあるのに
+     箱は高さに縛られて663pxしかない）で「PCだ」と誤判定して文字があふれる。 */
+  #stage{position:relative;overflow:hidden;background:#000;
+    --u:1;
+    aspect-ratio:16/9;
+    width:min(100%, calc((100dvh - 1.8rem) * 16 / 9));
+    max-width:100%;max-height:calc(100% - 1.8rem);
+    border-radius:10px;border:1px solid #2a2e34;
+    box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  /* 指で操作するので、ブラウザのスクロール/ズーム判定に取られないようにする。
+     これが無いとスティックを倒した瞬間に pointercancel が飛び、指を離した扱いになって
+     スマホで一歩も歩けない（2D版の #game には最初から入っていた）。 */
+  /* スマホの操作UI（スティックと攻撃/跳ボタン）を描く板。2D版と同じ Input.drawControls を
+     そのまま使いたいので、3Dの上に2Dのキャンバスを1枚重ねる。指は下の #c3d で受ける。 */
+  #pad{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #c3d{width:100%;height:100%;display:block;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  #hint{flex:0 0 auto;font-size:13px;color:#8b9097;text-align:center}
+
+  /* 吹き出し・頭上ラベル・ダメージ数字。3Dの中に文字を置くとボケるので、
+     キャラの位置を投影してDOMで重ねる */
+  /* メテオ着弾の赤い閃光。詠唱中もうっすら点く */
+  #flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:12;
+    background:radial-gradient(110% 80% at 50% 62%, rgba(255,120,50,.30), rgba(150,15,0,.80))}
+  #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  /* 役職名。級数は体格に合わせて JS 側で入れ替える（下の .bubble と同じ考え方） */
+  #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
+    font:700 16px/1 system-ui,sans-serif;
+    text-shadow:0 2px 4px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.95), 0 0 1px rgba(0,0,0,1)}
+  /* セリフ。級数は体格に合わせて JS 側で入れ替えるので、
+     余白・角丸・しっぽは em で持たせて一緒に大きくなるようにする */
+  /* 長いセリフは1行に収まらない。折り返せるようにして、幅の上限は JS が箱に合わせて入れる
+     （nowrap のままだと「究極のジェネラリストを目指していたが…」のような長い一言が
+     画面の外まで伸びて、#labels の overflow:hidden に切り落とされる）。 */
+  #labels .bubble{position:absolute;left:0;top:0;white-space:pre-wrap;text-align:center;z-index:1;
+    background:rgba(250,250,252,.97);color:#15171a;border-radius:.62em;
+    padding:.34em .72em;font:700 21px/1.22 system-ui,sans-serif;
+    box-shadow:0 5px 16px rgba(0,0,0,.5)}
+  #labels .bubble::after{content:'';position:absolute;left:50%;bottom:-.33em;
+    transform:translateX(-50%);border:.34em solid transparent;
+    border-top-color:rgba(250,250,252,.97);border-bottom:0}
+  #labels .bubble.ally{background:rgba(216,242,224,.97)}
+  #labels .bubble.ally::after{border-top-color:rgba(216,242,224,.97)}
+  /* ボス・中ボスは2D版と同じく、暖色の地に橙の縁 */
+  #labels .bubble.boss{background:rgba(255,243,224,.98);
+    box-shadow:0 0 0 2px #ff7f0e, 0 8px 22px rgba(0,0,0,.6)}
+  #labels .bubble.boss::after{border-top-color:#ff7f0e}
+  /* 本物のボス（魔王など）のセリフは、重なったときに必ず手前。
+     5人衆と魔王が同時に喋ると後ろに隠れて読めなくなるため */
+  #labels .bubble.lead{z-index:3}
+  /* 鳥居の扁額「出向」。朱の地に金の縁。縦書きにすると扁額の板から溢れるので横書き */
+  #labels .plate{position:absolute;left:0;top:0;white-space:nowrap;
+    font:700 max(11px, 15px * var(--u))/1 system-ui,sans-serif;letter-spacing:.16em;
+    color:#fff2dc;background:rgba(150,32,14,.95);
+    border:1px solid #e2c179;border-radius:2px;padding:3px 6px 3px 8px;
+    text-shadow:0 1px 2px rgba(0,0,0,.7);box-shadow:0 2px 7px rgba(0,0,0,.55)}
+  #labels .float{position:absolute;left:0;top:0;
+    font:700 max(10px, 13px * var(--u))/1 ui-monospace,monospace;
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  /* 頭上のHPバー（2D版の drawHpBar と同じ役割）。中ボスは .mid で一段大きくする */
+  #labels .ehp{position:absolute;left:0;top:0;
+    width:calc(32px * var(--u));height:calc(4px * var(--u));
+    border-radius:999px;background:rgba(0,0,0,.6);overflow:hidden;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.6)}
+  #labels .ehp > i{display:block;height:100%;width:100%;background:#49a862;border-radius:999px}
+  #labels .ehp.mid{width:calc(64px * var(--u));height:calc(7px * var(--u));box-shadow:0 0 0 1px rgba(255,120,110,.5), 0 2px 6px rgba(0,0,0,.7)}
+
+  /* 画面（タイトル/作業指示書/作業報告書/休職願/辞令）。社内システムの書類を模す */
+  #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(8,10,14,.74);backdrop-filter:blur(3px);padding:24px;z-index:20}
+  /* タイトルだけは背景（正門）を見せたいので暗幕を薄くする */
+  #screen.soft{background:linear-gradient(rgba(8,10,14,.16),rgba(8,10,14,.50));
+    backdrop-filter:blur(1px)}
+  /* タイトルは書類を細くして、左右に背景の正門を見せる（位置は中央のまま） */
+  #screen.soft .sheet{background:rgba(246,247,249,.96);box-shadow:0 24px 70px rgba(0,0,0,.72);
+    min-width:0;width:min(470px,78%);padding:22px 26px}
+  #screen .sheet{background:#f6f7f9;color:#1b1e23;border-radius:14px;
+    padding:26px 30px;min-width:min(560px,86%);max-width:86%;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);border-top:5px solid var(--accent)}
+  #screen .eyebrow{font-size:11px;letter-spacing:.32em;color:#6c737c;margin-bottom:12px}
+  #screen h1{font-size:clamp(20px,calc(42px * var(--u)),42px);color:var(--accent);letter-spacing:.02em;line-height:1}
+  #screen h2{font-size:22px;margin:4px 0 12px}
+  #screen h2.ok{color:#1f7a44} #screen h2.ng{color:#b3261e}
+  #screen .jp{font-size:14px;letter-spacing:.34em;margin-top:8px;color:#3a3f46}
+  #screen .lead{margin-top:12px;font-size:13px;color:#3a3f46;line-height:1.7}
+  #screen .diff{margin-top:16px;font-size:12px;color:#3a3f46}
+  #screen .form{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+  #screen .form th{width:7.5em;text-align:left;vertical-align:top;padding:7px 10px;
+    background:#e9ecef;border:1px solid #d3d8dd;color:#4a5058;font-weight:700}
+  #screen .form td{padding:7px 10px;border:1px solid #d3d8dd;line-height:1.6}
+  #screen .mono{font:700 14px ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  #screen .k{margin-top:18px;font-size:12px;color:#6c737c;text-align:center}
+  /* 難易度。キー操作の案内文だけだと気づかれないので、押せるボタンにする。
+     #screen は canvas を覆っているのでタップは canvas に届かない。ここで拾う。 */
+  #screen .diffwrap{margin-top:20px}
+  #screen .difflabel{font-size:11px;color:#6c737c;text-align:center;letter-spacing:.03em}
+  #screen .diffrow{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  #screen .dbtn{flex:1 1 0;min-width:0;cursor:pointer;font:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:#fff;color:#1b1e23;border:2px solid #d3d8dd;border-radius:10px;padding:9px 6px;
+    transition:background .12s ease, border-color .12s ease}
+  #screen .dbtn b{font-size:15px}
+  #screen .dbtn i{font-style:normal;font-size:10px;color:#8a9097}
+  #screen .dbtn:hover{border-color:var(--accent)}
+  #screen .dbtn.sel{background:var(--accent);border-color:var(--accent);color:#15171a}
+  #screen .dbtn.sel i{color:#15171a;opacity:.75}
+  #screen .diffdesc{margin-top:10px;font-size:12px;color:#3a3f46;text-align:center;min-height:1.4em}
+  /* 指で遊ぶ端末だけに出す開始ボタン。キーボードが無い相手に「Enter で開始」と
+     書いても押すものが無いので、押すものをはっきり置く。 */
+  #screen .startbtn{display:block;width:100%;margin-top:16px;cursor:pointer;font:inherit;
+    font-size:17px;font-weight:700;letter-spacing:.04em;
+    background:var(--accent);color:#15171a;border:0;border-radius:12px;padding:13px 10px;
+    box-shadow:0 6px 18px rgba(255,127,14,.35)}
+  #screen .startbtn:active{transform:translateY(1px)}
+  #screen .diffdesc.hell{color:#b3261e;font-weight:700}
+  #screen .title{text-align:center}
+  /* 解散通告とエピローグは、2D版と同じ間合いで1行ずつ出す */
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){ #screen [style*="fadein"]{animation:none!important} }
+
+  /* ---- HUD: ゲーム解像度に縛られない高解像度レイヤー（案A） ---- */
+  /* 箱（余白・バーの長さ・点の大きさ）は --u でそのまま縮める。
+     文字だけは max() で下限を持たせる。縮めきると6px台になって読めなくなるため。
+     --u=1 のPCでは max() が元の値を返すので、見た目は従来どおり。 */
+  #hud{position:absolute;inset:0;pointer-events:none;
+    padding:calc(12px * var(--u)) calc(14px * var(--u));
+    display:flex;flex-direction:column;gap:calc(14px * var(--u))}
+
+  /* 社内システムのヘッダ（案B） */
+  /* 折り返すと2行ぶんの帯になって画面を食うので、ここは何があっても1行に保つ */
+  .sysbar{display:flex;align-items:center;gap:calc(12px * var(--u));
+    background:var(--pane);backdrop-filter:blur(10px);white-space:nowrap;
+    border:1px solid var(--line);border-radius:calc(12px * var(--u));
+    padding:calc(8px * var(--u)) calc(14px * var(--u));
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  .sysbar .dot{width:calc(8px * var(--u));height:calc(8px * var(--u));
+    border-radius:999px;background:var(--accent);flex:0 0 auto}
+  .sysbar .name{font-size:max(10px, 12px * var(--u));font-weight:700;letter-spacing:.04em}
+  .sysbar .ver{font-size:max(9px, 11px * var(--u));color:var(--sub);font-variant-numeric:tabular-nums}
+  /* 現在の難易度。プレイ中に確認する手段がどこにも無かったので、ここに常時出す */
+  .sysbar .diff{font-size:max(9px, 11px * var(--u));font-weight:700;letter-spacing:.06em;
+    border-radius:999px;padding:calc(2px * var(--u)) calc(9px * var(--u));border:1px solid}
+  .sysbar .diff.easy{color:#8fe0ab;border-color:rgba(143,224,171,.45);background:rgba(56,148,81,.18)}
+  .sysbar .diff.normal{color:#d8dde3;border-color:rgba(216,221,227,.35);background:rgba(255,255,255,.07)}
+  .sysbar .diff.hell{color:#ff9b9b;border-color:rgba(255,120,120,.55);background:rgba(199,51,51,.22)}
+  /* BGMのミュート切替。Mキーでも切り替わるが、スマホ用に押せるものを置く */
+  /* #hud は pointer-events:none。押せるのはこのボタンだけなので、ここだけ戻す。
+     スマホにはキーボードが無いので、これが死んでいるとBGMを切る手段がなくなる。 */
+  .sysbar .mute{pointer-events:auto;font-size:max(9px, 11px * var(--u));font-weight:700;letter-spacing:.04em;cursor:pointer;
+    padding:calc(2px * var(--u)) calc(7px * var(--u));
+    border-radius:calc(5px * var(--u));border:1px solid rgba(255,255,255,.22);
+    background:rgba(255,255,255,.07);color:#d8dde3;user-select:none}
+  .sysbar .mute.off{color:#8b9199;border-color:rgba(255,255,255,.12);background:transparent}
+  .sysbar .spacer{flex:1}
+  /* 現在地。狭いと真っ先に溢れるので、入らないときは省略する（赤い横断幕でも出る） */
+  .sysbar .loc{font-size:max(9px, 11px * var(--u));color:var(--sub);
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+  .row{display:flex;gap:calc(14px * var(--u));align-items:flex-start}
+
+  .card{background:var(--pane);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:calc(14px * var(--u));
+    padding:calc(12px * var(--u)) calc(14px * var(--u));
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
+
+  .badge{display:inline-block;background:var(--accent);color:#15171a;
+    font-size:max(10px, 12px * var(--u));font-weight:700;border-radius:999px;
+    padding:calc(3px * var(--u)) calc(12px * var(--u));letter-spacing:.03em}
+
+  .label{font-size:max(9px, 10px * var(--u));color:var(--sub);letter-spacing:.08em;
+    margin-bottom:calc(5px * var(--u))}
+  .meter{width:calc(220px * var(--u));height:calc(8px * var(--u));
+    border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .meter > i{display:block;height:100%;width:100%;background:var(--ok);
+    border-radius:999px;transition:background .25s ease}
+  .num{font:700 max(10px, 12px * var(--u))/1 ui-monospace,SFMono-Regular,monospace;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .pair{display:flex;align-items:center;gap:calc(10px * var(--u));margin-top:calc(6px * var(--u))}
+
+  .dots{display:flex;align-items:center;gap:calc(5px * var(--u));margin-top:calc(2px * var(--u))}
+  .dots i{width:calc(9px * var(--u));height:calc(9px * var(--u));
+    border-radius:999px;background:rgba(255,255,255,.14)}
+  .dots i.on{background:var(--accent)}
+  /* 点は5つ＝「ふつう」の持ち玉ぶん。かんたんの24日は並べきれないので日数を添える */
+  .dots b{font-size:max(9px, 11px * var(--u));font-weight:700;line-height:1;
+    color:var(--accent);margin-left:1px}
+
+  /* 奥の手（K田）の残り。1回きりなので、使ったら灰色に落として「もう無い」と分かるようにする */
+  .kbadge{display:inline-block;font-size:max(10px, 12px * var(--u));font-weight:700;
+    line-height:1;padding:calc(3px * var(--u)) calc(8px * var(--u));
+    border-radius:calc(6px * var(--u));letter-spacing:.06em;
+    color:#15171a;background:#e8a030;box-shadow:0 0 0 1px rgba(255,200,120,.45)}
+  .kbadge.used{color:#6b7076;background:transparent;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+
+  .right{margin-left:auto;text-align:right}
+  .right .num{font-size:max(14px, 19px * var(--u))}
+  /* 通しゲージ（残工期・原価・レター）。章をまたいで持ち越す数字なので、
+     体力とは別のカードに積む。使わない章では display:none にする */
+  .g{margin-top:calc(7px * var(--u))}
+  .g .meter{width:calc(132px * var(--u))}
+  .g.off{display:none}
+  #koukiFill{background:#e08a3a}
+  #genkaFill{background:#e0c040}
+  #letterFill{background:#6ab0e0}
+  .g.full .label{color:#9ad8ff}
+  .dots i.mate{background:#6fd39a}
+  /* 待合室。敵は出てこない。ただ待たされている、という画面 */
+  #wait{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+    justify-content:center;gap:calc(8px * var(--u));background:rgba(8,10,14,0.55);
+    pointer-events:none;z-index:6;text-align:center}
+  #wait.show{display:flex}
+  #wait b{font-size:max(15px, 20px * var(--u));color:#8fa0b4}
+  #wait span{font-size:max(11px, 13px * var(--u));color:#6a7686}
+  #wait i{font-size:max(10px, 12px * var(--u));color:#4e94c8;font-style:normal;font-weight:700}
+
+  /* ボスゲージ: 下中央のパネル。
+     画面最上部の3pxの線だと、足元を見て戦っている最中はまず目に入らない。
+     中ボスもここに出す（stage.boss ではないので、拾わないとゲージが1本も出ない）。 */
+  /* 見えていない（opacity:0）ときも当たり判定は残るので、指を吸ってしまう。
+     画面下中央はスティックを出す場所でもあるため、必ず素通りさせる。 */
+  #bossWrap{pointer-events:none;
+    position:absolute;left:50%;bottom:calc(14px * var(--u));width:min(540px,84%);
+    transform:translateX(-50%) translateY(10px);
+    background:rgba(16,12,14,.80);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,120,110,.36);border-radius:calc(12px * var(--u));
+    padding:calc(8px * var(--u)) calc(12px * var(--u)) calc(10px * var(--u));
+    box-shadow:0 10px 30px rgba(0,0,0,.55);
+    opacity:0;transition:opacity .28s ease, transform .28s ease}
+  #bossWrap.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #bossWrap .head{display:flex;align-items:center;gap:calc(9px * var(--u));
+    margin-bottom:calc(7px * var(--u));white-space:nowrap}
+  #bossKind{flex:0 0 auto;background:#c02a22;color:#fff;font-size:max(9px, 10px * var(--u));font-weight:700;
+    letter-spacing:.14em;border-radius:calc(5px * var(--u));
+    padding:calc(3px * var(--u)) calc(8px * var(--u))}
+  #bossName{font-size:max(11px, 14px * var(--u));font-weight:700;letter-spacing:.06em;color:#ffe4e0;
+    overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  #bossNum{margin-left:auto;font:700 max(10px, 12px * var(--u))/1 ui-monospace,monospace;color:#ffc2bc;
+    font-variant-numeric:tabular-nums}
+  #bossWrap .line{position:relative;height:calc(13px * var(--u));border-radius:999px;
+    background:rgba(0,0,0,.6);overflow:hidden;
+    box-shadow:inset 0 1px 4px rgba(0,0,0,.7)}
+  #bossWrap .line > i{display:block;height:100%;width:100%;border-radius:999px;
+    background:linear-gradient(180deg,#ff9a6a,#e03a2a 58%,#ad1a0e);
+    transition:width .09s linear}
+  /* 10等分の目盛り。残りが読めると詰めどころが分かる */
+  #bossWrap .line::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,
+      transparent 0 calc(10% - 1px), rgba(0,0,0,.5) calc(10% - 1px), rgba(0,0,0,.5) 10%)}
+  #bossWrap.low{border-color:rgba(255,80,70,.7)}
+  #bossWrap.low .line > i{animation:bosslow .72s ease-in-out infinite}
+  @keyframes bosslow{50%{filter:brightness(1.6)}}
+
+  /* 赤い横断幕。左上のHUDカードと高さがぶつかっていたので、少し下げて中央寄せにする */
+  #banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-6px);
+    max-width:76%;text-align:center;
+    font-size:max(13px, 17px * var(--u));font-weight:700;letter-spacing:.06em;
+    background:rgba(150,20,20,.92);border-radius:calc(10px * var(--u));
+    padding:calc(8px * var(--u)) calc(20px * var(--u));
+    opacity:0;transition:opacity .22s ease, transform .22s ease;
+    box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #banner.show{opacity:1;transform:translate(-50%,0)}
+
+  #hint b{color:var(--sub);font-weight:600}
+  /* HUDの大きさは --u が面倒を見るので、ここでやるのはキーボードの案内を消すことだけ。
+     指で遊ぶ端末に「移動: ←↑↓→」と出しても意味がない。 */
+  @media (max-width:620px), (pointer:coarse){ #hint{display:none} }
+
+  /* 縦持ちのスマホ。16:9の画面を縦長の端末に入れると高さの26%しか使えないので、
+     箱ごと90°回して縦画面いっぱいに出す。横スクロールのゲームなので向きは横で固定。
+     タッチ判定は offsetX/offsetY（要素自身の座標系）で取っているため回してもずれない。 */
+  @media (orientation:portrait) and (pointer:coarse){
+    #frame{position:relative;gap:0}
+    #stage{position:absolute;left:50%;top:50%;
+      --w:min(100dvh, 100vw * 16 / 9);
+      width:var(--w);height:calc(var(--w) * 9 / 16);
+      max-width:none;max-height:none;
+      transform:translate(-50%,-50%) rotate(90deg);
+      border-radius:0;border:0}
+  }
+</style>
+</head>
+<body>
+  <div id="frame">
+    <div id="stage">
+      <canvas id="c3d"></canvas>
+      <canvas id="pad"></canvas>
+      <pre id="err" style="position:absolute;left:12px;bottom:12px;z-index:99;color:#ff8a8a;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70%"></pre>
+      <div id="bossWrap">
+        <div class="head">
+          <span id="bossKind">ボス</span>
+          <span id="bossName"></span>
+          <span id="bossNum"></span>
+        </div>
+        <div class="line"><i id="bossFill"></i></div>
+      </div>
+      <div id="hud">
+        <div class="sysbar">
+          <span class="dot"></span>
+          <span class="name">小向工場 工程管理システム</span>
+          <span class="ver">Ver 1.0</span>
+          <span class="diff normal" id="diffchip">ふつう</span>
+          <span class="mute" id="mute" title="BGMのオン/オフ（Mキー）">🔊 BGM</span>
+          <span class="spacer"></span>
+          <span class="loc" id="loc"></span>
+        </div>
+        <div class="row" id="cards">
+          <div class="card">
+            <span class="badge" id="rank">配属</span>
+            <div class="pair" style="margin-top:10px">
+              <div>
+                <div class="label">仕事体力</div>
+                <div class="meter"><i id="hpFill"></i></div>
+              </div>
+              <div class="num" id="hpNum">12 / 12</div>
+            </div>
+            <div class="pair">
+              <div>
+                <div class="label">残機</div>
+                <div class="dots" id="lives"></div>
+              </div>
+              <div style="margin-left:auto">
+                <div class="label">同期</div>
+                <div class="dots" id="roster"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card right">
+            <div class="label">SCORE</div>
+            <div class="num" id="score">000000</div>
+            <div class="g off" id="gKouki"><div class="label">残工期</div><div class="meter"><i id="koukiFill"></i></div></div>
+            <div class="g off" id="gGenka"><div class="label">原価</div><div class="meter"><i id="genkaFill"></i></div></div>
+            <div class="g off" id="gLetter"><div class="label" id="letterLabel">レター</div><div class="meter"><i id="letterFill"></i></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="wait">
+        <b>待合室</b>
+        <span>通されない。何時間も待たされている。</span>
+        <i>——書くことだけが増えていく</i>
+      </div>
+      <div id="flash"></div>
+      <div id="labels"></div>
+      <div id="screen"></div>
+      <div id="banner"></div>
+    </div>
+    <p id="hint">移動: ←↑↓→ / WASD　攻撃: J / Z　ジャンプ: K / X　レター: R　設計に口を出す: E　決定: Enter / Space</p>
+  </div>
+  <script>
+    (function(){
+      const el=()=>document.getElementById('err');
+      const show=(m)=>{ const e=el(); if(e) e.textContent=(e.textContent+'\n'+m).trim().slice(0,1200); };
+      addEventListener('error',(ev)=>show('ERROR: '+(ev.error&&ev.error.stack||ev.message)));
+      addEventListener('unhandledrejection',(ev)=>show('REJECT: '+(ev.reason&&ev.reason.stack||ev.reason)));
+      window.__dbg=show;
+    })();
+  </script>
+  <script type="module" src="src/main2-3d.js"></script>
+</body>
+</html>

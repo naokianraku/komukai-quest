@@ -33,10 +33,10 @@ export const TAUNTS2 = {
   gr_seizo:    ['今度こそ動きます'],
   gr_pm:       ['We are working on it.'],
 
-  // --- 第4章 L社 ---
-  l_toiawase: ['回答不可'],
-  l_yushutsu: ['その質問自体が規制対象です'],
-  l_pm:       ['提供できません'],
+  // --- 第4章 L3社 ---
+  l3_toiawase: ['回答不可'],
+  l3_yushutsu: ['その質問自体が規制対象です'],
+  l3_pm:       ['提供できません'],
 
   // --- 第5章 LM社 ---
   lm_keiyaku: ['それはSOWにありません'],

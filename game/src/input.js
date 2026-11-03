@@ -202,6 +202,10 @@ export const Input = {
   get special() { return this.specialReady && this.pressed('KeyL', 'TouchSpecial'); },
   get confirm() { return this.pressed('Enter', 'Space', 'KeyJ', 'KeyZ', 'TouchAttack', 'TouchConfirm'); },
 
+  // canvas を覆っている DOM（説明の紙など）の上のタップを「決定」として渡す。
+  // そこを押しても canvas の pointerdown は飛んでこないので、画面側から教えてもらう。
+  tapConfirm() { pressed.add('TouchConfirm'); },
+
   endFrame() { pressed.clear(); },
 
   // 直近タップの論理座標を1回だけ取り出す（メニューのヒットテスト用）

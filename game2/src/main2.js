@@ -222,7 +222,7 @@ class Stage2 extends Stage {
     }
 
     if (this.boss && this.boss.alive) {
-      // 食らいつき続けると、はじめてHPバーが現れる（L社＝情報が出ない）
+      // 食らいつき続けると、はじめてHPバーが現れる（L3社＝情報が出ない）
       if (this.boss.hideHpBar && !this.bossBarRevealed && this.boss.hp <= this.boss.maxhp * 0.62) {
         this.bossBarRevealed = true;
         this.boss.hideHpBar = false;
@@ -364,7 +364,7 @@ class Game2 {
         break;
 
       case 'epilogue':
-        if (this.screenT > 6.4 && Input.confirm) { location.href = '../game/'; }
+        if (this.screenT > 6.4 && Input.confirm) { location.href = this.exitHref || '../game/'; }
         break;
 
       case 'gameover':

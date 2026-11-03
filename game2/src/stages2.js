@@ -44,10 +44,10 @@ export const PALETTES2 = {
   gr_seizo:    { map: 'cap',    h: '#6b5a2c' }, // GR社 製造: キャップ
   gr_pm:       { map: 'suit',   b: '#5a4a2e', p: '#4a3d26', t: '#9a8a5a', h: '#3a2a18' },
 
-  // 第4章 L社 — 藍。閉じている
-  l_toiawase: { map: 'worker', h: '#3f51b5' },
-  l_yushutsu: { map: 'worker', h: '#2e3a86' },
-  l_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610' },
+  // 第4章 L3社 — 藍。閉じている
+  l3_toiawase: { map: 'worker', h: '#3f51b5' },
+  l3_yushutsu: { map: 'worker', h: '#2e3a86' },
+  l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610' },
 
   // 第5章 LM社 — 巨大。濃紺と金
   lm_keiyaku: { map: 'suit',   b: '#2a3050', p: '#232842', t: '#c0a040', h: '#1a1410' },
@@ -74,7 +74,7 @@ export const LABELS2 = {
   jinji: '人事部', manner: 'マナー講師', anzen: '安全衛生', ryocho: '寮長',
   m_kikai: '機械設計', m_denso: '電装', m_sekkei: '設計課長',
   gr_chotatsu: '調達', gr_gijutsu: '技術', gr_seizo: '製造',
-  l_toiawase: '技術問合せ', l_yushutsu: '輸出管理責任者',
+  l3_toiawase: '技術問合せ', l3_yushutsu: '輸出管理責任者',
   lm_keiyaku: '契約', lm_cr: '変更要求', lm_shiken: '試験', lm_kanri: '契約管理',
   dairiten: '代理店', kensakan: '検査官',
   kishi_kigen: '期限', kishi_seinou: '性能', kishi_sonshitsu: '損失', kishi_keisou: '係争',
@@ -86,7 +86,7 @@ export const COLORS2 = {
   jinji: '#9a9ab0', manner: '#d0a8bc', anzen: '#ff8a4a', ryocho: '#c0b070',
   m_kikai: '#e0e4ea', m_denso: '#c0ccd8', m_sekkei: '#aab6c4',
   gr_chotatsu: '#d0b060', gr_gijutsu: '#b89a50', gr_seizo: '#a08648',
-  l_toiawase: '#8c9eff', l_yushutsu: '#7080e0',
+  l3_toiawase: '#8c9eff', l3_yushutsu: '#7080e0',
   lm_keiyaku: '#c0a860', lm_cr: '#8a94b0', lm_shiken: '#7a86a0', lm_kanri: '#e0c060',
   dairiten: '#c0c4cc', kensakan: '#a0a898',
   kishi_kigen: '#ff8a4a', kishi_seinou: '#6ac0ff', kishi_sonshitsu: '#ffd85a', kishi_keisou: '#ff5a5a',
@@ -130,11 +130,11 @@ export const UNIT_TYPES2 = {
   gr_seizo:    { name: 'GR社 製造', sprite: 'gr_seizo', taunts: 'gr_seizo', midboss: true, scale: 1.5, hp: 16, speed: 44, reach: 27, dmg: 1, kb: 115, cooldown: 0.72, telegraph: 0.44, score: 700 },
   gr_pm: { name: 'GR社プロマネ', sprite: 'gr_pm', taunts: 'gr_pm', boss: true, scale: 1.8, hp: 32, speed: 40, reach: 30, dmg: 2, kb: 125, cooldown: 0.9, telegraph: 0.58, firstLine: "We're working on it.", score: 1800 },
 
-  // --- 第4章 L社（技術力が高い。だが情報を出さない）---
-  l_toiawase: { name: '技術問合せ', sprite: 'l_toiawase', taunts: 'l_toiawase', hp: 3, speed: 44, reach: 22, dmg: 1, kb: 90, cooldown: 0.78, telegraph: 0.44, score: 160 },
-  l_yushutsu: { name: '輸出管理責任者', sprite: 'l_yushutsu', taunts: 'l_yushutsu', midboss: true, scale: 1.5, hp: 18, speed: 44, reach: 27, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 800 },
+  // --- 第4章 L3社（技術力が高い。だが情報を出さない）---
+  l3_toiawase: { name: '技術問合せ', sprite: 'l3_toiawase', taunts: 'l3_toiawase', hp: 3, speed: 44, reach: 22, dmg: 1, kb: 90, cooldown: 0.78, telegraph: 0.44, score: 160 },
+  l3_yushutsu: { name: '輸出管理責任者', sprite: 'l3_yushutsu', taunts: 'l3_yushutsu', midboss: true, scale: 1.5, hp: 18, speed: 44, reach: 27, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 800 },
   // HPバーが出ない。食らいつき続けると途中で現れ、そこから普通に勝てる。
-  l_pm: { name: 'L社プロマネ', sprite: 'l_pm', taunts: 'l_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'その情報は提供できません', score: 2200 },
+  l3_pm: { name: 'L3社プロマネ', sprite: 'l3_pm', taunts: 'l3_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'その情報は提供できません', score: 2200 },
 
   // --- 第5章 LM社（技術力は高い。それでも完成しない）---
   lm_keiyaku: { name: 'LM社 契約', sprite: 'lm_keiyaku', taunts: 'lm_keiyaku', hp: 4, speed: 44, reach: 23, dmg: 1, kb: 95, cooldown: 0.76, telegraph: 0.44, score: 180 },
@@ -258,11 +258,11 @@ export const CHAPTERS = [
   },
   {
     id: 4,
-    name: '第4章 L社編',
+    name: '第4章 L3社編',
     subtitle: '入社4年目 — 担当は自分ひとり',
     playerRank: '小向兵士',
     playerSprite: 'p2_haizoku',
-    location: 'L社 立入制限エリア',
+    location: 'L3社 立入制限エリア',
     intro: '技術力はある。作れる会社だ。だが情報を出さない。\n規制でインターフェース仕様さえ十分に出てこない。中身の分からない箱に合わせて設計する。\n——そして、この相手の担当は自分ひとり。逃げ場がない。',
     width: 1750,
     bg: { scene: 'office', wall: '#2c3350', floor: '#465070', detail: '#1e2438', accent: '#7a86c0' },
@@ -275,12 +275,12 @@ export const CHAPTERS = [
     completion: true, // 2で唯一「完成」が出る章
     mobs: [{ type: 'chukan', x: 300 }],
     waves: [
-      { x: 380, label: '輸出管理', enemies: [{ type: 'l_toiawase', count: 2 }] },
-      { x: 740, label: '技術問合せ — 回答不可', enemies: [{ type: 'l_toiawase', count: 3 }] },
-      { x: 1020, label: '輸出管理責任者 出現！', enemies: [{ type: 'l_yushutsu', count: 1 }] },
+      { x: 380, label: '輸出管理', enemies: [{ type: 'l3_toiawase', count: 2 }] },
+      { x: 740, label: '技術問合せ — 回答不可', enemies: [{ type: 'l3_toiawase', count: 3 }] },
+      { x: 1020, label: '輸出管理責任者 出現！', enemies: [{ type: 'l3_yushutsu', count: 1 }] },
       { x: 1300, label: '帰社 — PM（課長）', enemies: [{ type: 'pm', count: 1 }] },
     ],
-    boss: { type: 'l_pm', x: 1660 },
+    boss: { type: 'l3_pm', x: 1660 },
     clearLine: '……あいつら、何度潰しても立ってくるぞ',
     outro: '納期は遅れた。コストも少し上がった。\nだが——完成した。5年でひとつだけ、自分の手でやりきったもの。',
     slope: 0.6,
@@ -334,7 +334,7 @@ export const CHAPTERS = [
     gauges: { kouki: true, genka: true },
     mobs: [{ type: 'chukan', x: 280 }, { type: 'chukan', x: 700 }, { type: 'chukan', x: 1150 }],
     waves: [
-      { x: 380, label: '再設計審査', enemies: [{ type: 'l_toiawase', count: 2 }, { type: 'lm_cr', count: 2 }] },
+      { x: 380, label: '再設計審査', enemies: [{ type: 'l3_toiawase', count: 2 }, { type: 'lm_cr', count: 2 }] },
       { x: 760, label: 'リカバリプラン', enemies: [{ type: 'lm_keiyaku', count: 2 }, { type: 'm_kikai', count: 2 }] },
       { x: 1040, label: '検査官 出現！', enemies: [{ type: 'kensakan', count: 1 }] },
       { x: 1360, label: '四騎士 出現！', enemies: [

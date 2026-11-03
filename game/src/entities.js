@@ -328,7 +328,7 @@ export class Char extends Entity {
     // --- 続編(game2)用フラグ。未指定なら1の挙動と完全に同じ ---
     this.noFumble = !!def.noFumble;     // 味方のうっかり攻撃をしない（同期）
     this.noBetray = !!def.noBetray;     // 絶対に裏切らない（同期）
-    this.hideHpBar = !!def.hideHpBar;   // ボスHPバーを隠す（L社＝情報が出ない）
+    this.hideHpBar = !!def.hideHpBar;   // ボスHPバーを隠す（L3社＝情報が出ない）
     this.noKb = !!def.noKb;             // 怯まない（なめている＝振り向かない段階）
     this.faceLock = def.faceLock ?? null; // 顔を向けない（null=通常, -1/1=固定）
     this.wanderT = 0.4 + (this.id % 7) * 0.3; // mob の徘徊タイマ
