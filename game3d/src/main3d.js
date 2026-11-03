@@ -161,37 +161,93 @@ function box(w, h, d, color, x, y, z, opts = {}) {
 const flames = [];          // {m, ph, rate, sy, sx, sway, x}
 const fireLights = [];      // {l, ph, base}
 const embers = [];          // {m, vy, t, life, x, y, z}
-const flameGeo = new THREE.ConeGeometry(1, 2, 6, 4);
-flameGeo.translate(0, 1, 0);                      // 底を原点に置く（伸ばすと上だけ伸びる）
-{
-  // 根元が白熱して先へ行くほど暗い赤になる階調を、頂点カラーで持たせる。
-  // 一色に塗った円錐は三角コーンにしか見えないので、ここが炎らしさの要になる。
-  // （頂点カラーは three の sRGB 自動変換の対象外なので手で linear 化する）
-  const pos = flameGeo.attributes.position;
-  const col = new Float32Array(pos.count * 3);
-  const hot = new THREE.Color('#fff4cc').convertSRGBToLinear();
-  const mid = new THREE.Color('#ff8a1e').convertSRGBToLinear();
-  const tip = new THREE.Color('#7a1604').convertSRGBToLinear();
-  const c = new THREE.Color();
-  for (let i = 0; i < pos.count; i++) {
-    const t = Math.min(1, Math.max(0, pos.getY(i) / 2));     // 0=根元 1=先端
-    if (t < 0.4) c.copy(hot).lerp(mid, t / 0.4);
-    else c.copy(mid).lerp(tip, (t - 0.4) / 0.6);
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+const glows = [];           // {m, ph, s} 足元の照り返し。炎と一緒に明滅させる
+let fireAmb = null;         // 炎のある場面の地明かり。ゆっくり脈打たせるための基準値
+// 炎の絵は手で描いて板に貼る。円錐メッシュだと縁がまっすぐな三角形のままで、
+// どれだけ揺らしても「オレンジのトゲ」にしか見えない。板なら縁をなめらかに
+// 消せるし、三角形のポリゴン2枚で済むので円錐より軽い。
+// 加算合成なので、黒いところはそのまま背景に溶ける＝透明になる。
+function flameTexture(seed) {
+  const S = 96;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g2 = cv.getContext('2d');
+  const img = g2.createImageData(S, S);
+  const d = img.data;
+  const rnd = (k) => { const v = Math.sin((seed * 37.1 + k) * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  // 縁を波打たせる種。1枚ごとに舌の形を変えて、同じ絵の繰り返しに見せない
+  const a1 = 0.13 + rnd(1) * 0.13, a2 = 0.07 + rnd(2) * 0.09;
+  const f1 = 5 + rnd(3) * 6, f2 = 12 + rnd(4) * 11;
+  const p1 = rnd(5) * 6.28, p2 = rnd(6) * 6.28;
+  for (let y = 0; y < S; y++) {
+    // 板のUVは下端が0。three は canvas を上下反転して貼るので、canvas の下の行が
+    // 板の下＝炎の根元になる。ここを取り違えると、根元が細く先が太い光の筋になる。
+    const v = y / (S - 1);                        // 0=先端(canvasの上) 1=根元(canvasの下)
+    // 幅。根元がふくらみ、上へすぼまる。正弦を2本重ねて輪郭を揺らす
+    const w = Math.max(0.005,
+      Math.pow(v, 0.58) * 0.44 * (1 + a1 * Math.sin(v * f1 + p1) + a2 * Math.sin(v * f2 + p2)));
+    for (let x = 0; x < S; x++) {
+      const i2 = (y * S + x) * 4;
+      const dx = Math.abs(x / (S - 1) - 0.5) / w;
+      if (dx >= 1) { d[i2 + 3] = 0; continue; }
+      // 縁へ向かってなめらかに消える。先はちぎれ、根元は床に溶ける
+      let a = Math.pow(1 - dx * dx, 1.5) * Math.min(1, v * 3.4);
+      if (v > 0.88) a *= (1 - v) / 0.12;
+      // 熱さ。根元の芯がいちばん白く、外と先へ行くほど赤くなる
+      const heat = Math.pow(v, 0.5) * (1 - dx * 0.72);
+      let r, g, b;
+      if (heat > 0.72)      { r = 255; g = 247; b = 218; }
+      else if (heat > 0.46) { const t = (heat - 0.46) / 0.26; r = 255; g = 162 + 85 * t; b = 42 + 176 * t; }
+      else if (heat > 0.20) { const t = (heat - 0.20) / 0.26; r = 251; g = 72 + 90 * t;  b = 10 + 32 * t; }
+      else                  { const t = heat / 0.20;          r = 118 + 133 * t; g = 14 + 58 * t; b = 4 + 6 * t; }
+      d[i2] = r; d[i2 + 1] = g; d[i2 + 2] = b;
+      d[i2 + 3] = Math.round(Math.max(0, Math.min(1, a)) * 255);
+    }
   }
-  flameGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g2.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
+
+// 炎のまわりの熱気。これが無いと炎だけが明るくて、周りが急に真っ暗になる
+function hazeTexture() {
+  const S = 64;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g2 = cv.getContext('2d');
+  const gr = g2.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  gr.addColorStop(0,    'rgba(255,190,120,0.85)');
+  gr.addColorStop(0.35, 'rgba(255,120,40,0.34)');
+  gr.addColorStop(0.7,  'rgba(190,52,12,0.10)');
+  gr.addColorStop(1,    'rgba(0,0,0,0)');
+  g2.fillStyle = gr; g2.fillRect(0, 0, S, S);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+const flameTex = [flameTexture(1), flameTexture(2), flameTexture(3), flameTexture(4)];
+const hazeTex = hazeTexture();
+const flamePlane = new THREE.PlaneGeometry(1, 1);
+flamePlane.translate(0, 0.5, 0);                  // 底を原点に（伸ばすと上だけ伸びる）
 const emberGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
 const glowGeo = new THREE.CircleGeometry(1, 24); glowGeo.rotateX(-Math.PI / 2);
 
-// 加算合成。重なったところが白く飛んで、暗い先端は背景に溶ける＝炎の見え方になる
-function tongue(x, z, r, h, opacity, tilt) {
-  const m = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({
-    vertexColors: true, transparent: true, opacity,
+// 板は1枚だと横から見たとき紙になる。カメラは横に動くので、毎フレームこちらを向かせる。
+// 回転順を YXZ にして、先のなびき(z)を板の中で効かせてから全体を回す。
+function billboard(m, cam) {
+  m.rotation.y = Math.atan2(cam.position.x - m.position.x, cam.position.z - m.position.z);
+}
+
+// 加算合成。重なったところが白く飛んで、暗いところは背景に溶ける＝炎の見え方になる
+function tongue(x, z, w, h, opacity, tilt, tex, tint) {
+  const m = new THREE.Mesh(flamePlane, new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, opacity,
+    color: tint ? hex(tint) : 0xffffff,
     depthWrite: false, blending: THREE.AdditiveBlending,
   }));
+  m.rotation.order = 'YXZ';
   m.position.set(x, 0.4, z);
-  m.scale.set(r, h / 2, r);
+  m.scale.set(w, h, 1);
   m.rotation.z = tilt;
   m.renderOrder = 4;
   scenery.add(m);
@@ -208,68 +264,105 @@ function fire(x, z, s, n) {
     color: hex('#ff6a1e'), transparent: true, opacity: 0.44,
     depthWrite: false, blending: THREE.AdditiveBlending }));
   glow.position.set(x, 0.14, z);
-  glow.scale.set(6.6 * s, 1, 6.6 * s);
+  glow.scale.set(7.4 * s, 1, 7.4 * s);
   scenery.add(glow);
-  // 細い舌を3枚。太いと炎ではなく三角コーンに見えるので、高さのわりに細くする。
+  glows.push({ m: glow, ph: fr(4) * 6.28, s: 7.4 * s });
+  // 舌を5枚。幅・高さ・濃さをばらして、根元が太く上が細い一山にする。
   const spec = [
-    [0.0,  0.0, 1.55, 12.0, 0.58],  // 外側（いちばん高く、薄い）
-    [-0.7, 0.5, 1.05,  8.2, 0.66],  // 中
-    [0.6, -0.4, 0.55,  4.8, 0.82],  // 芯（低く小さい・いちばん白い）
-    [0.2,  0.6, 0.42, 15.5, 0.34],  // 噴き上がる細い舌。上へ抜ける勢いを出す
+    [0.0,  0.0, 4.6, 10.0, 0.60, null],      // 本体
+    [-1.2, 0.6, 3.2,  7.0, 0.56, null],      // 左の張り出し
+    [1.1, -0.5, 2.8,  5.6, 0.60, null],      // 右の張り出し
+    [0.1,  0.2, 2.2,  3.6, 0.80, null],      // 芯（低く白い）
+    // 噴き上がる細い舌。幅が狭いぶん芯の白が勝って白い直線に見えるので、色で落とす
+    [0.4,  0.7, 1.6, 10.5, 0.30, '#d4551a'],
   ];
-  spec.forEach(([dx, dz, r, h, o], i) => {
-    const hh = h * s * (0.7 + fr(i) * 0.7);
-    const rr = r * s * (0.85 + fr(i + 7) * 0.35);
-    const tilt = (fr(i + 5) - 0.5) * 0.34;
-    const m = tongue(x + dx * s, z + dz * s, rr, hh, o, tilt);
-    flames.push({ m, ph: fr(i + 3) * 6.28, rate: 7.0 + fr(i + 11) * 6.0,
-                  sy: m.scale.y, sx: rr, x: m.position.x, tilt });
+  spec.forEach(([dx, dz, w, h, o, tint], i) => {
+    const hh = h * s * (0.72 + fr(i) * 0.66);
+    const ww = w * s * (0.82 + fr(i + 7) * 0.4);
+    const tilt = (fr(i + 5) - 0.5) * 0.3;
+    const m = tongue(x + dx * s, z + dz * s, ww, hh, o, tilt, flameTex[(n + i) % flameTex.length], tint);
+    flames.push({ m, ph: fr(i + 3) * 6.28, rate: 6.5 + fr(i + 11) * 6.5,
+                  sy: hh, sx: ww, x: m.position.x, tilt, amp: 0.4, op: o });
   });
+  // 熱気。炎より大きく、ゆっくり息をする。加算合成なので、全部の炎に付けると
+  // 何十枚も重なって画面が白く霞む。3か所に1つだけ、薄く乗せる。
+  if (n % 5 === 0) {
+    const hz = new THREE.Mesh(flamePlane, new THREE.MeshBasicMaterial({
+      map: hazeTex, transparent: true, opacity: 0.2,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    hz.rotation.order = 'YXZ';
+    hz.position.set(x, 0.1, z + 0.5);
+    hz.scale.set(8 * s, 8 * s, 1);
+    hz.renderOrder = 3;
+    scenery.add(hz);
+    flames.push({ m: hz, ph: fr(2) * 6.28, rate: 1.7 + fr(9) * 1.4,
+                  sy: 8 * s, sx: 8 * s, x: x, tilt: 0, amp: 0.1, op: 0.2 });
+  }
 }
 
 // 炎の列をまとめて置き、ところどころに点光源と火の粉を添える
 function fireRow(x0, x1, z, s, step, n0) {
   let n = n0;
+  let rowLights = 0;      // 列ごとに1つ。全体で数えると最初の列が使い切ってしまう
   const spots = [];
   for (let x = x0; x < x1; x += step * (0.7 + ((n * 7) % 5) / 5)) {
     const fr = Math.abs(Math.sin(n * 7.13) * 10) % 1;
     n++;
     if (fr < 0.08) continue;                                   // 抜け（一列に揃えない）
     fire(x, z + (fr - 0.5) * 8, s * (0.8 + fr * 0.85), n);
-    // 点光源は炎の数だけ置くと重い。列あたり数個に絞って、床と人に照りだけ乗せる。
-    if (fireLights.length < 5 && n % 5 === 0) {
-      const l = new THREE.PointLight(0xff6a1e, 4.0, 240, 2);
+    // 点光源は炎の数だけ置くと重い。列あたり2つに絞って、床と人に照りだけ乗せる。
+    if (rowLights < 1 && fireLights.length < 5 && n % 5 === 0) {
+      const l = new THREE.PointLight(0xff6a1e, 5.4, 270, 2);
       l.position.set(x, 10, z);
       scenery.add(l);
-      fireLights.push({ l, ph: fr * 6.28, base: 4.0 });
+      fireLights.push({ l, ph: fr * 6.28, base: 5.4 });
+      rowLights++;
     }
     spots.push(x);
   }
   // 火の粉は炎1つずつに持たせると数が増えすぎる。列ごとにまとめて散らす。
-  for (let k = 0; k < 16 && spots.length; k++) {
+  for (let k = 0; k < 28 && spots.length; k++) {
     const sx2 = spots[(k * 7) % spots.length];
     const f2 = ((k * 13) % 11) / 11;
     const m = new THREE.Mesh(emberGeo, new THREE.MeshBasicMaterial({
-      color: hex(k % 2 ? '#ffd24a' : '#ff8a3a'), transparent: true, opacity: 0.95, fog: false }));
+      color: hex(k % 3 === 0 ? '#fff0b4' : k % 3 === 1 ? '#ffd24a' : '#ff8a3a'),
+      transparent: true, opacity: 0.95, fog: false }));
+    // 大きさをばらす。粒が揃っていると、火の粉ではなく点線に見える
+    const sc = 0.7 + ((k * 17) % 9) / 9 * 1.6;
+    m.scale.set(sc, sc, sc);
     m.position.set(sx2, 2, z);
     scenery.add(m);
-    embers.push({ m, x: sx2, z, vy: 16 + f2 * 18, t: f2 * 3 + k * 0.17, life: 2.4 + f2 * 1.6 });
+    embers.push({ m, sc, x: sx2, z, vy: 14 + f2 * 24, t: f2 * 3 + k * 0.11, life: 2.2 + f2 * 2.0 });
   }
 }
 
-function updateFlames(dt, t) {
+function updateFlames(dt, t, cam) {
   for (const f of flames) {
     // 速い揺れに遅いうねりを重ねる。単純な正弦だけだと規則正しく脈打って見える
     const w = Math.sin(t * f.rate + f.ph) * 0.7 + Math.sin(t * f.rate * 0.37 + f.ph * 1.7) * 0.3;
-    f.m.scale.y = f.sy * (1 + w * 0.46);                       // 伸び縮み
-    const k = f.sx * (1 - w * 0.2);
-    f.m.scale.x = k; f.m.scale.z = k;                          // 伸びたぶん細る
-    f.m.position.x = f.x + Math.sin(t * f.rate * 0.6 + f.ph) * 0.8 * f.sx;   // 揺らぎ
-    f.m.rotation.z = f.tilt + Math.sin(t * f.rate * 0.45 + f.ph) * 0.24;     // 先がなびく
+    f.m.scale.y = f.sy * (1 + w * f.amp);                      // 伸び縮み
+    f.m.scale.x = f.sx * (1 - w * f.amp * 0.42);               // 伸びたぶん細る
+    f.m.position.x = f.x + Math.sin(t * f.rate * 0.6 + f.ph) * 0.1 * f.sx;   // 揺らぎ
+    f.m.rotation.z = f.tilt + Math.sin(t * f.rate * 0.45 + f.ph) * 0.22;     // 先がなびく
+    // 濃さも揺らす。形だけ動かすと、明るさが一定で作り物に見える
+    f.m.material.opacity = f.op * (0.76 + 0.24 * Math.sin(t * f.rate * 1.3 + f.ph * 2.1));
+    billboard(f.m, cam);
+  }
+  for (const g of glows) {
+    const k = g.s * (0.86 + 0.14 * Math.sin(t * 5.1 + g.ph));
+    g.m.scale.x = k; g.m.scale.z = k;
+    g.m.material.opacity = 0.34 + 0.16 * Math.sin(t * 6.7 + g.ph * 1.6);
   }
   for (const g of fireLights) {
     g.l.intensity = g.base * (0.62 + 0.38 * Math.abs(Math.sin(t * 7.3 + g.ph) * Math.sin(t * 3.1)));
   }
+  // 部屋ぜんたいの明るさもゆっくり脈打たせる。炎だけ動いて部屋が止まっていると、
+  // 書き割りの前で火が揺れているように見える。
+  if (fireAmb == null) fireAmb = { h: hemi.intensity, s: sun.intensity };
+  const amb = 1 + 0.1 * Math.sin(t * 2.9) * Math.sin(t * 1.3) + 0.04 * Math.sin(t * 9.1);
+  hemi.intensity = fireAmb.h * amb;
+  sun.intensity = fireAmb.s * amb;
   for (const e of embers) {
     e.t += dt;
     if (e.t > e.life) { e.t = 0; e.m.position.set(e.x + (Math.random() - 0.5) * 5, 2, e.z + (Math.random() - 0.5) * 5); }
@@ -277,13 +370,14 @@ function updateFlames(dt, t) {
     e.m.position.y = 2 + e.vy * e.t;
     e.m.position.x += Math.sin(t * 2.2 + e.vy) * dt * 3;       // ゆらゆら横に流れる
     e.m.material.opacity = 0.9 * (1 - p) * (p < 0.08 ? p / 0.08 : 1);
-    const sc = 1 - p * 0.6;
+    const sc = e.sc * (1 - p * 0.6);
     e.m.scale.set(sc, sc, sc);
   }
 }
 
 function clearScenery() {
   flames.length = 0; fireLights.length = 0; embers.length = 0; doorFx.length = 0;
+  glows.length = 0; fireAmb = null;
   for (const m of [...scenery.children]) {
     scenery.remove(m);
     // Group を混ぜると geometry が無くてここで落ちる。入れ子でも確実に捨てる。
@@ -1949,6 +2043,7 @@ function project(wxp, wyp, wzp) {
 }
 
 const tagEls = new Map();   // entity.id → {tag, bubble, hp}
+const drawOrder = [];       // 名札とセリフを置く順（毎フレーム使い回す）
 function elFor(id) {
   let r = tagEls.get(id);
   if (!r) {
@@ -1979,7 +2074,15 @@ function syncLabels() {
   // 読めるようにするため、下から順に段を重ねる。画面の上に出るものだけは諦める。
   // 各要素は { cx, bottom, half, h }。bottom は吹き出しの下辺（translate -100% のため）。
   const placedBubbles = [];
-  for (const e of stage.entities) {
+  // ボスを先に置く。後回しにすると雑魚や中ボスの吹き出しに押し上げられ、箱の外
+  //（#labels は overflow:hidden）へ出て上半分が切り落とされる。裏ステージで
+  // Y下5人衆と魔王が同時に喋るとこれが起きていた。魔王のセリフがいちばん大事なので、
+  // 先に場所を取らせて、残りをその上へ積ませる。
+  drawOrder.length = 0;
+  for (const e of stage.entities) if (e.isBoss) drawOrder.push(e);
+  for (const e of stage.entities) if (e.midboss && !e.isBoss) drawOrder.push(e);
+  for (const e of stage.entities) if (!e.isBoss && !e.midboss) drawOrder.push(e);
+  for (const e of drawOrder) {
     if (!e.alive) continue;
     seen.add(e.id);
     const { tag, bubble, hp } = elFor(e.id);
@@ -2046,6 +2149,7 @@ function syncLabels() {
       bubble.textContent = e.taunt;
       bubble.classList.toggle('ally', e.team === 'ally');
       bubble.classList.toggle('boss', !!(e.isBoss || e.midboss));
+      bubble.classList.toggle('lead', !!e.isBoss);   // 本物のボスだけは必ず手前に重ねる
       bubble.style.display = 'block';
       // 大きいボスほど吹き出しが高く上がるので、画面の外へ出してしまわないよう内側に寄せる。
       // offsetWidth を読むと毎フレーム再レイアウトが走るため、級数と文字数から見積もる。
@@ -2059,7 +2163,7 @@ function syncLabels() {
       const halfW = Math.min(maxW, wantW) / 2;
       const bh = fs * 1.35 * rows + fs * 0.7;
       const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);
-      let by = Math.max(bh + 8, tagY - tagH - 9);
+      let by = Math.max(bh + hudTop, tagY - tagH - 9);
       // ぶつかる相手の真上へ逃がす。数回繰り返して、空いた段に収める。
       for (let guard = 0; guard < 8; guard++) {
         const hit = placedBubbles.find((q) =>
@@ -2067,8 +2171,13 @@ function syncLabels() {
         if (!hit) break;
         by = hit.bottom - hit.h - 5;
       }
-      // 積み上げて画面の上へ出てしまうぶんだけは出さない（ボスと中ボスは必ず出す）
-      if (by - bh < 2 && !(e.isBoss || e.midboss)) { bubble.style.display = 'none'; continue; }
+      // 積み上げた結果、箱の上へ出てしまうことがある。#labels は overflow:hidden なので、
+      // そのまま出すと上が切れて何を言ったのか読めない。ボスは重なってでも中へ戻し、
+      // それ以外は諦めて出さない（切れた吹き出しより、出ないほうがまし）。
+      if (by - bh < hudTop) {
+        if (!e.isBoss) { bubble.style.display = 'none'; continue; }
+        by = bh + hudTop;
+      }
       placedBubbles.push({ cx: bxp, bottom: by, half: halfW, h: bh });
       bubble.style.transform = `translate(-50%,-100%) translate(${bxp}px,${by}px)`;
     } else bubble.style.display = 'none';
@@ -2353,11 +2462,16 @@ function renderScreen() {
 // 画面幅で判定してはいけない: 横持ちのスマホは画面が874pxあっても、16:9の箱は
 // 高さに縛られて663pxしかない。文字だけ原寸のまま残ると箱からあふれる。
 let uiScale = 1;
+// セリフを置いてよい上限（システムバーの下）。毎フレーム測ると再レイアウトが走るので
+// resize のときだけ測る。#labels と同じ #stage の中にあるので、この差がそのまま座標になる。
+let hudTop = 8;
 function resize() {
   const box = document.getElementById('stage');
   const w = Math.max(16, box.clientWidth), h = Math.max(9, box.clientHeight);
   uiScale = Math.min(1, Math.max(0.52, w / 1100));
   box.style.setProperty('--u', uiScale.toFixed(3));
+  const bar = box.querySelector('.sysbar');
+  hudTop = bar ? Math.round(bar.getBoundingClientRect().bottom - box.getBoundingClientRect().top) + 4 : 8;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.setSize(w, h, false);
   camera.aspect = 16 / 9;   // 枠自体が16:9なので固定（2D版と画角を揃えるため）
@@ -2529,7 +2643,7 @@ function loop(now) {
   }
 
   updateAudio();
-  if (flames.length) updateFlames(frame, now / 1000);
+  if (flames.length) updateFlames(frame, now / 1000, camera);
   if (doorFx.length) {
     const o = 0.62 + 0.38 * Math.sin(now / 1000 * 3.2);
     for (const m of doorFx) m.material.opacity = m.userData.amp * o;
@@ -2576,7 +2690,7 @@ if (new URLSearchParams(location.search).get('cast') === '1') {
   const cast = [
     ['1', 'ally'], ['1', 'buka'], ['1', 'senpai'], ['1', 'staff'], ['1', 'dr'],
     ['2', 'douki_sekkei'], ['2', 'douki_genba'], ['2', 'douki_hinsho'],
-    ['2', 'gr_seizo'], ['2', 'm_gisou'], ['1', 'kyaku'],
+    ['2', 'gr_seizo'], ['2', 'm_kikai'], ['1', 'kyaku'],
     // 中ボスも並べる。見分けがつくか（特に管理担当Kとその息子）をここで確かめられる
     ['1', 'kanrik'], ['1', 'kanrik_son'], ['1', 'seikikaku'],
   ];

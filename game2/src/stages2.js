@@ -33,7 +33,7 @@ export const PALETTES2 = {
   kyoiku: { map: 'suit',   b: '#2c3348', p: '#242a3c', t: '#a03030', h: '#1a1410' },
 
   // 第2章 M菱重工（機体メーカー）— 機体側は白〜銀系
-  m_gisou:  { map: 'cap',    h: '#8a9099' }, // 艤装は現場仕事なのでキャップ
+  m_kikai:  { map: 'cap',    h: '#8a9099' }, // 機械設計。現場に降りるのでキャップ
   m_denso:  { map: 'worker', h: '#a8b4c0' },
   m_sekkei: { map: 'worker', h: '#8e9aa8' },
   m_pm:     { map: 'suit',   b: '#3a4250', p: '#303643', t: '#b0b8c2', h: '#1e1a14' },
@@ -72,7 +72,7 @@ export const LABELS2 = {
   douki_sekkei: '設計', douki_genba: '現場', douki_hinsho: '品証', shutantou: '主担当',
   chukan: '部長・課長', tsukou: '社員', pm: 'PM（課長）',
   jinji: '人事部', manner: 'マナー講師', anzen: '安全衛生', ryocho: '寮長',
-  m_gisou: '艤装', m_denso: '電装', m_sekkei: '設計課長',
+  m_kikai: '機械設計', m_denso: '電装', m_sekkei: '設計課長',
   gr_chotatsu: '調達', gr_gijutsu: '技術', gr_seizo: '製造',
   l_toiawase: '技術問合せ', l_yushutsu: '輸出管理責任者',
   lm_keiyaku: '契約', lm_cr: '変更要求', lm_shiken: '試験', lm_kanri: '契約管理',
@@ -84,7 +84,7 @@ export const COLORS2 = {
   douki_sekkei: '#7aa8ff', douki_genba: '#f0d860', douki_hinsho: '#b88ce8', shutantou: '#5cd0c8',
   chukan: '#9aa0a8', tsukou: '#aab0b8', pm: '#c8c8d8',
   jinji: '#9a9ab0', manner: '#d0a8bc', anzen: '#ff8a4a', ryocho: '#c0b070',
-  m_gisou: '#e0e4ea', m_denso: '#c0ccd8', m_sekkei: '#aab6c4',
+  m_kikai: '#e0e4ea', m_denso: '#c0ccd8', m_sekkei: '#aab6c4',
   gr_chotatsu: '#d0b060', gr_gijutsu: '#b89a50', gr_seizo: '#a08648',
   l_toiawase: '#8c9eff', l_yushutsu: '#7080e0',
   lm_keiyaku: '#c0a860', lm_cr: '#8a94b0', lm_shiken: '#7a86a0', lm_kanri: '#e0c060',
@@ -118,7 +118,7 @@ export const UNIT_TYPES2 = {
   kyoiku: { name: '教育担当課長', sprite: 'kyoiku', taunts: 'kyoiku', boss: true, scale: 1.7, hp: 20, speed: 42, reach: 29, dmg: 2, kb: 125, cooldown: 0.8, telegraph: 0.5, firstLine: '学生気分は、いつ抜けるんだ？', score: 1000 },
 
   // --- 第2章 M菱重工（同格。だが上から来る）---
-  m_gisou:  { name: '艤装担当', sprite: 'm_gisou',  taunts: 'm_gisou',  hp: 3, speed: 48, reach: 23, dmg: 1, kb: 95, cooldown: 0.75, telegraph: 0.42, score: 140 },
+  m_kikai:  { name: '機械設計', sprite: 'm_kikai',  taunts: 'm_kikai',  hp: 3, speed: 48, reach: 23, dmg: 1, kb: 95, cooldown: 0.75, telegraph: 0.42, score: 140 },
   m_denso:  { name: '電装担当', sprite: 'm_denso',  taunts: 'm_denso',  hp: 3, speed: 46, reach: 23, dmg: 1, kb: 95, cooldown: 0.78, telegraph: 0.44, score: 140 },
   m_sekkei: { name: '設計課長', sprite: 'm_sekkei', taunts: 'm_sekkei', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 27, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 700 },
   // 「載せてやっている」側。最初こちらを向かず、怯まない。
@@ -218,8 +218,8 @@ export const CHAPTERS = [
     gauges: { kouki: true },
     mobs: [{ type: 'chukan', x: 260 }, { type: 'chukan', x: 640 }, { type: 'tsukou', x: 1100 }],
     waves: [
-      { x: 380, label: '艤装調整', enemies: [{ type: 'm_gisou', count: 2 }, { type: 'm_denso', count: 1 }] },
-      { x: 760, label: '電装・熱設計', enemies: [{ type: 'm_denso', count: 2 }, { type: 'm_gisou', count: 1 }] },
+      { x: 380, label: '機械設計・重量調整', enemies: [{ type: 'm_kikai', count: 2 }, { type: 'm_denso', count: 1 }] },
+      { x: 760, label: '電装・熱設計', enemies: [{ type: 'm_denso', count: 2 }, { type: 'm_kikai', count: 1 }] },
       { x: 1050, label: '機体側 設計課長 出現！', enemies: [{ type: 'm_sekkei', count: 1 }] },
       { x: 1320, label: '帰社 — PM（課長）', enemies: [{ type: 'pm', count: 1 }] },
     ],
@@ -335,7 +335,7 @@ export const CHAPTERS = [
     mobs: [{ type: 'chukan', x: 280 }, { type: 'chukan', x: 700 }, { type: 'chukan', x: 1150 }],
     waves: [
       { x: 380, label: '再設計審査', enemies: [{ type: 'l_toiawase', count: 2 }, { type: 'lm_cr', count: 2 }] },
-      { x: 760, label: 'リカバリプラン', enemies: [{ type: 'lm_keiyaku', count: 2 }, { type: 'm_gisou', count: 2 }] },
+      { x: 760, label: 'リカバリプラン', enemies: [{ type: 'lm_keiyaku', count: 2 }, { type: 'm_kikai', count: 2 }] },
       { x: 1040, label: '検査官 出現！', enemies: [{ type: 'kensakan', count: 1 }] },
       { x: 1360, label: '四騎士 出現！', enemies: [
         { type: 'kishi_kigen', count: 1 }, { type: 'kishi_seinou', count: 1 }, { type: 'kishi_sonshitsu', count: 1 },
