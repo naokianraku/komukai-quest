@@ -16,7 +16,7 @@ Web 版の 3D（`game3d/`）をそのまま WKWebView に入れただけのア�
 | 項目 | 値 |
 |---|---|
 | 表示名 | 小向クエスト |
-| Bundle ID | com.anraku.KomukaiQuest |
+| Bundle ID | com.anraku.komukai |
 | 対象 | iOS 18.0+、iPhone、**横向きのみ**、全画面（ステータスバーなし） |
 | Team | Y5GK3529Q4 |
 | 言語 | Swift 6、SwiftUI、外部ライブラリなし |
@@ -37,14 +37,14 @@ xcodebuild test  -scheme KomukaiQuest -destination "platform=iOS Simulator,id=$S
 
 APP=build/DerivedData/Build/Products/Debug-iphonesimulator/KomukaiQuest.app
 xcrun simctl install "$SIM" "$APP"
-xcrun simctl launch  "$SIM" com.anraku.KomukaiQuest
+xcrun simctl launch  "$SIM" com.anraku.komukai
 ```
 
 場面を確かめるときは起動引数 `-game` に Web 版と同じクエリを渡す（塚越ナビの `-boardSide` と同じやり方）。
 
 ```bash
-xcrun simctl launch "iPhone 17 Pro" com.anraku.KomukaiQuest -game "stage=3&demo=1010"
-xcrun simctl launch "iPhone 17 Pro" com.anraku.KomukaiQuest -game "stage=ura&boss=1&nosheet=1"
+xcrun simctl launch "iPhone 17 Pro" com.anraku.komukai -game "stage=3&demo=1010"
+xcrun simctl launch "iPhone 17 Pro" com.anraku.komukai -game "stage=ura&boss=1&nosheet=1"
 ```
 
 使えるクエリは Web 版と同じ（`stage` `ch` `demo` `boss` `meteor` `diff` `cast` `looks` `scene` `nosheet` `noshadow`）。
@@ -104,7 +104,7 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 - App Store Connect API の手伝い: `~/Developer/tsukagoshi_app/scripts/asc.swift`
 - 配布用の鍵・証明書・プロファイル: `~/.config/apple-signing/`（使い方は同フォルダの README.md）。
   配布証明書は 5QCK22285N（2027-11-03 まで）でチーム共通
-- 小向クエスト用にまだ作っていないもの: アプリ ID（`com.anraku.KomukaiQuest`）、開発用プロファイル、
+- 小向クエスト用にまだ作っていないもの: アプリ ID（`com.anraku.komukai`）、開発用プロファイル、
   配布用プロファイル、App Store Connect のアプリ登録
 - `codesign` が errSecInternalComponent で落ちたら、本人に VS Code のターミナルで
   `security unlock-keychain ~/Library/Keychains/login.keychain-db` を打ってもらう

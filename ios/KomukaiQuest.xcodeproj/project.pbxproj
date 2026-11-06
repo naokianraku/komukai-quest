@@ -222,9 +222,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuest;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.komukai;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -290,7 +290,6 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -338,9 +337,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuest;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.komukai;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -399,7 +398,6 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

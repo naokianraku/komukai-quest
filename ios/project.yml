@@ -10,14 +10,20 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: Y5GK3529Q4
     CODE_SIGN_STYLE: Automatic
-    # iPhone だけ。省略すると iPad も対象の universal になり、審査に iPad の
-    # スクリーンショットが要るうえ、触っていない4:3の画面で審査されることになる。
-    TARGETED_DEVICE_FAMILY: "1"
 
 targets:
   KomukaiQuest:
     type: application
     platform: iOS
+    # 既定だと prefix + ターゲット名で com.anraku.KomukaiQuest になる。
+    # 塚越ナビ・MaxSauna と同じく全部小文字で揃える（後から変えられないので）。
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anraku.komukai
+        # iPhone だけ。省略すると iPad も対象の universal になり、審査に iPad の
+        # スクリーンショットが要るうえ、触っていない4:3の画面で審査される。
+        # プロジェクト側に書いても、XcodeGen がターゲット側に "1,2" を書くので負ける。
+        TARGETED_DEVICE_FAMILY: "1"
     sources:
       - path: Sources
       - path: Resources
