@@ -9,17 +9,30 @@
 /* Begin PBXBuildFile section */
 		181AA049F34E88068D69D38E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC7BC4E572BD848DFA67233E /* Assets.xcassets */; };
 		7292D12788DCC62AF70E379F /* KomukaiQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */; };
+		952324466A6FD8BEE135ED4D /* GameUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2638C659BA74EF1196ED672 /* GameUITests.swift */; };
 		AEC1192483AD6514E66223BE /* game in Resources */ = {isa = PBXBuildFile; fileRef = F98FBDC0B386E3121043AD7B /* game */; };
 		C039F78D8E2ACA473972EE1A /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F480B9E32EC1A5044448760A /* GameView.swift */; };
 		CCBD6F1F0DBA880B7292990A /* GameScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */; };
 		FD5119EB5BF0482606C02D50 /* game3d in Resources */ = {isa = PBXBuildFile; fileRef = 20FD478F833969F119D65FF1 /* game3d */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		CC8F438397DEA6008E92A31C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FED50DC0B4E242C5DB05810E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8FD47131980746FA9E605225;
+			remoteInfo = KomukaiQuest;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScheme.swift; sourceTree = "<group>"; };
 		20FD478F833969F119D65FF1 /* game3d */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game3d; path = ../game3d; sourceTree = SOURCE_ROOT; };
 		544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KomukaiQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		64F7C12BD56AC7F98B65CAFE /* KomukaiQuestUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KomukaiQuestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KomukaiQuestApp.swift; sourceTree = "<group>"; };
+		A2638C659BA74EF1196ED672 /* GameUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameUITests.swift; sourceTree = "<group>"; };
 		DC7BC4E572BD848DFA67233E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F480B9E32EC1A5044448760A /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
 		F98FBDC0B386E3121043AD7B /* game */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game; path = ../game; sourceTree = SOURCE_ROOT; };
@@ -33,8 +46,17 @@
 				20FD478F833969F119D65FF1 /* game3d */,
 				CFFB3F86319813380C853B9F /* Resources */,
 				8C1D8A46C11AF9FB4669B75B /* Sources */,
+				6ECF42BEB319CE4C9DEFE615 /* Tests */,
 				9EAE67FF03CFEA38BCE463D9 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		6ECF42BEB319CE4C9DEFE615 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				A2638C659BA74EF1196ED672 /* GameUITests.swift */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		8C1D8A46C11AF9FB4669B75B /* Sources */ = {
@@ -51,6 +73,7 @@
 			isa = PBXGroup;
 			children = (
 				544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */,
+				64F7C12BD56AC7F98B65CAFE /* KomukaiQuestUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -84,6 +107,24 @@
 			productReference = 544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A9F26BC66F700CCBA09D2CFF /* KomukaiQuestUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 65D54B99767A76EA1E131BB2 /* Build configuration list for PBXNativeTarget "KomukaiQuestUITests" */;
+			buildPhases = (
+				9F84ACB109BF0736A8C49602 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				328FE79D29B308D0E19D2905 /* PBXTargetDependency */,
+			);
+			name = KomukaiQuestUITests;
+			packageProductDependencies = (
+			);
+			productName = KomukaiQuestUITests;
+			productReference = 64F7C12BD56AC7F98B65CAFE /* KomukaiQuestUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -96,6 +137,11 @@
 					8FD47131980746FA9E605225 = {
 						DevelopmentTeam = Y5GK3529Q4;
 						ProvisioningStyle = Automatic;
+					};
+					A9F26BC66F700CCBA09D2CFF = {
+						DevelopmentTeam = Y5GK3529Q4;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 8FD47131980746FA9E605225;
 					};
 				};
 			};
@@ -114,6 +160,7 @@
 			projectRoot = "";
 			targets = (
 				8FD47131980746FA9E605225 /* KomukaiQuest */,
+				A9F26BC66F700CCBA09D2CFF /* KomukaiQuestUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -142,7 +189,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9F84ACB109BF0736A8C49602 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				952324466A6FD8BEE135ED4D /* GameUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		328FE79D29B308D0E19D2905 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8FD47131980746FA9E605225 /* KomukaiQuest */;
+			targetProxy = CC8F438397DEA6008E92A31C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2D3C4044413B59519CDB47AC /* Debug */ = {
@@ -226,6 +289,40 @@
 			};
 			name = Debug;
 		};
+		81301210DFF7FCBFA2BB7A4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuestUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KomukaiQuest;
+			};
+			name = Release;
+		};
+		D1BA457298410AC81E36F119 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuestUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KomukaiQuest;
+			};
+			name = Debug;
+		};
 		D2DC5E68BC930AB4AD1FC3E8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -303,6 +400,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		65D54B99767A76EA1E131BB2 /* Build configuration list for PBXNativeTarget "KomukaiQuestUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D1BA457298410AC81E36F119 /* Debug */,
+				81301210DFF7FCBFA2BB7A4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		C05C52CEA28019D586702B29 /* Build configuration list for PBXProject "KomukaiQuest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

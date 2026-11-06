@@ -24,13 +24,20 @@ Web 版の 3D（`game3d/`）をそのまま WKWebView に入れただけのア�
 
 ## ビルド・確認
 
+**端末は名前ではなく UDID で指定すること。** この Mac には同じ名前のシミュレーターが
+複数あり、MaxSauna や塚越ナビのセッションと取り合いになる。UI テストの途中で
+ほかのアプリに画面を取られると落ちる。`xcrun simctl list devices available` で
+誰も使っていないものを選ぶ。
+
 ```bash
-xcodegen   # Sources/ や Resources/ にファイルを足したとき（ゲームのファイルは不要）
-xcodebuild build -scheme KomukaiQuest -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath build/DerivedData -quiet
+SIM=264BF619-05C9-481D-BA48-FA014B4398F0   # iPhone 17 Pro Max / iOS 26.4
+xcodegen   # Sources/ Tests/ Resources/ にファイルを足したとき（ゲームのファイルは不要）
+xcodebuild build -scheme KomukaiQuest -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/DerivedData -quiet
+xcodebuild test  -scheme KomukaiQuest -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/DerivedData
 
 APP=build/DerivedData/Build/Products/Debug-iphonesimulator/KomukaiQuest.app
-xcrun simctl install "iPhone 17 Pro" "$APP"
-xcrun simctl launch  "iPhone 17 Pro" com.anraku.KomukaiQuest
+xcrun simctl install "$SIM" "$APP"
+xcrun simctl launch  "$SIM" com.anraku.KomukaiQuest
 ```
 
 場面を確かめるときは起動引数 `-game` に Web 版と同じクエリを渡す（塚越ナビの `-boardSide` と同じやり方）。
@@ -49,6 +56,30 @@ xcrun simctl launch "iPhone 17 Pro" com.anraku.KomukaiQuest -game "stage=ura&bos
 swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.png
 ```
 
+## UIテスト（本物のタップで確かめる）
+
+`Tests/GameUITests.swift`。シミュレーターに実際にタップとドラッグを流して、4つを見る。
+
+| 見るもの | なぜ要るか |
+|---|---|
+| タッチ端末として認識し、操作UIを描く | ここが false だとボタンが1つも描かれず、指で何もできない |
+| 「はじめる」を押すと始まる | タイトルはボタン以外を押しても始まらない作り。押せているかは外からしか分からない |
+| 攻撃ボタンを押すと光る | タッチが WKWebView を越えて canvas まで届いている証拠 |
+| スティックを倒すと景色が動く | 歩けている証拠 |
+
+仕組み: WKWebView の中（canvas と three.js の絵）は XCUITest から一切見えない。
+アプリを `-uitest 1` で起動すると、`GameView.probeJS` が 0.25 秒ごとにページを覗いて、
+結果を**見えない文字**（`accessibilityIdentifier("gamestate")`）に書き出す。テストはそれを読む。
+覗き見が返す座標は CSS px ＝ UIKit のポイントなので、そのまま `XCUICoordinate` で押せる。
+
+はまったこと:
+- **WKWebView をアクセシビリティの木から外さないと tap が失敗する。** 外さないと XCUITest が
+  ページ全体をなめに行き、タップ前の「画面が落ち着くまで待つ」が終わらない（実測 324 秒かけて失敗）。
+  `web.accessibilityElementsHidden = true`（UIテストのときだけ）で直る
+- **`press(forDuration:)` は指を離してから返る。** 押下中の光りを外から覗くことはできないので、
+  いちばん光ったときの値をページ側（`window.__peak`）で覚えている
+- 「はじめる」の次はすぐ戦闘ではなく作業指示書（intro）。紙は出たままなので `screen` は `flex` のまま
+
 ## 作りの要点（はまりどころ）
 
 - **`file://` では動かない。** ES モジュール（`import`）は file:// のページだとオリジンが null 扱いになり、
@@ -60,8 +91,32 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 - BGM は `.ambient`＝消音スイッチに従う。ゲーム内にもミュートがある
 - 攻撃ボタンが下端に近いので `.defersSystemGestures(on: .bottom)` を入れてある（1回目の下端スワイプでホームに戻らない）
 
+## 実機に入れる・App Store に出す（塚越ナビのセッションからの引き継ぎ）
+
+**この Mac では Xcode の自動署名が通らない。** Xcode に Apple のアカウントが無く、
+API キーを付けた `-allowProvisioningUpdates` も Authentication failed で止まる
+（塚越・MaxSauna で確認済み）。実機用のビルドは App Store Connect API でアプリ ID と
+プロファイルを作り、手動署名する。`project.yml` は `CODE_SIGN_STYLE: Automatic` のままなので、
+実機ビルドのときはコマンドラインで `CODE_SIGN_STYLE=Manual` を上書きする。
+
+- 手本: `~/Developer/tsukagoshi_app/scripts/install_on_iphone.sh`（実機）、
+  `~/Developer/tsukagoshi_app/scripts/release_testflight.sh`（TestFlight。`--no-upload` で ipa 止め）
+- App Store Connect API の手伝い: `~/Developer/tsukagoshi_app/scripts/asc.swift`
+- 配布用の鍵・証明書・プロファイル: `~/.config/apple-signing/`（使い方は同フォルダの README.md）。
+  配布証明書は 5QCK22285N（2027-11-03 まで）でチーム共通
+- 小向クエスト用にまだ作っていないもの: アプリ ID（`com.anraku.KomukaiQuest`）、開発用プロファイル、
+  配布用プロファイル、App Store Connect のアプリ登録
+- `codesign` が errSecInternalComponent で落ちたら、本人に VS Code のターミナルで
+  `security unlock-keychain ~/Library/Keychains/login.keychain-db` を打ってもらう
+- 審査メモに書くこと（推論）: ゲームを丸ごと同梱していてオフラインでも動くこと
+  （ガイドライン 4.2 対策）。社名を伏せていること
+- **審査への提出と公開は本人のはっきりした OK が要る**
+
 ## まだやっていないこと
 
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
+- **実機での確認**。音（`.ambient` が実機でどう鳴るか）、発熱とフレームレート、
+  横向きでの切り欠きの避け方は、シミュレーターでは分からない
 - 実機への配布・App Store 申請。掲載文・スクリーンショット・審査メモも未作成
-- 実機での確認（シミュレーターのみ）。特に音と、指でボタンを押したときの当たりは実機で見ること
+- プライバシーマニフェスト（`PrivacyInfo.xcprivacy`）。`UserDefaults` は required reason API に
+  当たるはずで、申請前に要るかどうかを確かめること

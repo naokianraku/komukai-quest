@@ -44,3 +44,29 @@ targets:
         UIRequiresFullScreen: true
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
+
+  # 本物のタップでゲームが動くかを確かめる。canvas の中は見えないので、
+  # アプリ側（-uitest 1）が JavaScript で覗いた結果を読んで判定する。
+  KomukaiQuestUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: KomukaiQuest
+
+schemes:
+  KomukaiQuest:
+    build:
+      targets:
+        KomukaiQuest: all
+        KomukaiQuestUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - KomukaiQuestUITests
