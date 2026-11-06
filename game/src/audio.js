@@ -93,6 +93,10 @@ export const Audio = {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.muted ? 0 : 0.2;
     this.master.connect(this.ctx.destination);
+    // 割り込みが明けたら自分で戻る。ボタンを押させない（iPhoneでは押す場所も無い）。
+    this.ctx.addEventListener('statechange', () => {
+      if (this.enabled && this.ctx.state !== 'running') this.ctx.resume();
+    });
     // 効果音用ホワイトノイズ素材
     const len = Math.floor(this.ctx.sampleRate * 0.3);
     const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
@@ -105,7 +109,9 @@ export const Audio = {
   resume() {
     this.ensure();
     if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    // WebKit には標準に無い4つめの状態 'interrupted' がある（電話・Siri・タイマー）。
+    // 'suspended' だけを見ていると、割り込みのあと二度と音が戻らない。
+    if (this.ctx.state !== 'running') this.ctx.resume();
     this.enabled = true;
     if (this._track) this._start(this._track);
   },

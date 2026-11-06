@@ -10,6 +10,9 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: Y5GK3529Q4
     CODE_SIGN_STYLE: Automatic
+    # iPhone だけ。省略すると iPad も対象の universal になり、審査に iPad の
+    # スクリーンショットが要るうえ、触っていない4:3の画面で審査されることになる。
+    TARGETED_DEVICE_FAMILY: "1"
 
 targets:
   KomukaiQuest:
@@ -41,7 +44,6 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        UIRequiresFullScreen: true
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
 

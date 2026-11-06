@@ -40,7 +40,10 @@ struct GameView: UIViewRepresentable {
         web.scrollView.bounces = false
         web.scrollView.contentInsetAdjustmentBehavior = .never
         web.allowsBackForwardNavigationGestures = false
-        if #available(iOS 16.4, *) { web.isInspectable = true }   // Mac の Safari から覗ける
+        // Mac の Safari から中を覗ける。配布するビルドでは開けないようにする。
+        #if DEBUG
+        if #available(iOS 16.4, *) { web.isInspectable = true }
+        #endif
 
         web.load(URLRequest(url: GameSchemeHandler.url(query: Self.query)))
 
@@ -55,7 +58,7 @@ struct GameView: UIViewRepresentable {
     /// シミュレーターで場面を確かめるときは起動引数を足す（塚越ナビと同じやり方）:
     ///   -game "stage=3&demo=1010"   第3ステージの途中から
     ///   -game "stage=ura&boss=1"    魔王戦をすぐ
-    private static var query: String {
+    static var query: String {
         var q = "app=1"
         if let extra = UserDefaults.standard.string(forKey: "game"), !extra.isEmpty {
             q += "&" + extra
@@ -109,6 +112,7 @@ struct GameView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate {
         let handler = GameSchemeHandler(root: Bundle.main.bundleURL)
         private var task: Task<Void, Never>?
+        private var retried = false
 
         deinit { task?.cancel() }
 
@@ -128,6 +132,25 @@ struct GameView: UIViewRepresentable {
                     probe.state = (r as? String) ?? ""
                 }
             }
+        }
+
+        /// WKWebView の中身は別プロセスで動いていて、裏に回っているあいだに
+        /// OS に回収されることがある（three.js + WebGL は真っ先に切られる側）。
+        /// 戻すものが無いと、画面いっぱいの WKWebView が空になって真っ黒のまま固まる。
+        /// アプリ側に他のUIが無いので、押せる場所も無い。必ず貼り直す。
+        /// 独自スキームだと履歴が無く reload() が空振りすることがあるので、
+        /// 起動時と同じ URL を投げ直す。
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            webView.load(URLRequest(url: GameSchemeHandler.url(query: GameView.query)))
+        }
+
+        /// 最初の読み込みに失敗したときも、同じく黒いままになる。1回だけやり直す。
+        func webView(_ webView: WKWebView,
+                     didFailProvisionalNavigation navigation: WKNavigation!,
+                     withError error: Error) {
+            guard !retried else { return }
+            retried = true
+            webView.load(URLRequest(url: GameSchemeHandler.url(query: GameView.query)))
         }
 
         /// 外のリンク（あそびかた等）はアプリの中で開かず、Safari に渡す。

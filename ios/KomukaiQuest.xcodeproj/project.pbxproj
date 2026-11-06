@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		181AA049F34E88068D69D38E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC7BC4E572BD848DFA67233E /* Assets.xcassets */; };
 		7292D12788DCC62AF70E379F /* KomukaiQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */; };
+		94037B42574E82982EAC163B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0BF71370111EE49876BDEC92 /* PrivacyInfo.xcprivacy */; };
 		952324466A6FD8BEE135ED4D /* GameUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2638C659BA74EF1196ED672 /* GameUITests.swift */; };
 		AEC1192483AD6514E66223BE /* game in Resources */ = {isa = PBXBuildFile; fileRef = F98FBDC0B386E3121043AD7B /* game */; };
 		C039F78D8E2ACA473972EE1A /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F480B9E32EC1A5044448760A /* GameView.swift */; };
@@ -27,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0BF71370111EE49876BDEC92 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScheme.swift; sourceTree = "<group>"; };
 		20FD478F833969F119D65FF1 /* game3d */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game3d; path = ../game3d; sourceTree = SOURCE_ROOT; };
 		544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KomukaiQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				DC7BC4E572BD848DFA67233E /* Assets.xcassets */,
+				0BF71370111EE49876BDEC92 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -171,6 +174,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				181AA049F34E88068D69D38E /* Assets.xcassets in Resources */,
+				94037B42574E82982EAC163B /* PrivacyInfo.xcprivacy in Resources */,
 				AEC1192483AD6514E66223BE /* game in Resources */,
 				FD5119EB5BF0482606C02D50 /* game3d in Resources */,
 			);
@@ -286,6 +290,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -394,6 +399,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
