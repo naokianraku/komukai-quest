@@ -91,6 +91,44 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 - BGM は `.ambient`＝消音スイッチに従う。ゲーム内にもミュートがある
 - 攻撃ボタンが下端に近いので `.defersSystemGestures(on: .bottom)` を入れてある（1回目の下端スワイプでホームに戻らない）
 
+## App Store Connect の登録内容（2026-11-06 時点）
+
+| 項目 | 値 |
+|---|---|
+| App ID | 6831629914 |
+| Bundle ID / SKU | com.anraku.komukai / komukai-quest |
+| App ID（Developer Portal） | 993QCH23TK |
+| 配布用プロファイル | Komukai Quest App Store（2027-11-03まで）。`~/.config/apple-signing/profiles/komukai_appstore.mobileprovision` |
+| TestFlight 内部グループ | 「自分」 38b530a4-230e-46cb-a927-fe57421ac250（全ビルド自動配布） |
+| バージョン 1.0 | PREPARE_FOR_SUBMISSION / releaseType=AFTER_APPROVAL（審査通過後に自動公開） |
+| 上がっているビルド | 1（VALID・IN_BETA_TESTING） |
+
+**審査には出していない。** 提出は本人のはっきりした OK が要る（公開は自動公開の設定済み）。
+
+### TestFlight に上げ直す手順
+
+```bash
+cd ios
+# 1) 版番号を上げる（project.yml の CFBundleVersion。同じ番号は受け取ってもらえない）
+xcodegen
+W=/tmp/komukai-dist && mkdir -p $W
+# 2) 署名せずにアーカイブ
+xcodebuild archive -scheme KomukaiQuest -configuration Release -destination generic/platform=iOS \
+  -archivePath $W/KomukaiQuest.xcarchive -derivedDataPath build/DerivedData-dist \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+# 3) 一時キーチェーンで署名して ipa にする（手本: scratchpad の dist/sign.sh、元は塚越ナビの release_testflight.sh）
+# 4) 上げる。--p8-file-path を付けないと鍵を見つけられない
+xcrun altool --upload-app -f $W/KomukaiQuest.ipa -t ios \
+  --apiKey L8Y672436D --apiIssuer 680220f7-3bcc-4a35-ba12-ab586d451466 \
+  --p8-file-path ~/Developer/max_sauna_timer/appstore_drafts/handoff/keys/AuthKey_L8Y672436D.p8
+```
+
+はまったこと:
+- `altool` は `--apiKey` だけだと `./private_keys` などの決まった場所しか探さない。**`--p8-file-path` が要る**
+- 内部グループに `hasAccessToAllBuilds: true` を付けると、ビルドを個別に割り当てようとしても
+  422（Cannot add internal group to a build）になる。自動で配られるので割り当て不要
+- 別アプリの betaTester は使い回せない（409）。アプリごとに作る
+
 ## 実機に入れる・App Store に出す（塚越ナビのセッションからの引き継ぎ）
 
 **この Mac では Xcode の自動署名が通らない。** Xcode に Apple のアカウントが無く、
@@ -117,6 +155,6 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
 - **実機での確認**。音（`.ambient` が実機でどう鳴るか）、発熱とフレームレート、
   横向きでの切り欠きの避け方は、シミュレーターでは分からない
-- 実機への配布・App Store 申請。掲載文・スクリーンショット・審査メモも未作成
+- App Store 申請。掲載文・スクリーンショット・審査メモが未作成（TestFlight までは済んでいる）
 - プライバシーマニフェスト（`PrivacyInfo.xcprivacy`）。`UserDefaults` は required reason API に
   当たるはずで、申請前に要るかどうかを確かめること
