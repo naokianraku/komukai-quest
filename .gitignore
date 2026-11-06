@@ -3,6 +3,14 @@
 # セリフ一覧・変換ツール・バックアップは外部公開しない（ローカル限定）
 セリフ一覧.md
 scripts/
+# ただし iPhone アプリのスクリプトは中身なので追跡する（上の scripts/ に巻き込まれるため）
+!ios/scripts/
+!ios/scripts/**
 game/src/taunts.js.bak
 ゴールデンエイジ編_構成.md
 セリフ一覧2.md
+
+# Xcode（iPhone アプリ）
+ios/build/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate

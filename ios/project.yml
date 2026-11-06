@@ -1,0 +1,46 @@
+name: KomukaiQuest
+options:
+  bundleIdPrefix: com.anraku
+  developmentLanguage: ja
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "26.4"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: Y5GK3529Q4
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  KomukaiQuest:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources
+      # ゲーム本体。青フォルダ（type: folder）でそのままアプリへ入れる。
+      # リポジトリの置き方のまま入るので、game3d から ../../game/src/... への
+      # 相対の読み込みがアプリの中でもそのまま通る。
+      - path: ../game3d
+        type: folder
+        buildPhase: resources
+      - path: ../game
+        type: folder
+        buildPhase: resources
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: 小向クエスト
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        # 16:9 の横画面のゲーム。縦は持たせない（Webの縦持ち回転は使わない）
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false

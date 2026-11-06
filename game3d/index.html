@@ -262,7 +262,19 @@
   #hint b{color:var(--sub);font-weight:600}
   /* HUDの大きさは --u が面倒を見るので、ここでやるのはキーボードの案内を消すことだけ。
      指で遊ぶ端末に「移動: ←↑↓→」と出しても意味がない。 */
-  @media (max-width:620px), (pointer:coarse){ #hint{display:none} }
+  @media (max-width:620px), (pointer:coarse){
+    #hint{display:none}
+    /* 操作の案内を出していないのだから、その行ぶんの高さを空けておく理由もない。
+       箱を画面の高さいっぱいまで使う。 */
+    #frame{gap:0}
+    #stage{width:min(100%, calc(100dvh * 16 / 9));max-height:100%}
+  }
+  /* iPhone アプリ（WKWebView）。ページの中の「箱」ではなく画面そのものなので、
+     枠・角丸・影は出さない。16:9 より横長の端末では左右が黒帯になるが、
+     画角は2D版と揃える決まりなので引き伸ばさない。 */
+  html[data-app] #frame{gap:0;padding:0}
+  html[data-app] #stage{width:min(100%, calc(100dvh * 16 / 9));max-height:100%;
+    border:0;border-radius:0;box-shadow:none}
 
   /* 縦持ちのスマホ。16:9の画面を縦長の端末に入れると高さの26%しか使えないので、
      箱ごと90°回して縦画面いっぱいに出す。横スクロールのゲームなので向きは横で固定。
@@ -277,6 +289,11 @@
       border-radius:0;border:0}
   }
 </style>
+<script>
+  // アプリから ?app=1 で開かれたときだけ、枠を外して画面いっぱいにする（上のCSS）。
+  // 描画が始まる前に付けたいので、モジュールではなくここで実行する。
+  if (new URLSearchParams(location.search).has('app')) document.documentElement.dataset.app = '1';
+</script>
 </head>
 <body>
   <div id="frame">

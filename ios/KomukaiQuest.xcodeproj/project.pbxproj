@@ -1,0 +1,327 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		181AA049F34E88068D69D38E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC7BC4E572BD848DFA67233E /* Assets.xcassets */; };
+		7292D12788DCC62AF70E379F /* KomukaiQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */; };
+		AEC1192483AD6514E66223BE /* game in Resources */ = {isa = PBXBuildFile; fileRef = F98FBDC0B386E3121043AD7B /* game */; };
+		C039F78D8E2ACA473972EE1A /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F480B9E32EC1A5044448760A /* GameView.swift */; };
+		CCBD6F1F0DBA880B7292990A /* GameScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */; };
+		FD5119EB5BF0482606C02D50 /* game3d in Resources */ = {isa = PBXBuildFile; fileRef = 20FD478F833969F119D65FF1 /* game3d */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScheme.swift; sourceTree = "<group>"; };
+		20FD478F833969F119D65FF1 /* game3d */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game3d; path = ../game3d; sourceTree = SOURCE_ROOT; };
+		544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KomukaiQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KomukaiQuestApp.swift; sourceTree = "<group>"; };
+		DC7BC4E572BD848DFA67233E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F480B9E32EC1A5044448760A /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		F98FBDC0B386E3121043AD7B /* game */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game; path = ../game; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		5EBF369C988C9456EAD9BA2C = {
+			isa = PBXGroup;
+			children = (
+				F98FBDC0B386E3121043AD7B /* game */,
+				20FD478F833969F119D65FF1 /* game3d */,
+				CFFB3F86319813380C853B9F /* Resources */,
+				8C1D8A46C11AF9FB4669B75B /* Sources */,
+				9EAE67FF03CFEA38BCE463D9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		8C1D8A46C11AF9FB4669B75B /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */,
+				F480B9E32EC1A5044448760A /* GameView.swift */,
+				74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		9EAE67FF03CFEA38BCE463D9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CFFB3F86319813380C853B9F /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DC7BC4E572BD848DFA67233E /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8FD47131980746FA9E605225 /* KomukaiQuest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA4C881231CD6A24295F81C6 /* Build configuration list for PBXNativeTarget "KomukaiQuest" */;
+			buildPhases = (
+				4D1D0E04961ABB7E702D0BB8 /* Sources */,
+				C3438E4BEAA9D5F63C065973 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KomukaiQuest;
+			packageProductDependencies = (
+			);
+			productName = KomukaiQuest;
+			productReference = 544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FED50DC0B4E242C5DB05810E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					8FD47131980746FA9E605225 = {
+						DevelopmentTeam = Y5GK3529Q4;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C05C52CEA28019D586702B29 /* Build configuration list for PBXProject "KomukaiQuest" */;
+			developmentRegion = ja;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				ja,
+			);
+			mainGroup = 5EBF369C988C9456EAD9BA2C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9EAE67FF03CFEA38BCE463D9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8FD47131980746FA9E605225 /* KomukaiQuest */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C3438E4BEAA9D5F63C065973 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				181AA049F34E88068D69D38E /* Assets.xcassets in Resources */,
+				AEC1192483AD6514E66223BE /* game in Resources */,
+				FD5119EB5BF0482606C02D50 /* game3d in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4D1D0E04961ABB7E702D0BB8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCBD6F1F0DBA880B7292990A /* GameScheme.swift in Sources */,
+				C039F78D8E2ACA473972EE1A /* GameView.swift in Sources */,
+				7292D12788DCC62AF70E379F /* KomukaiQuestApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2D3C4044413B59519CDB47AC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuest;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7CE9144D842B63DF3851489A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = Y5GK3529Q4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		D2DC5E68BC930AB4AD1FC3E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.anraku.KomukaiQuest;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F90A26158D20A5BD113AB4E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = Y5GK3529Q4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C05C52CEA28019D586702B29 /* Build configuration list for PBXProject "KomukaiQuest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7CE9144D842B63DF3851489A /* Debug */,
+				F90A26158D20A5BD113AB4E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA4C881231CD6A24295F81C6 /* Build configuration list for PBXNativeTarget "KomukaiQuest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2D3C4044413B59519CDB47AC /* Debug */,
+				D2DC5E68BC930AB4AD1FC3E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FED50DC0B4E242C5DB05810E /* Project object */;
+}

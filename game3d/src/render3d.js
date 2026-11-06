@@ -3,7 +3,9 @@
 // ゲームロジックは一切持たない。Stage / Game をシェル側（main3d.js, main2-3d.js）が
 // 作り、setStage / setGame で渡す。ここは渡されたものを毎フレーム描くだけ。
 // 場面（背景）・キャラのメッシュ・武器・飛び道具・粒子・名札と吹き出し・カメラが中身。
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+// three.js は CDN ではなく同梱のものを読む。iPhone アプリは機内でも動く必要があるし、
+// 外部のCDNが落ちたらゲームごと動かなくなる。版は 0.160.0 で固定（game3d/vendor/）。
+import * as THREE from '../vendor/three.module.js';
 import { PLAY, setPlay, playMid } from '../../game/src/config.js';
 import { buildChar3DSplitForType, LEG, C3 } from '../../game/src/voxel.js';
 import { TYPE_LABEL, TYPE_COLOR } from '../../game/src/sprites.js';
