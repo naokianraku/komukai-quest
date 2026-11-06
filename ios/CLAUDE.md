@@ -100,10 +100,41 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | App ID（Developer Portal） | 993QCH23TK |
 | 配布用プロファイル | Komukai Quest App Store（2027-11-03まで）。`~/.config/apple-signing/profiles/komukai_appstore.mobileprovision` |
 | TestFlight 内部グループ | 「自分」 38b530a4-230e-46cb-a927-fe57421ac250（全ビルド自動配布） |
-| バージョン 1.0 | PREPARE_FOR_SUBMISSION / releaseType=AFTER_APPROVAL（審査通過後に自動公開） |
+| バージョン 1.0 | **WAITING_FOR_REVIEW（2026-11-06 23:52 提出）** / releaseType=AFTER_APPROVAL（審査通過後に自動公開） |
 | 上がっているビルド | 1（VALID・IN_BETA_TESTING） |
+| 価格・配信 | 無料 / **日本のみ**（新しい国には自動で広げない） |
+| 年齢区分 | **12+**（ブラジル14・韓国12） |
+| 提出 ID | 589f4756-b439-4976-8ea3-1d506286fbfc |
 
-**審査には出していない。** 提出は本人のはっきりした OK が要る（公開は自動公開の設定済み）。
+**2026-11-06 に本人の OK をもらって審査に提出済み。** 通れば自動で公開される。
+
+### 提出のときに入れたもの
+
+| 欄 | 中身 |
+|---|---|
+| 掲載文・キーワード・プロモ文 | `Design/appstore/*.txt`（本文1432字・キーワード88字・プロモ161字） |
+| サブタイトル | 工場を生き残れ。有休が残機のアクション |
+| スクリーンショット | 6枚・2868×1320（6.9インチ）。元は `Design/appstore/screenshots/` |
+| サポート / プライバシー | anraku-tech.com/komukai/support ・ /privacy（`website-anrakutech`） |
+| 審査メモ | `Design/appstore/review_notes.txt` |
+| 著作権 | 2026 Naoki Anraku |
+| データ収集 | 「収集なし」で申告・公開済み |
+| 権利の申告 | USES_THIRD_PARTY_CONTENT（three.js を同梱しているため。塚越ナビと同じ） |
+
+### 提出ではまったこと（次の版でも同じ順で詰まる）
+
+API だけでは最後まで行けない。**「App のプライバシー」だけは API に口が無く、ブラウザで入れる**
+（`/apps/<id>/distribution/privacy` →「はじめに」→ 収集しない → 保存 →「公開」）。
+これを入れないと `reviewSubmissionItems` の POST が 409 STATE_ERROR で、理由は返ってこない。
+**理由はブラウザのバージョン画面で「審査用に追加」を押すと赤字で出る。** 行き詰まったらまずそれ。
+
+- `ageRatingDeclarations` は `ageRatingOverride`（旧）と `ageRatingOverrideV2` を同時に送ると 409。新しい方だけ送る
+- `appAvailabilities` の POST は **175 か国・地域を全部 included に並べないと 409**。日本だけ `available: true` にして残りは false
+- 価格は `appPriceSchedules` を POST（日本を基準に、無料の価格帯 `customerPrice: '0'` を `manualPrices` に）
+- **著作権（`copyright`）が空だと提出できない。** これで 1 回弾かれた
+- スクリーンショットは上げたあと `UPLOAD_COMPLETE` のまま進まないことがある（6枚中2枚）。
+  エラーは空。**消して上げ直せば通る**
+- 画像の PUT は `uploadOperations` の URL へ素の curl。`asc.swift` は JSON しか投げられない
 
 ### TestFlight に上げ直す手順
 
@@ -148,13 +179,11 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
   `security unlock-keychain ~/Library/Keychains/login.keychain-db` を打ってもらう
 - 審査メモに書くこと（推論）: ゲームを丸ごと同梱していてオフラインでも動くこと
   （ガイドライン 4.2 対策）。社名を伏せていること
-- **審査への提出と公開は本人のはっきりした OK が要る**
+- **審査への提出は本人のはっきりした OK が要る。** 1.0 は 2026-11-06 に OK をもらって提出済み。
+  次の版も同じで、上げ直すところまでは進んでよいが、提出の前に必ず訊く
 
 ## まだやっていないこと
 
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
-- **実機での確認**。音（`.ambient` が実機でどう鳴るか）、発熱とフレームレート、
-  横向きでの切り欠きの避け方は、シミュレーターでは分からない
-- App Store 申請。掲載文・スクリーンショット・審査メモが未作成（TestFlight までは済んでいる）
-- プライバシーマニフェスト（`PrivacyInfo.xcprivacy`）。`UserDefaults` は required reason API に
-  当たるはずで、申請前に要るかどうかを確かめること
+- ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
+- 審査の結果待ち（2026-11-06 提出）。落ちたら理由を見て直す
