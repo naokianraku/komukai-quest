@@ -41,7 +41,7 @@ targets:
       properties:
         CFBundleDisplayName: 小向クエスト
         CFBundleShortVersionString: "1.0.1"
-        CFBundleVersion: "2"
+        CFBundleVersion: "3"
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
