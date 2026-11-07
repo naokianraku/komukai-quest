@@ -95,7 +95,7 @@ export class Stage {
         { kind: 'missile', dmg: 2, kb: 130, w: 8, homing: true, target },
       ));
     } else if (THROWS[thrower.projKind] || thrower.projKind === 'junk') {
-      // 一升瓶（中村）や鉄パイプ・鉄アレイ・パソコン（魔王Y下）。山なりに投げて落とす。
+      // 一升瓶（N村）や鉄パイプ・鉄アレイ・パソコン（魔王Y下）。山なりに投げて落とす。
       // 魔王は投げるたびに中身が変わる。同じ弾の見た目が途中で変わらないよう、ここで決めてしまう。
       const look = thrower.projKind === 'junk'
         ? JUNK[(thrower.throwN = (thrower.throwN || 0) + 1) % JUNK.length]

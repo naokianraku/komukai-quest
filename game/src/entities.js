@@ -299,7 +299,7 @@ export class Char extends Entity {
     // 崩れ落ちる時間。ボスは「ガラガラと」見せたいので長め、中ボスは短め。
     this.downDur = def.downDur ?? (def.boss ? 3.4 : 2.6);
     this.dying = false; this.downT = 0;
-    // 大振り（中村の一升瓶の振り回し）。これも def に無ければ一切出さない。
+    // 大振り（N村の一升瓶の振り回し）。これも def に無ければ一切出さない。
     this.swingDef = def.swing || null;
     this.swingT = this.swingDef ? (this.swingDef.first ?? 3.0) : 0;
     this.swinging = false;
@@ -536,7 +536,7 @@ export class Char extends Entity {
     if (this.tauntCat) this.setTaunt(); // 攻撃時にしゃべる（味方の掛け声もここ）
   }
 
-  // 大振り（中村の一升瓶の振り回し）。大きく振りかぶって横薙ぎに払う。
+  // 大振り（N村の一升瓶の振り回し）。大きく振りかぶって横薙ぎに払う。
   // 通常の殴りより遅く・広く・重い。背後まで薙ぐので、すれ違いざまに抜けても当たる。
   // 振りかぶりが長いぶん、見てから離れれば必ずかわせる。
   startSwing() {
@@ -650,11 +650,11 @@ export class Char extends Entity {
 export const HAND_Z = 10;
 
 // 投げ物のドット絵。(x, y) は中心、upright=true で縦向き（90度回った状態）。
-// 中村の一升瓶と、魔王Y下が投げてくる鉄パイプ・鉄アレイ・パソコン。
+// N村の一升瓶と、魔王Y下が投げてくる鉄パイプ・鉄アレイ・パソコン。
 // 投げ物の飛び方。vz/gz は「投擲間合いの少し先で床に落ちる」ように決めた値で、
 // 弧の頂点はどれも当たり判定の高さ許容(Z_TOL=20)の内側。頭上を素通りして当たらない事故が起きない。
 export const THROWS = {
-  sake:     { vx: 205, vz: 72, gz: 150, dmg: 2, kb: 110, w: 7 },  // 一升瓶（中村）
+  sake:     { vx: 205, vz: 72, gz: 150, dmg: 2, kb: 110, w: 7 },  // 一升瓶（N村）
   pipe:     { vx: 240, vz: 0,  gz: 28,  dmg: 2, kb: 130, w: 7 },  // 鉄パイプ: 低く速い（投げ上げない。約200px先で落ちる）
   dumbbell: { vx: 175, vz: 62, gz: 130, dmg: 3, kb: 175, w: 7 },  // 鉄アレイ: 高く重く、一番痛い
   pc:       { vx: 195, vz: 44, gz: 95,  dmg: 2, kb: 155, w: 9 },  // パソコン

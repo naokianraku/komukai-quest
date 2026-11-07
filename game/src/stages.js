@@ -46,15 +46,15 @@ export const UNIT_TYPES = {
 
   // 中ボス（道中の強敵。midboss=地獄でも増殖しない。セリフは後から セリフ一覧.md の同名カテゴリに追記可）
   kanrik:    { name: '管理担当K',    sprite: 'kanrik',    taunts: 'kanrik',    midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
-               lastLine: '第二、第三の黒目が必ずやお前を倒すだろう',
+               lastLine: '第二、第三のK目が必ずやお前を倒すだろう',
                heir: 'kanrik_son', score: 700 }, // Stage2 中ボス。言い終わって崩れたあと、息子が出てくる
   // 管理担当Kの息子。父を倒したその場に現れる。若いぶん速いが、体力は父より軽い。
   // セリフは本人ゆずりの一言だけ（増やすときは セリフ一覧.md の kanrik_son に追記）。
   // K目息子。小学生。通学帽とランドセルで、父（黒ヘルメットの作業着）と対になる。
   // 体は大人より小さいぶん速い。背負い物は3D版だけ（2D版はドット絵なので帽子までで表現）。
   kanrik_son:{ name: 'K目息子', sprite: 'kanrik_son', taunts: 'kanrik_son', midboss: true, scale: 0.8, hp: 14, speed: 58, reach: 26, dmg: 2, kb: 110, cooldown: 0.58, telegraph: 0.36,
-               satchel: true, firstLine: '俺が黒目だ！', score: 500 },
-  // 生産企画課長（中村）: 一升瓶を山なりに投げる。投げるのは近すぎない間合いのときだけ。
+               satchel: true, firstLine: '俺がK目だ！', score: 500 },
+  // 生産企画課長（N村）: 一升瓶を山なりに投げる。投げるのは近すぎない間合いのときだけ。
   // 間合いに入られたら瓶を振り回す（swing）。遅くて広くて重い、見てからかわす大振り。
   seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
                thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.5,

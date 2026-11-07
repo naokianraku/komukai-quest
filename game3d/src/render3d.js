@@ -1698,7 +1698,7 @@ const WEAPON_OF = {
   pmr_seisan: 'binder', pmr_seizou: 'wrench', pmr_choutatsu: 'binder',
   pmr_gijutsu: 'roll', pmr_hinshou: 'stamp', kanrik: 'stamp', kanrik_son: 'stamp',
   kta: 'fist',   // K田は素手。回っている腕そのものが見せ場
-  // 生産企画課長（中村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
+  // 生産企画課長（N村）とその再登場 N村 は一升瓶。投げるだけでなく、素手でも瓶を握っている。
   seikikaku: 'bottle', shitennou_nmura: 'bottle',
   shitennou_hno: 'wrench',   // H野は速い詰め役。振りの速い得物を持たせる
   maou: 'pipe',   // 魔王Y下は鉄パイプ。投げ切ってもまた拾ってくる、という体
@@ -1775,7 +1775,7 @@ function syncWeapons() {
     let px = wx(e.x) + 9.5 * sc * (e.bodyW || 1) * dir;
     const py = wy(e.z) + 10 * sc * (e.bodyH || 1);
     let pz = wz(e.y), yaw = 0;
-    // 大振り（中村の一升瓶）は、体のまわりを横薙ぎに回す。
+    // 大振り（N村の一升瓶）は、体のまわりを横薙ぎに回す。
     // 通常の殴りは前へ突き出すだけなので、振り回しているとひと目で分かるようにする。
     // 奥の手のK田は、止まらずぐるぐる回し続ける（振り回しの一振りとは別物）
     if (e.attack && e.attack.spin) {
@@ -1853,7 +1853,7 @@ const THROWN = {
     tip.position.x = 4.2; tip.rotation.z = -Math.PI / 2; g.add(tip);
     return g;
   },
-  // 中村の一升瓶
+  // N村の一升瓶
   sake: () => {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 10, 10), mat('#1d4a2c')));
