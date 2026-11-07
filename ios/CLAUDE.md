@@ -101,7 +101,7 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | 配布用プロファイル | Komukai Quest App Store（2027-11-03まで）。`~/.config/apple-signing/profiles/komukai_appstore.mobileprovision` |
 | TestFlight 内部グループ | 「自分」 38b530a4-230e-46cb-a927-fe57421ac250（全ビルド自動配布） |
 | バージョン 1.0 | **READY_FOR_SALE（2026-11-06 公開）** |
-| バージョン 1.0.1 | PREPARE_FOR_SUBMISSION（ビルド3）／ releaseType=AFTER_APPROVAL |
+| バージョン 1.0.1 | **WAITING_FOR_REVIEW（2026-11-07 21:49 提出・ビルド3）** ／ releaseType=AFTER_APPROVAL |
 | 上がっているビルド | 1（1.0・公開中）／ 2（未使用）／ 3（1.0.1 用） |
 | 価格・配信 | 無料 / **日本のみ**（新しい国には自動で広げない） |
 | 年齢区分 | **12+**（ブラジル14・韓国12） |
@@ -193,8 +193,7 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
 - ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
-- 1.0.1 の提出（本人の OK 待ち）。中身はスクリーンショット2枚の差し替えと、
-  登場人物の実名を伏せ字に揃えた文言修正
+- 1.0.1 の審査結果待ち（2026-11-07 提出）。落ちたら理由を見て直す
 
 ## 登場人物の名前は伏せ字（2026-11-07）
 
