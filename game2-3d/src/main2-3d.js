@@ -18,6 +18,7 @@ import {
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
 } from '../../game3d/src/render3d.js';
+import { loadSequelScenes } from './scenes2.js';
 
 // 続編の役職パレットと名札を先に登録する。voxel.js は sprites.js の CHAR_PALETTES を
 // 直接読むので、これを忘れると続編のキャラが全員「部下」の見た目で出てくる。
@@ -56,6 +57,8 @@ class Game2_3D extends Game2 {
   }
 }
 
+// 続編専用の場面を先に登録する（章を読み込むと場面を張るので、その前に済ませる）
+window.__scenes2 = await loadSequelScenes();
 const game = new Game2_3D();
 setGame(game);
 
