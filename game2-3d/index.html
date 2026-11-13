@@ -232,6 +232,9 @@
   #genkaFill{background:#e0c040}
   #letterFill{background:#6ab0e0}
   .g.full .label{color:#9ad8ff}
+  /* 代理店を外して直接話した（話が拗れて残工期が減る）ときに、残工期を短く点滅させる */
+  .g.hit .meter{animation:ghit .3s ease-in-out 5}
+  @keyframes ghit{50%{box-shadow:0 0 0 2px #ff5a3a;filter:brightness(1.6)}}
   .dots i.mate{background:#6fd39a}
   /* 待合室。敵は出てこない。ただ待たされている、という画面 */
   /* 待合室（第3章の最初の18秒）。以前は画面全体を55%暗くしていたが、待合室そのものを

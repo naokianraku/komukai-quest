@@ -132,7 +132,13 @@ function attach(st, data) {
   const oBoom = st.fx.boom ? st.fx.boom.bind(st.fx) : null;
   if (oBoom) st.fx.boom = (x, y) => { oBoom(x, y); FX.hitstop = 0.22; FX.shake = 2.6; burst(x, y, '#ffd24a'); };
   const oText = st.fx.text.bind(st.fx);
-  st.fx.text = (x, y, s, c) => { oText(x, y, s, c); addFloat(x, y, 0, s, c); };
+  st.fx.text = (x, y, s, c) => {
+    // 代理店が同席している間、こちらの言葉は薄まる（ボスの被ダメ半減）。2Dでは数字でしか分からないので、
+    // 3Dではボスに出る減りの数字を灰色にして「通っていない」ことを見せる
+    const b = st.boss;
+    if (st.agent && st.agent.alive && b && b.alive && x === b.x && typeof s === 'string' && s[0] === '-') c = '#9aa0a8';
+    oText(x, y, s, c); addFloat(x, y, 0, s, c);
+  };
   const oShatter = st.fx.shatter.bind(st.fx);
   st.fx.shatter = (x, y, look) => { oShatter(x, y, look); FX.shake = Math.max(FX.shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
   const oMeteor = st.fx.meteor.bind(st.fx);
@@ -507,7 +513,10 @@ function pumpSceneEvents(st, dt) {
   if (!evPrev.bossStarted && st.bossStarted) { sceneEvent('bossStart'); placeWatchers(st); }
   if (!evPrev.reveal && st.bossBarRevealed) sceneEvent('reveal');
   if (!evPrev.turned && st.turned) sceneEvent('turn');
-  if (!evPrev.agentDown && st.agentCleared) sceneEvent('agentDown');
+  if (!evPrev.agentDown && st.agentCleared) {
+    sceneEvent('agentDown');
+    hud.gKouki.classList.remove('hit'); void hud.gKouki.offsetWidth; hud.gKouki.classList.add('hit');
+  }
   const rl = st.reviveLeft || 0;
   if (rl < evPrev.reviveLeft) sceneEvent(reviveFromBoss ? 'revive' : 'kuchidashi');
   reviveFromBoss = false;
