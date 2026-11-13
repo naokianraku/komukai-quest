@@ -188,6 +188,9 @@ export const CHAPTERS = [
     intro: '入社。全員が同じ作業着で、同じ白いヘルメットで、番号で呼ばれる。\n名刺交換をやり直し、指差呼称をやり直し、「学生気分を捨てろ」と言われ続ける。',
     width: 1700,
     bg: { scene: 'meeting', wall: '#4a5058', floor: '#6c727a', detail: '#343a42', accent: '#b0b8c0' },
+    // 3D の場面（2D は bg のまま）。講堂 → 実習場 → 独身寮 → 研修の廊下（配属面談の待合）→ ボスは講堂の壇上（配属発表）
+    scenes3d: [{ x: 0, scene: 'g2_kodo' }, { x: 500, scene: 'g2_kenshu' }, { x: 860, scene: 'g2_ryo' }, { x: 1150, scene: 'g2_kenshu' }],
+    bossScene3d: 'g2_kodo',
     noBetray: true,
     douki: 0,
     doukiJoin: [{ wave: 1, type: 'douki_genba' }, { wave: 2, type: 'douki_sekkei' }, { wave: 3, type: 'douki_hinsho' }],
@@ -213,6 +216,9 @@ export const CHAPTERS = [
     intro: 'こちらはレーダー、向こうは機体。互いに官庁と直接契約していて、上下関係はない。\nつまり誰も相手に命令できない。重量が超過し、電力が足りず、寸法が合わない。\n——どちらが合わせるのかを、延々と決められない。',
     width: 1800,
     bg: { scene: 'meeting', wall: '#3c4650', floor: '#586470', detail: '#2a323c', accent: '#8a96a4' },
+    // 3D の場面。相手先の大会議室 → 帰社（自社）→ ボスは大会議室の上座
+    scenes3d: [{ x: 0, scene: 'g2_m_kaigi' }, { x: 1140, scene: 'g2_jisha' }],
+    bossScene3d: 'g2_m_kaigi',
     noBetray: true,
     douki: 3,
     gauges: { kouki: true },
@@ -238,6 +244,9 @@ export const CHAPTERS = [
     intro: '主要機器の供給元。技術力が低く、モノが完成しない。作っては壊れ、作り直し、また壊れる。\nそして扱いがひどい。金を払っているのはこちらなのに、\n肌寒いタイル張りの待合室で、何時間も待たされる。',
     width: 1800,
     bg: { scene: 'factory', wall: '#3e4248', floor: '#5c6068', detail: '#2c3036', accent: '#8e9298' },
+    // 3D の場面。タイル張りの待合室（待ちの間は x≤420 から出られない）→ 古い工場 → 帰社 → ボスは古い会議室
+    scenes3d: [{ x: 0, scene: 'g2_gr_machi' }, { x: 440, scene: 'g2_gr_kojo' }, { x: 1160, scene: 'g2_jisha' }],
+    bossScene3d: 'g2_gr_kaigi',
     noBetray: true,
     douki: 3,
     support: 'shutantou', // 支援章: 主担当が同行する
@@ -266,6 +275,9 @@ export const CHAPTERS = [
     intro: '技術力はある。作れる会社だ。だが情報を出さない。\n規制でインターフェース仕様さえ十分に出てこない。中身の分からない箱に合わせて設計する。\n——そして、この相手の担当は自分ひとり。逃げ場がない。',
     width: 1750,
     bg: { scene: 'office', wall: '#2c3350', floor: '#465070', detail: '#1e2438', accent: '#7a86c0' },
+    // 3D の場面。立入制限区域 → 帰社 → ボスは窓のない会議室（HPバーが見えると開く）
+    scenes3d: [{ x: 0, scene: 'g2_l3_kuiki' }, { x: 1120, scene: 'g2_jisha' }],
+    bossScene3d: 'g2_l3_kaigi',
     noBetray: true,
     douki: 3,
     doukiLeave: [{ wave: 3, type: 'douki_hinsho' }], // 朝、来たらいなかった
@@ -295,6 +307,9 @@ export const CHAPTERS = [
     intro: '技術力はある。設計もできる。人も揃っている。それでも完成しない。\n設計は通る。だが試験で裏切られる。壊れる。作り直し。\n納得がいかず設計方針に口を出すと——「That\'s out of scope.」そして追加費用を要求される。',
     width: 1900,
     bg: { scene: 'office_win', wall: '#2e3448', floor: '#4c5468', detail: '#1e2230', accent: '#c0a040' },
+    // 3D の場面。巨大な組立工場 → 帰社 → ボスは試験台の見える会議室（作り直しで試験品が壊れる）
+    scenes3d: [{ x: 0, scene: 'g2_lm_kojo' }, { x: 1380, scene: 'g2_jisha' }],
+    bossScene3d: 'g2_lm_kaigi',
     noBetray: true,
     douki: 2,
     doukiLeave: [{ wave: 4, type: 'douki_genba' }], // 帰国後、異動。見送りもない
@@ -326,6 +341,9 @@ export const CHAPTERS = [
     intro: '残工期はもう無い。原価は膨れきっている。装置は動くが、要求性能には届かない。\n納期の延長を願い出る。何度も、何度も。',
     width: 1900,
     bg: { scene: 'meeting', wall: '#33383c', floor: '#4e545a', detail: '#22262a', accent: '#7a8088' },
+    // 3D の場面。5階の審査室 → ボスは1階の大会議室（解散で誰もいなくなる。エピローグもここ）
+    scenes3d: [{ x: 0, scene: 'g2_saishin' }],
+    bossScene3d: 'g2_daikaigi',
     bossLocation: '60号1階 大会議室',
     bossBg: { scene: 'boardroom', wall: '#1c1726', floor: '#2c2640', detail: '#120d1a', accent: '#c79a3a' },
     noBetray: true,

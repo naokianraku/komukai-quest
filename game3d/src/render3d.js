@@ -164,6 +164,60 @@ function box(w, h, d, color, x, y, z, opts = {}) {
   return m;
 }
 
+// 場面の外から足した物（円柱・時計の針など）も、張り替えでまとめて捨てられるよう scenery に入れる
+function addScenery(obj) { scenery.add(obj); return obj; }
+
+// 動かない箱を、色ごとに分けずにまとめて1つのメッシュにする（頂点カラー）。
+// box() は1つ置くたびに描画が1回増える。場面に数百個並ぶと iPhone で効いてくるので、
+// 続編の場面はこれで建てる。影を落とす物と落とさない物で分けて、最大2回の描画で済む。
+// 自発光（emissive）・半透明（opacity）の箱はまとめられないので、それだけ box() で置く。
+//   const b = boxBatch();  b.box(w,h,d,'#色',x,y,z,{cast,rotY});  …  b.done();
+function boxBatch() {
+  const groups = { cast: [], plain: [] };
+  return {
+    box(w, h, d, color, x, y, z, opts = {}) {
+      (opts.cast ? groups.cast : groups.plain).push([w, h, d, color, x, y, z, opts.rotY || 0]);
+    },
+    count() { return groups.cast.length + groups.plain.length; },
+    done() {
+      const out = [];
+      for (const [kind, list] of Object.entries(groups)) {
+        if (!list.length) continue;
+        const pos = [], nor = [], col = [], idx = [];
+        const c = new THREE.Color();
+        const v = new THREE.Vector3(), n = new THREE.Vector3();
+        for (const [w, h, d, color, x, y, z, ry] of list) {
+          const g = new THREE.BoxGeometry(w, h, d);
+          if (ry) g.rotateY(ry);
+          g.translate(x, y, z);
+          c.set(color);   // ColorManagement が効いているので r,g,b は linear。頂点カラーにそのまま入れてよい
+          const base = pos.length / 3;
+          const P = g.attributes.position, N = g.attributes.normal;
+          for (let i = 0; i < P.count; i++) {
+            v.fromBufferAttribute(P, i); n.fromBufferAttribute(N, i);
+            pos.push(v.x, v.y, v.z); nor.push(n.x, n.y, n.z); col.push(c.r, c.g, c.b);
+          }
+          for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.array[i]);
+          g.dispose();
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        geo.setIndex(idx);
+        const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+        m.castShadow = kind === 'cast';
+        m.receiveShadow = true;
+        m.matrixAutoUpdate = false; m.updateMatrix();
+        scenery.add(m);
+        out.push(m);
+      }
+      groups.cast.length = 0; groups.plain.length = 0;
+      return out;
+    },
+  };
+}
+
 // ===== 炎 =====
 // 箱を3段に積んだだけでは炎に見えない（オレンジの荷物に見える）。
 // 先細りの舌を3枚重ね、毎フレーム伸び縮みさせて揺らす。さらに火の粉を昇らせ、
@@ -1434,13 +1488,27 @@ const SCENES = {
 // 外から場面を足す口。続編（ゴールデンエイジ編）の場面は本編の SCENES に混ぜず、
 // 続編のファイル（game2-3d/src/scenes2.js）で書いてここから登録する。
 // 本編のページは続編のファイルを読まないので、本編の容量も動きも変わらない。
-export function registerScene(key, build) { SCENES[key] = build; }
+// hooks.onEvent(name, arg) を渡すと、その場面が張られている間だけ sceneEvent が届く
+// （待合室の扉が開く・HPバーが見えて照明が点く・作り直しで試験品が壊れる、など）。
+const SCENE_HOOKS = {};
+export function registerScene(key, build, hooks = null) {
+  if (SCENES[key] && !SCENE_HOOKS[key] && !hooks) console.warn('registerScene: 既にある場面を上書きする', key);
+  SCENES[key] = build;
+  if (hooks) SCENE_HOOKS[key] = hooks;
+}
+// 今の場面に出来事を知らせる。場面が受け取らなければ何もしない（本編の場面は受け取らない）。
+export function sceneEvent(name, arg) {
+  const h = curScene && SCENE_HOOKS[curScene];
+  if (h && h.onEvent) h.onEvent(name, arg);
+}
 
 function applyScene(key, data) {
   clearScenery();
   const W = data.width * S;
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
-  (SCENES[key] || buildOffice)(W, halfD);
+  // 知らないキーは本編の執務室で代用する（今まで通り）。ただし黙って化けると気づけないので知らせる
+  if (!SCENES[key]) console.warn('applyScene: 登録されていない場面', key, '→ 執務室で代用');
+  (SCENES[key] || buildOffice)(W, halfD, { stage, data });
   // 「出向」の入り口は場面の一部ではなくステージの仕掛け。場面を張り替えても消えないよう、
   // どの場面のあとにも足す（ボス戦で稲荷社に変わったあとも、来た道に残っていてよい）。
   if (stage && stage.door) buildInariDoor(stage.door);
@@ -1459,11 +1527,14 @@ let curScene = null;
 
 // タイトルの背景は正門。ステージの場面とは別に張り替える。
 // タイトルへ戻るときは必ずここを通す（戻り先が執務室のままだと開始画面が暗いだけになる）。
-export function buildTitleScenery(width) {
+// key を渡すと、登録した場面をタイトルの背景にする（続編は続編専用のタイトル場面）。
+export function buildTitleScenery(width, key = 'gate') {
   clearScenery();
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
-  buildGate(width * S, halfD);
-  curScene = 'gate';
+  const build = key === 'gate' ? buildGate : SCENES[key];
+  if (!build) console.warn('buildTitleScenery: 登録されていない場面', key, '→ 正門で代用');
+  (build || buildGate)(width * S, halfD, { stage, data: null, title: true });
+  curScene = build ? key : 'gate';
 }
 
 // 場面の読み書き。章の途中で背景が変わるステージは、シェルがここを突いて張り替える。
@@ -2324,6 +2395,7 @@ export {
   box, applyScene, sceneAt, buildScenery, clearScenery, clearStageObjects,
   // 場面を書くための道具（続編の scenes2.js が使う）
   hex, zones, setLighting, ceilingSlab, chair, fireRow, hemi, sun, fill, ROOM,
+  boxBatch, addScenery,
   addFloat, burst, meteorBoom,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,

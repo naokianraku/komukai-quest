@@ -3,7 +3,7 @@
 // ゲームロジックは2D版（game2/src/main2.js）の Game2 / Stage2 をそのまま使う。
 // 描画は本編の3D版と同じ render3d.js。ここが持つのは
 // 「章をどう読み込むか」「HUDに何を出すか」「どの画面を出すか」だけ。
-import { LIVES } from '../../game/src/config.js';
+import { LIVES, PLAY } from '../../game/src/config.js';
 import { Input } from '../../game/src/input.js';
 import { Audio } from '../../game/src/audio.js';
 import { registerPalettes, registerTypeMeta } from '../../game/src/sprites.js';
@@ -13,7 +13,7 @@ import {
   wx, wz, Q, renderer, scene, camera, CAM, camPos, camLook,
   SHARD, flames, domes, flashEl, FX,
   buildScenery, clearStageObjects, sceneAt, getScene, setScene,
-  setStage, setGame, setGaugeTarget, setHudTop,
+  setStage, setGame, setGaugeTarget, setHudTop, sceneEvent, buildTitleScenery,
   addFloat, burst, meteorBoom,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
@@ -46,7 +46,8 @@ class Game2_3D extends Game2 {
 
   update(dt) {
     // 打撃の手応え。止めている間はステージを進めないが、画面の状態遷移は進める
-    if (this.state === 'playing' && !this.paused && FX.hitstop > 0) {
+    this.hitstopStep = this.state === 'playing' && !this.paused && FX.hitstop > 0;
+    if (this.hitstopStep) {
       FX.hitstop -= dt;
       const st = this.stage;
       st.update = () => {};
@@ -88,6 +89,14 @@ function attach(st, data) {
 // タイトルの裏にも章が要る（render3d は stage を前提に描く）。第1章を置いておく。
 game.stage = new Stage2(CHAPTERS[0], game);
 attach(game.stage, CHAPTERS[0]);
+enterTitleScene();
+
+// 続編専用のタイトル場面（研修センターの前）。読めなかったときは第1章の場面のまま。
+function enterTitleScene() {
+  if (window.__scenes2 && window.__scenes2.loaded.includes('g2_title')) {
+    buildTitleScenery(CHAPTERS[0].width, 'g2_title');
+  }
+}
 
 // ===== HUD =====
 const hud = {
@@ -190,6 +199,9 @@ function updateHUD(dt) {
   if (st.bannerT > 0 && st.banner) {
     hud.banner.textContent = st.banner;
     hud.banner.classList.add('show');
+    // バナーの色は意味を持つ（合流＝緑・離脱＝灰・通された＝紺 など。main2.js が決める）。
+    // CSS の既定は赤なので、色の指定が無いときだけ赤に戻す
+    hud.banner.style.background = st.bannerColor || '';
   } else hud.banner.classList.remove('show');
   // 待合室。敵が出ない代わりに、残工期だけが減っていく時間
   hud.wait.classList.toggle('show', game.state === 'playing' && st.waitT > 0);
@@ -275,7 +287,7 @@ function renderScreen() {
         </svg>
         ${game.chapterIndex === 1
           ? '<p class="lead" style="text-align:center">「これから下り坂のない、上り坂の道が、何年か続きます」</p>'
-          : '<p class="lead" style="text-align:center;color:#6c737c">坂は、まだ続いている。</p>'}
+          : ''}
         ${hint('Enter で次の章へ', '画面を押して次の章へ')}
       </div>`);
       break;
@@ -395,6 +407,63 @@ renderMute();
 // BGM がスローモーションになる）
 document.addEventListener('visibilitychange', () => Audio.setMusicPaused(document.hidden));
 
+// ===== 出来事を場面へ =====
+// 続編の場面は、待合室の扉・L3社の照明・試験台などを出来事で変える（scenes2.js の onEvent）。
+// ロジック（game2/src/main2.js）は触らず、前のフレームとの差を見てここから知らせる。
+const evPrev = { st: null };
+let reviveFromBoss = false;   // 作り直しの残りが減ったのが、ボスの復活か E（口出し）かを分ける
+let sceneClock = 0;
+function pumpSceneEvents(st, dt) {
+  if (!st) return;
+  if (evPrev.st !== st) {   // 章が変わった（attach の後）。差を取る起点を取り直す
+    Object.assign(evPrev, { st, waiting: st.waitT > 0, bossStarted: !!st.bossStarted, reveal: !!st.bossBarRevealed,
+      bossAlive: !!(st.boss && st.boss.alive), reviveLeft: st.reviveLeft || 0, letter: game.letter, state: game.state });
+    if (typeof st.reviveBoss === 'function' && !st.__reviveWrapped) {
+      const o = st.reviveBoss.bind(st);
+      st.reviveBoss = () => { reviveFromBoss = true; o(); };
+      st.__reviveWrapped = true;
+    }
+  }
+  sceneClock += dt;
+  sceneEvent('tick', {
+    dt, t: sceneClock, waitT: st.waitT || 0,
+    letter: game.letter / (game.letterMax || 100),
+    kouki: game.kouki / (game.koukiMax || 100),
+    genka: game.genka / (game.genkaMax || 100),
+  });
+  const waiting = st.waitT > 0;
+  if (evPrev.waiting && !waiting) sceneEvent('waitEnd');
+  if (!evPrev.bossStarted && st.bossStarted) { sceneEvent('bossStart'); placeWatchers(st); }
+  if (!evPrev.reveal && st.bossBarRevealed) sceneEvent('reveal');
+  const rl = st.reviveLeft || 0;
+  if (rl < evPrev.reviveLeft) sceneEvent(reviveFromBoss ? 'revive' : 'kuchidashi');
+  reviveFromBoss = false;
+  const lmax = game.letterMax || 100;
+  if (evPrev.letter >= lmax && game.letter < evPrev.letter && st.bossStarted) sceneEvent('letter');
+  const alive = !!(st.boss && st.boss.alive);
+  if (evPrev.bossAlive && !alive && rl === 0) sceneEvent('defeated');
+  if (evPrev.state !== game.state) {
+    if (game.state === 'disband') sceneEvent('disband');
+    if (game.state === 'epilogue') sceneEvent('epilogue');
+    if (game.state === 'title' && evPrev.state && evPrev.state !== 'title') enterTitleScene();
+  }
+  Object.assign(evPrev, { waiting, bossStarted: !!st.bossStarted, reveal: !!st.bossBarRevealed,
+    bossAlive: alive, reviveLeft: rl, letter: game.letter, state: game.state });
+}
+
+// 海外3社のボス戦は単騎。2D版は同期と主担当を「2Dカメラの左端」へ下げるが、3Dのカメラは自機を追って
+// 寄るので、その位置は画面の外になる（「端で見ているのに入ってこられない」が見えない）。
+// 3Dで見える左の奥（ボス部屋のガラスの外）へ置き直す。並びは見た目だけで、ロジックは変えない。
+function placeWatchers(st) {
+  if (!st.data.soloBoss) return;
+  const ws = st.entities.filter((e) => e.alive && e.team === 'mob'
+    && ((st.doukiUnits || []).includes(e) || e === st.supportUnit));
+  ws.forEach((e, i) => {
+    e.x = Math.max(12, st.player.x - 150 + i * 24);
+    e.y = PLAY.top + 6 + (i % 2) * 9;
+  });
+}
+
 // ===== ループ =====
 const STEP = 1 / 60;
 const SHOT = parseFloat(Q.get('shot') || '0');
@@ -414,7 +483,10 @@ function loop(now) {
     // タイトルでは2D側（game2/src/main2.js の title）が M を処理する。ここでも反転させると
     // 同じ押下で2回ひっくり返って効かない。タイトル以外だけここで反転し、表示は毎回合わせる。
     if (Input.pressed('KeyM')) { if (!wasTitle) Audio.toggleMute(); renderMute(); }
+    // ヒットストップでステージが止まっていた間に押された R／E は、読まれずに消える。次のフレームへ持ち越す
+    const carry = game.hitstopStep ? ['KeyR', 'KeyE'].filter((k) => Input.pressed(k)) : [];
     Input.endFrame();
+    for (const k of carry) Input.keepPressed(k);
     acc -= STEP;
   }
 
@@ -436,10 +508,12 @@ function loop(now) {
     }
   }
   // ボス戦で場面が変わる章（会議室 → 相手の工場 など）
-  if (st && st.bossStarted && !bossSceneApplied && st.data.bossBg && !Q.get('scene')) {
+  if (st && st.bossStarted && !bossSceneApplied && (st.data.bossScene3d || st.data.bossBg) && !Q.get('scene')) {
     bossSceneApplied = true;
-    setScene(st.data.bossBg.scene, st.data);
+    // 3D専用のボス場面を先に見る（bossBg は2D版と共有のキーなので、3Dだけの場面はこちらに書く）
+    setScene(st.data.bossScene3d || st.data.bossBg.scene, st.data);
   }
+  pumpSceneEvents(st, frame);
 
   // 詠唱の圧と閃光（本編と同じ）
   const cast = st ? st.entities.some((e) => e.alive && e.state === 'cast') : false;
@@ -478,13 +552,30 @@ addEventListener('pointerdown', resume, { once: true });
   const d = Q.get('diff');
   if (d === 'easy' || d === 'normal' || d === 'hell') { game.difficulty = d; game.lives = LIVES[d]; }
 }
+// ?ch=N で途中の章から始めるとき、その章の始まりにいるはずの同期を揃える。
+// 前の章までの加入・離脱を、applyDoukiEvents と同じ順（波ごとに加入→離脱）でなぞる。
+// 空のままだと、第2章以降を確かめるとき同期が1人もいない。
+function rosterAt(n) {
+  const r = [];
+  for (let i = 0; i < n - 1; i++) {
+    const d = CHAPTERS[i];
+    const waves = [...new Set([...(d.doukiJoin || []).map((j) => j.wave), ...(d.doukiLeave || []).map((l) => l.wave)])]
+      .sort((a, b) => a - b);
+    for (const w of waves) {
+      for (const j of (d.doukiJoin || [])) if (j.wave === w && !r.includes(j.type)) r.push(j.type);
+      for (const l of (d.doukiLeave || [])) if (l.wave === w) { const k = r.indexOf(l.type); if (k >= 0) r.splice(k, 1); }
+    }
+  }
+  return r;
+}
+
 // ?ch=1..6 … 指定した章から始める（場面の確認用）
 {
   const n = parseInt(Q.get('ch') || '0', 10);
   if (n >= 1 && n <= CHAPTERS.length) {
     game.score = 0; game.lives = LIVES[game.difficulty];
     game.kouki = game.koukiMax; game.genka = 0; game.letter = 0;
-    game.roster = [];
+    game.roster = rosterAt(n);
     game.chapterIndex = n - 1;
     game.loadChapter(n - 1);
     game.state = 'intro'; game.screenT = 0;

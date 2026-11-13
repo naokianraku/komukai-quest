@@ -221,6 +221,9 @@ export const Input = {
   // canvas を覆っている DOM（説明の紙など）の上のタップを「決定」として渡す。
   // そこを押しても canvas の pointerdown は飛んでこないので、画面側から教えてもらう。
   tapConfirm() { pressed.add('TouchConfirm'); },
+  // 押した瞬間を次のフレームへ持ち越す（続編の R／E。ヒットストップでステージが止まっている間に
+  // 押されると、読まれる前に endFrame で消えてしまうため）
+  keepPressed(code) { pressed.add(code); },
 
   endFrame() { pressed.clear(); },
 
