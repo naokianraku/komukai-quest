@@ -48,7 +48,8 @@ export async function loadSequelScenes() {
     .filter(Boolean);
   if (failed.length) {
     console.warn('続編の場面を読めなかった（本編の執務室で代用する）:', failed);
-    if (window.__dbg) window.__dbg('SCENES2: ' + failed.join(' / '));
+    // 画面の赤い文字（#err）は開発用。遊ぶ人には見せない（?dbg=1 のときだけ）
+    if (window.__dbg && new URLSearchParams(location.search).get('dbg') === '1') window.__dbg('SCENES2: ' + failed.join(' / '));
   }
   return { loaded: results.filter((r) => r.status === 'fulfilled').map((r) => r.value), failed };
 }

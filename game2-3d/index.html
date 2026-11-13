@@ -89,6 +89,13 @@
   #screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     background:rgba(8,10,14,.74);backdrop-filter:blur(3px);padding:24px;z-index:20}
   /* タイトルだけは背景（正門）を見せたいので暗幕を薄くする */
+  /* 解散・エピローグ。裏の3D（誰もいなくなっていく大会議室）を見せたいので、
+     暗幕を薄くして書類を下へ寄せる。文言は今までのまま（見せ方だけ変える） */
+  #screen.veil{background:linear-gradient(rgba(8,10,14,.08),rgba(8,10,14,.62));backdrop-filter:none;
+    align-items:flex-end;padding-bottom:calc(14px * var(--u))}
+  #screen.veil .sheet{background:rgba(246,247,249,.93);width:min(560px,82%);min-width:0;
+    padding:14px 22px;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  #screen.veil .sheet svg{max-height:22vh}
   #screen.soft{background:linear-gradient(rgba(8,10,14,.16),rgba(8,10,14,.50));
     backdrop-filter:blur(1px)}
   /* タイトルは書類を細くして、左右に背景の正門を見せる（位置は中央のまま） */

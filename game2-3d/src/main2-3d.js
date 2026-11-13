@@ -10,7 +10,7 @@ import { registerPalettes, registerTypeMeta } from '../../game/src/sprites.js';
 import { CHAPTERS, PALETTES2, LABELS2, COLORS2, defFor2 } from '../../game2/src/stages2.js';
 import { Game2, Stage2 } from '../../game2/src/main2.js';
 import {
-  wx, wz, Q, renderer, scene, camera, CAM, camPos, camLook,
+  THREE, wx, wz, Q, renderer, scene, camera, CAM, camPos, camLook,
   SHARD, flames, domes, flashEl, FX,
   buildScenery, clearStageObjects, sceneAt, getScene, setScene,
   setStage, setGame, setGaugeTarget, setHudTop, sceneEvent, buildTitleScenery,
@@ -62,6 +62,8 @@ class Game2_3D extends Game2 {
 window.__scenes2 = await loadSequelScenes();
 const game = new Game2_3D();
 setGame(game);
+// ?dbg=1 のときだけ外から状態を触れるようにする（出来事の演出を確かめる用。本編の __scene と同じ扱い）
+if (Q.get('dbg') === '1') window.__g2 = game;
 
 let bossSceneApplied = false;
 
@@ -209,9 +211,10 @@ function updateHUD(dt) {
 
 // ===== 画面 =====
 const screenEl = document.getElementById('screen');
+// soft: タイトル（書類を細くして背景を見せる）／'veil': 解散・エピローグ（暗幕を薄く、書類を下に）
 function showScreen(html, soft = false) {
   screenEl.innerHTML = html;
-  screenEl.className = soft ? 'soft' : '';
+  screenEl.className = soft === 'veil' ? 'veil' : soft ? 'soft' : '';
   screenEl.style.display = 'flex';
 }
 function hideScreen() { screenEl.style.display = 'none'; }
@@ -300,7 +303,7 @@ function renderScreen() {
         <p class="lead" style="animation:fadein .6s 1.8s both">勝った。だが、何も覆らなかった。</p>
         <p class="lead" style="animation:fadein .6s 3.4s both;color:#6c737c">最後の同期が呼ばれて出ていく。振り返らない。</p>
         <p class="k" style="animation:fadein .6s 5.0s both">${touch() ? '画面を押して先へ' : 'Enter で先へ'}</p>
-      </div>`);
+      </div>`, 'veil');
       break;
     case 'epilogue':
       showScreen(`<div class="sheet">
@@ -313,7 +316,7 @@ function renderScreen() {
         <p class="lead" style="animation:fadein .6s 2.6s both">そして、頂上もなかった。</p>
         <h2 style="animation:fadein .8s 6.2s both;color:var(--accent);text-align:center">— 小向戦士 —</h2>
         <p class="k" style="animation:fadein .8s 6.2s both">${touch() ? '画面を押して 小向クエスト（本編）へ' : 'Enter で 小向クエスト（本編）へ'}</p>
-      </div>`);
+      </div>`, 'veil');
       break;
     case 'gameover':
       showScreen(`<div class="sheet">
@@ -439,7 +442,7 @@ function pumpSceneEvents(st, dt) {
   if (rl < evPrev.reviveLeft) sceneEvent(reviveFromBoss ? 'revive' : 'kuchidashi');
   reviveFromBoss = false;
   const lmax = game.letterMax || 100;
-  if (evPrev.letter >= lmax && game.letter < evPrev.letter && st.bossStarted) sceneEvent('letter');
+  if (evPrev.letter >= lmax && game.letter < evPrev.letter && st.bossStarted) { sceneEvent('letter'); fireLetterFx(st); }
   const alive = !!(st.boss && st.boss.alive);
   if (evPrev.bossAlive && !alive && rl === 0) sceneEvent('defeated');
   if (evPrev.state !== game.state) {
@@ -449,6 +452,36 @@ function pumpSceneEvents(st, dt) {
   }
   Object.assign(evPrev, { waiting, bossStarted: !!st.bossStarted, reveal: !!st.bossBarRevealed,
     bossAlive: alive, reviveLeft: rl, letter: game.letter, state: game.state });
+}
+
+// 社長宛レター（R）。待たされた時間が書かせた手紙が、自機から舞い上がってボスの頭上を越え、
+// 上から落ちてくる。ダメージはロジック側で即座に入るので、絵は短く（0.5秒）して因果に見せる。
+// 宛先・社名などの文字は出さない。
+const letterFx = [];
+function fireLetterFx(st) {
+  const b = st.boss;
+  if (!b) return;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(8, 0.45, 5.5),
+    new THREE.MeshLambertMaterial({ color: 0xf6f3ea, emissive: 0x6fb8e8, emissiveIntensity: 0.45 }));
+  scene.add(m);
+  letterFx.push({ m, t: 0, x0: wx(st.player.x), z0: wz(st.player.y), x1: wx(b.x), z1: wz(b.y), bx: b.x, by: b.y });
+}
+function updateLetterFx(dt) {
+  for (let i = letterFx.length - 1; i >= 0; i--) {
+    const f = letterFx[i];
+    f.t += dt;
+    const u = Math.min(1, f.t / 0.5);
+    // 頭越しの弧。高くしすぎると画面の上（HUDの帯）に出て見えないので、頂点は y≈30 まで
+    f.m.position.set(f.x0 + (f.x1 - f.x0) * u, 8 + Math.sin(Math.PI * u) * 22, f.z0 + (f.z1 - f.z0) * u);
+    f.m.rotation.set(u * 8, u * 3, u * 5);
+    if (u >= 1) {
+      burst(f.bx, f.by, '#9ad8ff');
+      FX.shake = Math.max(FX.shake, 2.2);
+      FX.hitstop = Math.max(FX.hitstop, 0.12);
+      scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose();
+      letterFx.splice(i, 1);
+    }
+  }
 }
 
 // 海外3社のボス戦は単騎。2D版は同期と主担当を「2Dカメラの左端」へ下げるが、3Dのカメラは自機を追って
@@ -535,6 +568,7 @@ function loop(now) {
   syncLabels();
   syncDoorPlate();
   updateFloats(frame);
+  updateLetterFx(frame);
   drawPad();
   updateAudio();
   if (SHOT > 0) shotDone = true;
