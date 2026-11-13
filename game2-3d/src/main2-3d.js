@@ -157,6 +157,9 @@ enterTitleScene();
 
 // 続編専用のタイトル場面（研修センターの前）。読めなかったときは第1章の場面のまま。
 function enterTitleScene() {
+  // タイトルは一枚絵。裏に置いた第1章の通行人が画面の端で半身だけ出たり入ったりするので、自機のほかは出さない
+  // （始めるときに章を読み込み直すので、ここで消しても遊びには影響しない）
+  for (const e of game.stage.entities) if (e !== game.stage.player) e.alive = false;
   if (window.__scenes2 && window.__scenes2.loaded.includes('g2_title')) {
     buildTitleScenery(CHAPTERS[0].width, 'g2_title');
   }
