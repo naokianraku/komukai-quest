@@ -1484,7 +1484,9 @@ function buildFactory(W, halfD) {
 
 const SCENES = {
   gate: buildGate, factory: buildFactory,
-  office_win: buildOffice, office: buildOfficeInner, meeting: buildMeeting,
+  // office は2引数で包む。applyScene は第3引数に { stage, data } を渡すので、buildOfficeInner の
+  // 第3引数（部屋の配色 R）に入って R.binder で落ちる（f143a6f で本編第2ステージが壊れていた）
+  office_win: buildOffice, office: (W, halfD) => buildOfficeInner(W, halfD), meeting: buildMeeting,
   kanren: (W, halfD) => buildOfficeInner(W, halfD, ROOM.kanren),
   boardroom: buildBoardroom, hellfire: buildHellfire,
   shrine: buildShrine, shokudo: buildShokudo, yard: buildYard,
@@ -1504,7 +1506,8 @@ export function registerScene(key, build, hooks = null) {
 // 今の場面に出来事を知らせる。場面が受け取らなければ何もしない（本編の場面は受け取らない）。
 export function sceneEvent(name, arg) {
   const h = curScene && SCENE_HOOKS[curScene];
-  if (h && h.onEvent) h.onEvent(name, arg);
+  if (!h || !h.onEvent) return;
+  try { h.onEvent(name, arg); } catch (err) { console.error('sceneEvent: 場面の出来事で落ちた', curScene, name, err); }
 }
 
 function applyScene(key, data) {
@@ -1513,7 +1516,14 @@ function applyScene(key, data) {
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
   // 知らないキーは本編の執務室で代用する（今まで通り）。ただし黙って化けると気づけないので知らせる
   if (!SCENES[key]) console.warn('applyScene: 登録されていない場面', key, '→ 執務室で代用');
-  (SCENES[key] || buildOffice)(W, halfD, { stage, data });
+  // 場面の関数が落ちても、ゲームのループは止めない（真っ黒で固まるのを避ける）。執務室で代用する
+  try {
+    (SCENES[key] || buildOffice)(W, halfD, { stage, data });
+  } catch (err) {
+    console.error('applyScene: 場面を建てる途中で落ちた', key, err);
+    clearScenery();
+    buildOffice(W, halfD);
+  }
   // 「出向」の入り口は場面の一部ではなくステージの仕掛け。場面を張り替えても消えないよう、
   // どの場面のあとにも足す（ボス戦で稲荷社に変わったあとも、来た道に残っていてよい）。
   if (stage && stage.door) buildInariDoor(stage.door);
