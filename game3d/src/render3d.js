@@ -7,7 +7,10 @@
 // 外部のCDNが落ちたらゲームごと動かなくなる。版は 0.160.0 で固定（game3d/vendor/）。
 import * as THREE from '../vendor/three.module.js';
 import { PLAY, setPlay, playMid } from '../../game/src/config.js';
-import { buildChar3DSplitForType, LEG, C3 } from '../../game/src/voxel.js';
+import {
+  buildChar3DSplitForType, LEG, C3, APPEARANCES, pickVariant, lookOf, modelKeyOf, bodyYaw,
+  paletteOf, armColorsOf,
+} from '../../game/src/voxel.js';
 import { TYPE_LABEL, TYPE_COLOR } from '../../game/src/sprites.js';
 
 // 歩ける奥行きを2Dの2倍に広げる。2Dは帯76px(=25ワールドユニット≒キャラ2人分)で、
@@ -54,39 +57,10 @@ const BUILDS = [            // 身長と横幅。bw/bd（胴の厚み）はボ�
   { w: 1.04, h: 0.90 },     // 3 小柄で太め
 ];
 
-// 見た目のプリセット20種。[髪型, 眼鏡, 髭, 肌, 髪色, 体格]
-// 1軸だけ変えるとパッと見で同じ人に見えるので、1体ごとに複数軸をまとめて変える。
-const APPEARANCES = [
-  [0, 0, 0, 0, 0, 1], [1, 1, 0, 1, 1, 0], [2, 0, 0, 2, 2, 2], [3, 2, 1, 3, 4, 3],
-  [4, 0, 0, 0, 0, 0], [5, 1, 0, 1, 0, 2], [0, 0, 2, 4, 2, 1], [1, 2, 0, 2, 5, 3],
-  [2, 1, 1, 0, 1, 1], [3, 0, 0, 3, 6, 2], [4, 1, 0, 2, 3, 1], [5, 0, 2, 1, 2, 0],
-  [0, 2, 0, 3, 1, 2], [1, 0, 1, 4, 0, 1], [2, 0, 0, 1, 5, 0], [3, 1, 2, 0, 4, 1],
-  [4, 2, 0, 4, 2, 2], [5, 0, 0, 3, 3, 3], [0, 1, 1, 2, 6, 3], [2, 2, 2, 4, 4, 0],
-];
-// ボスは小柄だと貫禄が出ないので、体格は標準以上に寄せた別表にする
-const BOSS_APPEARANCES = [
-  [2, 1, 0, 1, 5, 2], [3, 2, 1, 2, 6, 2], [5, 0, 2, 0, 1, 2],
-  [1, 1, 0, 3, 4, 1], [0, 2, 0, 2, 6, 2], [2, 0, 1, 4, 5, 2],
-];
-const PLAYER_APPEARANCE = [0, 0, 0, 0, 0, 1];
-
-// 見た目を固定するキャラ。ボスの個体差は e.id から選んでいるが、id は出現順で
-// 変わるので、同じボスでも遊ぶたびに髪型・髪色・眼鏡が入れ替わってしまう
-// （眼鏡が無い回もある）。看板キャラだけはここで固定する。
-// skin / hairColor を null にすると、個体差で上書きせず CHAR_PALETTES の指定が残る。
-const FIXED_APPEARANCE = {
-  // 魔王Y下: 七三・黒縁眼鏡・髭なし。黒髪と日焼けはパレット側の指定をそのまま使う。
-  maou: { hair: 2, glasses: 1, beard: 0, skin: null, hairColor: null, build: 2 },
-};
-
-function variantOf(e) {
-  const fixed = FIXED_APPEARANCE[e.spriteKey];
-  if (fixed) return fixed;
-  const t = e === stage.player ? PLAYER_APPEARANCE
-    : e.isBoss ? BOSS_APPEARANCES[e.id % BOSS_APPEARANCES.length]
-    : APPEARANCES[e.id % APPEARANCES.length];
-  return { hair: t[0], glasses: t[1], beard: t[2], skin: t[3], hairColor: t[4], build: t[5] };
-}
+// 見た目のプリセット（APPEARANCES）・ボス用・自機・若い人の表と、見た目を固定するキャラの表
+// （FIXED_APPEARANCE。続編の人物は registerFixedAppearance で外から足す）は voxel.js にある。
+// 決め方も同じ（pickVariant）。ここは「この面の自機か」だけを教える。
+function variantOf(e) { return pickVariant(e, e === stage.player); }
 const variantKey = (v) => `${v.hair}${v.glasses}${v.beard}${v.skin}${v.hairColor}${v.build}`;
 
 const geoCache = new Map();
@@ -1531,9 +1505,71 @@ function makeRing(e) {
   return m;
 }
 
+// ===== 光る目とまとう光（続編の四騎士）=====
+// 頂点色の Lambert は自分では光らないので、光るところだけ照明の影響を受けない別のメッシュにする。
+// マテリアルは色ごとに1つを全員で共有し、1体あたりの増えは「目2つ・足元の光・体の後ろの光」に
+// 抑える（iPhone で重くしない）。パレットの e（2D版の目の色）をそのまま光の色に使う。
+const eyeGeo = new THREE.BoxGeometry(2.6, 1.3, 0.7);
+const glowMats = new Map();
+function glowMat(col, kind) {
+  const k = col + ':' + kind;
+  let m = glowMats.get(k);
+  if (!m) {
+    const add = { color: hex(col), transparent: true, blending: THREE.AdditiveBlending,
+                  depthWrite: false, fog: false, map: auraTex };
+    m = kind === 'eye' ? new THREE.MeshBasicMaterial({ color: hex(col), fog: false })
+      : kind === 'floor' ? new THREE.MeshBasicMaterial({ ...add, opacity: 0.85 })
+      : new THREE.SpriteMaterial({ ...add, opacity: 0.42 });
+    glowMats.set(k, m);
+  }
+  return m;
+}
+// 目の位置はボクセルの x 15-17 / 22-24・y 46-47。顔の前面（z=18）の少しだけ手前に浮かせる。
+function makeEyes(col) {
+  const g = new THREE.Group();
+  for (const x of [-3.5, 3.5]) {
+    const m = new THREE.Mesh(eyeGeo, glowMat(col, 'eye'));
+    m.position.set(x, 47, 6.4);
+    g.add(m);
+  }
+  return g;
+}
+// まとう光の板の絵。中心が濃く、縁へなめらかに消える（加算合成なので黒は透明になる）
+function auraTexture() {
+  const N = 64;
+  const cv = document.createElement('canvas'); cv.width = cv.height = N;
+  const g2 = cv.getContext('2d');
+  const gr = g2.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g2.fillStyle = gr; g2.fillRect(0, 0, N, N);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const auraTex = auraTexture();
+const auraGeo = new THREE.PlaneGeometry(2, 2); auraGeo.rotateX(-Math.PI / 2);
+// 足元に敷く光と、体の後ろに立てる光（いつもカメラを向く板＝Sprite）。体が手前で光の中心を
+// 隠すので、輪郭のまわりだけが光って見える。どちらも root の子（向きと崩れ落ちには付いていかない）。
+function makeAura(col) {
+  const g = new THREE.Group();
+  const floor = new THREE.Mesh(auraGeo, glowMat(col, 'floor'));
+  floor.position.y = 0.16;
+  floor.renderOrder = 1;
+  const halo = new THREE.Sprite(glowMat(col, 'halo'));
+  halo.position.set(0, 0, -2);
+  g.add(floor); g.add(halo);
+  g.userData = { floor, halo };
+  return g;
+}
+
 function makeRig(e) {
   e._v = e._v || variantOf(e);   // _v が先に入っていればそれを使う（?looks=1 の確認用）
-  const g = partsFor(e.spriteKey, e._v);
+  // どのパレットで作るか（続編の第1章で同期が研修生の格好になる、など）。顔は e.spriteKey のまま
+  const mk = modelKeyOf(e, stage);
+  const look = lookOf(mk);       // 3D専用の形の指定。本編の種別は空（＝従来どおり）
+  const g = partsFor(mk, e._v);
   const root = new THREE.Group();
   const body = new THREE.Mesh(g.body, charMat);
   const legA = new THREE.Mesh(g.legA, charMat);
@@ -1543,12 +1579,33 @@ function makeRig(e) {
   root.add(body); root.add(hipA); root.add(hipB);
   if (e.satchel) body.add(makeSatchel());   // 小学生のランドセル（K目息子）
   for (const m of [body, legA, legB]) { m.castShadow = true; m.receiveShadow = false; }
+  let aura = null;
+  if (look.eyes || look.aura) {
+    const col = paletteOf(mk, e._v).e;
+    if (look.eyes) body.add(makeEyes(col));
+    if (look.aura) { aura = makeAura(col); root.add(aura); }
+  }
   scene.add(root);
   // 位相は個体ごとにずらす。全員が同じ足から踏み出すと行進に見える
   const r = { root, body, legA, legB, hipA, hipB, ring: makeRing(e),
-              ph: (e.id % 7) * 0.9, amp: 0, air: 0, px: e.x, py: e.y };
+              ph: (e.id % 7) * 0.9, amp: 0, air: 0, px: e.x, py: e.y,
+              look, aura, yaw: null, arm: armColorsOf(mk, e._v) };
   meshes.set(e.id, r);
   return r;
+}
+
+// 体格の倍率。def 側の指定（魔王Y下を太らせるなど）× パレット側の指定（続編のシルエット）。
+// 本編の種別はパレット側を持たないので、def 側の値そのもの。
+function bodyW(e, look) { return (e.bodyW || 1) * (look.bodyW || 1); }
+function bodyH(e, look) { return (e.bodyH || 1) * (look.bodyH || 1); }
+const lookOfRig = (e) => { const r = meshes.get(e.id); return r ? r.look : lookOf(e.spriteKey); };
+
+// 角度 a を b へ、最大 step だけ近道で回す
+function turnToward(a, b, step) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return Math.abs(d) <= step ? b : a + Math.sign(d) * step;
 }
 
 function syncEntities(dt) {
@@ -1560,8 +1617,8 @@ function syncEntities(dt) {
     // C3.SCALE で 2D版と同じ見た目サイズに戻す（グリッドが細かいぶん1ボクセルが小さい）
     const sc = ((e.scale || 3) / 3) * C3.SCALE;
     const bd = BUILDS[(e._v && e._v.build) ?? 1];
-    // 体格の差。bodyW/bodyH は def 側の指定（魔王Y下を太らせるなど）
-    const sx = sc * bd.w * (e.bodyW || 1), sy = sc * bd.h * (e.bodyH || 1);
+    // 体格の差。bodyW/bodyH は def 側の指定（魔王Y下を太らせるなど）と、続編のパレット側の指定
+    const sx = sc * bd.w * bodyW(e, r.look), sy = sc * bd.h * bodyH(e, r.look);
     const dir = e.facing >= 0 ? 1 : -1;
 
     // --- 歩行の位相 ---
@@ -1612,7 +1669,23 @@ function syncEntities(dt) {
     // 進行方向へ向ける。真横(90°)まで回すと薄い板に見えるので浅めに留め、顔はカメラ側に残す。
     // 符号に注意: Y軸回転 θ で正面(+Z)は x=sin(θ) へ向く。右(+X)を向かせるには θ>0。
     // 脚には ひねり を足さない（振りの軸をワールドのx方向＝進行方向に合わせるため）。
-    const face = dir * 0.55;
+    let face = dir * 0.55;
+    // 背中を向ける種別（続編の PM／振り向くまでのプロマネ）。向きの決め方は voxel.js の bodyYaw。
+    // 振り向く・向きを変えるときは一瞬で裏返さず回り込ませる（「ようやく振り向いた」を見せる）。
+    // 本編の種別は faceAway を持たないので、ここは通らない（従来どおり即座に向く）。
+    if (r.look.faceAway) {
+      const want = bodyYaw(e, r.look, stage.player.x);
+      r.yaw = r.yaw == null ? want : turnToward(r.yaw, want, dt * 5.5);
+      face = r.yaw;
+    }
+    if (r.aura) {   // まとう光はゆっくり脈打たせる。足元は陣営の輪より一回り大きく、後ろの光は体を包む大きさ
+      const s = (e.scale || 3) / 3, k = s * (r.look.aura || 1);
+      const p = 1 + 0.08 * Math.sin(performance.now() / 1000 * 2.2 + e.id);
+      const { floor, halo } = r.aura.userData;
+      floor.scale.set(9.5 * k * p, 1, 9.5 * k * p);
+      halo.scale.set(17 * k * p, 23 * k * p, 1);
+      halo.position.y = 10 * s;
+    }
     // 奥の手のK田は体ごと回る。腕（得物）だけ回しても「ぐるぐる回っている」とは見えない。
     r.body.rotation.y = (e.attack && e.attack.spin)
       ? performance.now() / 1000 * 11
@@ -1708,7 +1781,9 @@ const WEAPON_OF = {
   shitennou_hno: 'wrench',   // H野は速い詰め役。振りの速い得物を持たせる
   maou: 'pipe',   // 魔王Y下は鉄パイプ。投げ切ってもまた拾ってくる、という体
 };
-const weaponOf = (e) => (e === stage.player ? 'fist' : (WEAPON_OF[e.spriteKey] || (e.isBoss ? 'fist' : 'roll')));
+// 続編の種別は、パレットの weapon で得物を指定できる（無ければ従来どおりの既定）
+const weaponOf = (e) => (e === stage.player ? 'fist'
+  : (WEAPON_OF[e.spriteKey] || lookOfRig(e).weapon || (e.isBoss ? 'fist' : 'roll')));
 
 // ランドセル。胴のボクセルは x:-20..20 / y:0..60 / z:-12..12（+zが正面）なので、
 // 背中は -z 側。胴の子にすると、向きも崩れ落ちも一緒に動く。
@@ -1738,19 +1813,25 @@ const armMat = mat('#a8c4de');   // 作業着の袖
 const wristMat = mat('#f1c79b');
 const armGeo = new THREE.BoxGeometry(7.0, 2.2, 2.2);
 const wristGeo = new THREE.BoxGeometry(1.4, 2.4, 2.4);
+// 本人の上衣と肌の色の前腕（続編の服を着た種別だけ。voxel.js の armColorsOf）。色ごとに共有する
+const armMats = new Map();
+const armMatOf = (c) => { let m = armMats.get(c); if (!m) { m = mat(c); armMats.set(c, m); } return m; };
 
-function makeWeapon(kind) {
+function makeWeapon(kind, armCol) {
   const spec = WEAPON_SPEC[kind] || WEAPON_SPEC.fist;
   const g = new THREE.Group();
   // 前腕。道具だけが宙に浮いて見えるのを防ぐため、必ず胴側へ伸ばす
-  const arm = new THREE.Mesh(armGeo, armMat);
+  // armCol が無い（本編の全員）ときは、従来どおり作業着の袖と同じ空色・同じ肌色。
+  const arm = new THREE.Mesh(armGeo, armCol ? armMatOf(armCol.sleeve) : armMat);
   arm.position.set(-5.0, 0, 0); arm.castShadow = true; g.add(arm);
-  const wrist = new THREE.Mesh(wristGeo, wristMat);
+  const wrist = new THREE.Mesh(wristGeo, armCol ? armMatOf(armCol.skin) : wristMat);
   wrist.position.set(-1.6, 0, 0); wrist.castShadow = true; g.add(wrist);
   for (const key of ['a', 'b']) {
     const part = spec[key];
     if (!part) continue;
-    const [geo, material, pos, rot] = part;
+    const [geo, , pos, rot] = part;
+    // 拳は本人の肌の色（四騎士の灰の肌に肌色の拳が付かないように）
+    const material = (armCol && kind === 'fist') ? armMatOf(armCol.skin) : part[1];
     const m = new THREE.Mesh(geo, material);
     m.position.set(pos[0], pos[1], pos[2]);
     if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
@@ -1769,23 +1850,25 @@ function syncWeapons() {
     let r = weapons.get(e.id);
     if (!r || r.kind !== kind) {
       if (r) { scene.remove(r.group); scene.remove(r.flash); }
-      const group = makeWeapon(kind);
+      const rig = meshes.get(e.id);
+      const group = makeWeapon(kind, rig ? rig.arm : null);
       const flash = makeFlash();
       scene.add(group); scene.add(flash);
       r = { group, flash, kind }; weapons.set(e.id, r);
     }
     const sc = (e.scale || 3) / 3;
     const dir = e.facing >= 0 ? 1 : -1;
+    const look = lookOfRig(e);
     // 太い相手は腕も外に出るので、得物の位置を横幅に合わせてずらす
-    let px = wx(e.x) + 9.5 * sc * (e.bodyW || 1) * dir;
-    const py = wy(e.z) + 10 * sc * (e.bodyH || 1);
+    let px = wx(e.x) + 9.5 * sc * bodyW(e, look) * dir;
+    const py = wy(e.z) + 10 * sc * bodyH(e, look);
     let pz = wz(e.y), yaw = 0;
     // 大振り（N村の一升瓶）は、体のまわりを横薙ぎに回す。
     // 通常の殴りは前へ突き出すだけなので、振り回しているとひと目で分かるようにする。
     // 奥の手のK田は、止まらずぐるぐる回し続ける（振り回しの一振りとは別物）
     if (e.attack && e.attack.spin) {
       const a = performance.now() / 1000 * 11;
-      const R = 15 * sc * (e.bodyW || 1);
+      const R = 15 * sc * bodyW(e, look);
       px = wx(e.x) + Math.cos(a) * R * dir;
       pz = wz(e.y) + Math.sin(a) * R * 0.7;
       yaw = -a;
@@ -1794,7 +1877,7 @@ function syncWeapons() {
     if (sw && sw.dur > 0) {
       const prog = Math.max(0, Math.min(1, 1 - e.stateT / sw.dur));
       const a = -2.5 + prog * 3.6;                      // 後ろから前へ薙ぎ払う
-      const R = 13 * sc * (e.bodyW || 1);
+      const R = 13 * sc * bodyW(e, look);
       px = wx(e.x) + Math.cos(a) * R * dir;
       pz = wz(e.y) + Math.sin(a) * R * 0.7;             // 奥行きは少し潰して見やすく
       yaw = -a;
@@ -2134,7 +2217,7 @@ function syncLabels() {
     if (!e.alive) continue;
     seen.add(e.id);
     const { tag, bubble, hp } = elFor(e.id);
-    const headY = wy(e.z) + 19 * ((e.scale || 3) / 3) * (e.bodyH || 1);   // 頭のすぐ上
+    const headY = wy(e.z) + 19 * ((e.scale || 3) / 3) * bodyH(e, lookOfRig(e));   // 頭のすぐ上
     const p = project(wx(e.x), headY, wz(e.y));
     if (!p) { tag.style.display = bubble.style.display = hp.style.display = 'none'; continue; }
 

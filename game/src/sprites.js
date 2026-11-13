@@ -161,6 +161,25 @@ export const TYPE_COLOR = {
 // 続編(game2)などから、追加のキャラパレット/ラベルを登録するためのフック。
 // buildSprites() より前に呼ぶこと。未使用なら1の挙動は一切変わらない。
 export function registerPalettes(extra) { Object.assign(CHAR_PALETTES, extra); }
+
+// パレットのうち「色ではなく形の指定」のキー。2Dのドット絵の色にも、3Dの色の解決にも混ぜない。
+// map（2Dのドット絵の型）と shirt（魔王Y下の開襟）は以前からのもの。残りは3D専用の語彙で、
+// 続編（game2/src/stages2.js の PALETTES2）だけが使う。本編のパレットはどれも持たないので、
+// 本編の2D・3Dの見た目は変わらない。意味は game/src/voxel.js の charParts と
+// game3d/src/render3d.js を参照。
+export const SHAPE_KEYS = new Set([
+  'map', 'shirt',
+  'outfit', 'tie', 'roll', 'skirt', 'collar', 'vest3', 'shoulder',   // 服の型と、その細部
+  'headwear', 'pose', 'back', 'props', 'eyes', 'aura',               // かぶりもの・姿勢・後ろ姿・小物・光
+  'age', 'keepSkinHair', 'faceAway', 'weapon', 'bodyW', 'bodyH',     // 個体差・向き・得物・体格
+]);
+
+// パレットを「2Dのドット絵の型」「形の指定」「色」に分ける
+export function splitPalette(ov) {
+  const shape = {}, colors = {};
+  for (const [k, v] of Object.entries(ov || {})) (SHAPE_KEYS.has(k) ? shape : colors)[k] = v;
+  return { map: shape.map, shape, colors };
+}
 export function registerTypeMeta(labels, colors) {
   if (labels) Object.assign(TYPE_LABEL, labels);
   if (colors) Object.assign(TYPE_COLOR, colors);
@@ -191,7 +210,7 @@ export function buildSprites() {
     }
   }
   for (const [key, ov] of Object.entries(CHAR_PALETTES)) {
-    const { map, shirt, ...colors } = ov;   // shirt は色ではなく形の指定（3D用）
+    const { map, colors } = splitPalette(ov);   // 形の指定（shirt など3D用）は色に混ぜない
     const base = map === 'suit' ? SUIT_BASE : WORKER_BASE;
     const baseMap = map === 'suit' ? SUIT_MAP : map === 'cap' ? WORKER_CAP_MAP : WORKER_MAP;
     REGISTRY[key] = bake(baseMap, base, colors);
