@@ -1126,10 +1126,12 @@ function buildMeeting(W, halfD) {
     for (let i = 0; i < 5; i++) box(5.2, 0.6, 5.2, R.chair, x, 1.2 + i * 1.4, BACK + 13, { cast: true });
     box(5.6, 7.5, 5.6, R.chair, x, 4.2, BACK + 13);
   }
+  // フリップチャートは奥の壁ぎわに立てる。以前は手前（z=halfD+12）に立てていて、板（y=14〜30）が
+  // カメラと人の間に入り、中ボスが丸ごと隠れた（ストアの画像で発覚。ゲーム座標 300/720/1140/1560）。
   for (let x = 100; x < W; x += 140) {
-    box(0.6, 20, 0.6, '#9aa096', x - 5, 10, halfD + 12);
-    box(0.6, 20, 0.6, '#9aa096', x + 5, 10, halfD + 12);
-    box(13, 16, 0.4, '#fbfcfa', x, 22, halfD + 12, { receive: false });
+    box(0.6, 20, 0.6, '#9aa096', x - 5, 10, BACK + 16);
+    box(0.6, 20, 0.6, '#9aa096', x + 5, 10, BACK + 16);
+    box(13, 16, 0.4, '#fbfcfa', x, 22, BACK + 16.3, { receive: false });
   }
 }
 
@@ -1184,7 +1186,10 @@ function buildBoardroom(W, halfD) {
     // 椅子は必ず歩行帯側（手前）に置く。机の向こうに置くと壁を隠してしまう
     for (const dx of [-19, -6, 7, 20]) {
       box(7.5, 1.0, 7.5, R.chair, x + dx, 6.2, z + 11 * back, { cast: true });        // 座面
-      box(7.5, 13, 1.2, R.chair, x + dx, 12.7, z + 14 * back, { cast: true });        // 高い背もたれ
+      // 手前の列（back=-1）の背もたれはカメラと人の間に入る。高いままだと帯の手前端に立つ人の
+      // 下半身を隠す（最終ボス戦で自機が隠れた）。手前の列だけ、胴の線より低い背もたれにする
+      if (back > 0) box(7.5, 13, 1.2, R.chair, x + dx, 12.7, z + 14 * back, { cast: true });   // 高い背もたれ
+      else box(7.5, 5, 1.2, R.chair, x + dx, 8.7, z + 14 * back, { cast: true });                // 低い背もたれ
       box(1.4, 5.4, 1.4, '#6a6270', x + dx, 3.0, z + 11 * back);
       box(7.0, 0.6, 7.0, '#6a6270', x + dx, 0.5, z + 11 * back);
     }

@@ -587,7 +587,8 @@ function rosterAt(n) {
   if (d > 0 && game.stage) {
     const st = game.stage;
     game.state = 'playing'; hideScreen();
-    st.waitT = 0;
+    // ?wait=1 なら待合室の「待っている最中」のまま（第3章の待合室の場面を確かめる用）
+    if (!Q.get('wait')) st.waitT = 0;
     st.player.x = d;
     st.currentWave = st.data.waves.length;
     st.lockX = st.width - 40;
