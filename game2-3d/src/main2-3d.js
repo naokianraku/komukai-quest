@@ -669,9 +669,7 @@ function stepEpilogue(st, dt) {
     act.senshi = true;
     const p = st.player;
     p.spriteKey = 'p2_senshi';
-    // 3Dの人形は最初に作ったものを使い回すので、作り直させる（次の描画で新しい色で作られる）
-    const r = meshes.get(p.id);
-    if (r) { scene.remove(r.root); if (r.ring) scene.remove(r.ring); meshes.delete(p.id); }
+    refreshRig(p);   // 3Dの人形は最初に作ったものを使い回すので、作り直させる
     burst(p.x, p.y - 20, '#ff7f0e');
   }
 }
@@ -679,6 +677,37 @@ function endAct() {
   if (act.cam0) { CAM.dist = act.cam0.dist; CAM.height = act.cam0.height; act.cam0 = null; }
   CAM.xOff = 0;
   act.senshi = false; act.leavers = []; act.last = null;
+}
+
+// ===== 配属発表（第1章のボスが倒れていく間。3D版だけ） =====
+// 研修の間は主人公も同期3人も同じ白いヘルメット（chars2.js の kenshuLook）。ボスが崩れていく間に、
+// 主人公から順に0.4秒おきに1人ずつ、それぞれの配属の色へ変わる（構成案「同じ白だった4人の色が分かれる」）。
+// 主人公の種別を配属後（p2_haizoku）にすると、研修の着替えが外れて同期も自分の色で作られるようになる。
+const haizoku = { st: null, t: 0, order: [], done: 0 };
+function refreshRig(e) {   // 3Dの人形を作り直させる（次の描画で、いまの種別・着替えで作られる）
+  const r = meshes.get(e.id);
+  if (r) { scene.remove(r.root); if (r.ring) scene.remove(r.ring); meshes.delete(e.id); }
+}
+function stepHaizoku(st, dt) {
+  if (!st) return;
+  if (haizoku.st !== st) {
+    haizoku.st = st; haizoku.order = []; haizoku.done = 0; haizoku.t = 0;
+  }
+  const b = st.boss;
+  if (!haizoku.order.length) {
+    if (!(b && b.dying && st.player.spriteKey === 'p2_shinjin')) return;
+    haizoku.order = [st.player, ...(st.doukiUnits || []).filter((e) => e.alive)];
+    haizoku.t = 0;
+  }
+  if (haizoku.done >= haizoku.order.length) return;
+  haizoku.t += dt;
+  while (haizoku.done < haizoku.order.length && haizoku.t >= 0.5 + haizoku.done * 0.4) {
+    const e = haizoku.order[haizoku.done++];
+    if (e === st.player) e.spriteKey = 'p2_haizoku';
+    if (!e.alive) continue;
+    refreshRig(e);
+    burst(e.x, e.y - 20, '#ffffff');
+  }
 }
 
 // ===== 区間の切り替えの暗転 =====
@@ -778,6 +807,7 @@ function loop(now) {
   }
   pumpSceneEvents(st, frame);
   stepAct(st, frame);
+  stepHaizoku(st, frame);
 
   // 詠唱の圧と閃光（本編と同じ）
   const cast = st ? st.entities.some((e) => e.alive && e.state === 'cast') : false;
