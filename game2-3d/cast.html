@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>続編キャラ一覧</title>
+<!--
+  開発用: ゴールデンエイジ編の3Dキャラ（37種）を、章ごと・陣営ごとに並べて見るページ。
+  描画はゲーム本体と同じエンジン（game3d/src/render3d.js）とキャラの定義（game2-3d/src/chars2.js）を
+  そのまま使うので、ここで見える形・色・向き・持ち物・光る目はゲームの中と同じになる。
+  1回描いて止まる（毎フレーム描き直さない）ので、ヘッドレスのブラウザでもそのまま撮れる。
+  文字は役職名と章の名前だけ（公開されても害が無いように）。
+  ?ch=1..6 … その章の段だけを出す
+  ?atk=1   … 全員が殴りかかった瞬間で止める（得物と前腕の色を確かめる）
+-->
+<style>
+  :root { color-scheme: dark; --bg: #15171a; --card: #1c1f24; --line: #2a2e34; --ink: #f0f3f5; --sub: #8a929c; --accent: #ff7f0e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 13px/1.5 system-ui, -apple-system, "Hiragino Sans", sans-serif; }
+  h1 { font-size: 15px; margin: 16px 16px 2px; }
+  h1 b { color: var(--accent); }
+  .row { position: relative; margin: 10px 16px 18px; background: var(--card);
+         border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .row h2 { margin: 0; padding: 8px 14px; font-size: 13px; font-weight: 700; letter-spacing: .04em;
+            border-bottom: 1px solid var(--line); }
+  .row canvas { display: block; width: 100%; height: auto; }
+  .pic { position: relative; }
+  .tags { position: absolute; inset: 0; pointer-events: none; }
+  .tag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+         font: 700 12px/1 system-ui, sans-serif; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+  .side { position: absolute; transform: translateX(-50%); bottom: 6px; white-space: nowrap;
+          font-size: 11px; color: var(--sub); letter-spacing: .1em; }
+  /* 描画エンジンが探す要素。ゲームの画面は使わないので見えない場所に置く */
+  #stage { position: absolute; left: -10000px; top: 0; width: 960px; height: 540px; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c3d"></canvas><div id="labels"></div><div id="flash"></div></div>
+<h1>小向クエスト2 <b>ゴールデンエイジ編</b> — キャラ一覧</h1>
+<main id="rows"></main>
+
+<script type="module">
+import {
+  THREE, renderer, scene, setStage, setGame, setLighting, syncEntities, syncWeapons, sun, fill, wx, wy, wz,
+} from '../game3d/src/render3d.js';
+import { registerPalettes, registerTypeMeta, TYPE_LABEL } from '../game/src/sprites.js';
+import { Char } from '../game/src/entities.js';
+import { playMid } from '../game/src/config.js';
+import { CHAPTERS, PALETTES2, LABELS2, COLORS2, UNIT_TYPES2, defFor2 } from '../game2/src/stages2.js';
+import { registerChars2 } from './src/chars2.js';
+
+// ゲーム本体（main2-3d.js）と同じ順で登録する
+registerPalettes(PALETTES2);
+registerTypeMeta(LABELS2, COLORS2);
+registerChars2();
+
+// 段の並び。side: 味方（ally）／相手（enemy）／見ているだけ（mob）。
+// turned … 「こちらを見ようともしない」プロマネの、振り向いたあとの姿（faceLock を外す）
+const ROWS = [
+  { ch: 1, player: 'p2_shinjin', groups: [
+    ['ally',  ['p2_shinjin', 'douki_sekkei', 'douki_genba', 'douki_hinsho']],
+    ['enemy', ['jinji', 'manner', 'anzen', 'ryocho', 'kyoiku']],
+    ['mob',   ['tsukou']],
+  ] },
+  { ch: 2, player: 'p2_haizoku', groups: [
+    ['ally',  ['p2_haizoku', 'douki_sekkei', 'douki_genba', 'douki_hinsho']],
+    ['enemy', ['m_kikai', 'm_denso', 'm_sekkei', 'pm', 'm_pm', 'm_pm:turned']],
+    ['mob',   ['chukan']],
+  ] },
+  { ch: 3, player: 'p2_haizoku', groups: [
+    ['ally',  ['shutantou']],
+    ['enemy', ['gr_chotatsu', 'gr_gijutsu', 'gr_seizo', 'gr_pm']],
+    ['mob',   ['dairiten']],
+  ] },
+  { ch: 4, player: 'p2_haizoku', groups: [
+    ['enemy', ['l3_toiawase', 'l3_yushutsu', 'l3_pm']],
+  ] },
+  { ch: 5, player: 'p2_haizoku', groups: [
+    ['enemy', ['lm_keiyaku', 'lm_cr', 'lm_shiken', 'lm_kanri', 'lm_pm', 'lm_pm:turned']],
+  ] },
+  { ch: 6, player: 'p2_haizoku', groups: [
+    ['enemy', ['kensakan', 'kishi_kigen', 'kishi_seinou', 'kishi_sonshitsu', 'kishi_keisou', 'kancho_pm']],
+  ] },
+];
+const SIDE = { ally: '味方', enemy: '相手', mob: '見ているだけ' };
+// 名札。役職名だけ（主人公は章の等級、ボスは役職の名前）
+const labelOf = (type, ch) => (type.startsWith('p2_') ? CHAPTERS[ch - 1].playerRank
+  : (LABELS2[type] || TYPE_LABEL[type] || UNIT_TYPES2[type].name));
+// 主人公は種別の表（UNIT_TYPES2）に無い（ゲームでは Stage が作る自機）。並べるためだけの定義
+const defOf = (type) => (type.startsWith('p2_')
+  ? { ...defFor2('douki_sekkei'), sprite: type, name: '', taunts: null } : defFor2(type));
+
+setLighting(false);                 // 室内の照明（ゲームの会議室・執務室と同じ）
+scene.background = new THREE.Color('#1c1f24');
+setGame({ state: 'playing' });
+
+const only = parseInt(new URLSearchParams(location.search).get('ch') || '0', 10);
+const atk = new URLSearchParams(location.search).get('atk') === '1';
+const host = document.getElementById('rows');
+const W = Math.min(1280, Math.max(640, innerWidth - 32));
+// 全段で同じ縮尺にする（章をまたいで大きさを比べられるように）。いちばん横に長い段が収まる倍率
+const gap = (t) => 7 + 6 * (defOf(t.split(':')[0]).scale || 1);
+const spanOf = (row) => row.groups.reduce((a, [, ts]) => a + ts.reduce((b, t) => b + 2 * gap(t), 0) + 6, 0);
+const K = W / (Math.max(...ROWS.map(spanOf)) + 6);   // 1ワールド単位あたりの px
+
+for (const row of ROWS) {
+  if (only && row.ch !== only) continue;
+  // 1段ぶんのキャラを作る。間隔は体格（scale）に合わせて空ける
+  const ents = [], marks = [];
+  let x = 3, maxH = 0;
+  for (const [side, types] of row.groups) {
+    const x0 = x;
+    for (const t of types) {
+      const [type, mode] = t.split(':');
+      const def = defOf(type);
+      const s = def.scale || 1;
+      x += gap(t);
+      const c = new Char(x * 3, playMid(), { ...def, team: side === 'ally' ? 'ally' : side === 'enemy' ? 'enemy' : 'mob' });
+      // 味方は右向き、相手は左向き（ゲームの中で主人公に向かってくる向き）
+      c.facing = side === 'ally' ? 1 : -1;
+      // 振り向く前のプロマネ（bossFaceLock）。ゲームと同じく faceLock=-1 にしておく
+      if (PALETTES2[type].faceAway === 'locked' && mode !== 'turned') c.faceLock = -1;
+      ents.push(c);
+      marks.push({ c, label: labelOf(type, row.ch), type });
+      maxH = Math.max(maxH, 19 * s * (PALETTES2[type].bodyH || 1));
+      x += gap(t);
+    }
+    marks.push({ side: SIDE[side], x0, x1: x });
+    x += 6;
+  }
+  // 自機。第1章は研修生（同期の着替えは自機の格好で決まる）。並びに入れていない段では
+  // 画面の左の外に置く（振り向く前のプロマネは自機から顔を背けるので、自機の位置が要る）
+  let player = ents.find((c) => c.spriteKey === row.player);
+  if (!player) { player = new Char(-300, playMid(), { ...defFor2('douki_sekkei'), team: 'ally' }); player.spriteKey = row.player; player.alive = false; }
+  setStage({ entities: ents, player, projectiles: [], boss: null, bossStarted: false, data: CHAPTERS[row.ch - 1] });
+  syncEntities(1 / 60);   // リグを作って立ち姿に置く
+  if (atk) {               // 見ているだけの人は殴らない
+    for (const c of ents) if (c.team !== 'mob' && c.alive) { c.attackActive = true; c.attack = { hitSet: new Set() }; }
+    syncWeapons();
+  }
+
+  // この段だけを写す平行投影のカメラ。ゲームのカメラと同じくらい上から見下ろす。
+  // 左端をそろえ、全段同じ縮尺（K）で写す。x はワールド座標（キャラは x*3 のゲーム座標に置いた）
+  const viewH = maxH + 12, H = Math.round(viewH * K);
+  const halfW = W / K / 2, cx = halfW;
+  const cam = new THREE.OrthographicCamera(-halfW, halfW, viewH / 2, -viewH / 2, 1, 2000);
+  const ang = 0.26;   // 約15°（ゲームの CAM の高さと距離から）
+  const cy = viewH / 2 - 2.5;
+  cam.position.set(cx, cy + 400 * Math.sin(ang), 400 * Math.cos(ang));
+  cam.lookAt(cx, cy, 0);
+  sun.position.set(cx - 60, 120, 80); sun.target.position.set(cx, 0, 0);
+  fill.position.set(cx + 20, 34, 120); fill.target.position.set(cx, 8, 0);
+
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setSize(W, H, false);
+  renderer.render(scene, cam);
+
+  // 2Dのキャンバスへ写し取る（WebGL の画面は次の段で描き直すため）
+  const card = document.createElement('section');
+  card.className = 'row';
+  const h2 = document.createElement('h2');
+  h2.textContent = CHAPTERS[row.ch - 1].name;
+  const cv = document.createElement('canvas');
+  cv.width = renderer.domElement.width; cv.height = renderer.domElement.height;
+  cv.getContext('2d').drawImage(renderer.domElement, 0, 0);
+  const pic = document.createElement('div');
+  pic.className = 'pic';
+  const tags = document.createElement('div');
+  tags.className = 'tags';
+  pic.append(cv, tags);
+  card.append(h2, pic);
+  host.append(card);
+
+  // 名札と陣営の見出し（頭上の点を投影して重ねる）
+  const v = new THREE.Vector3();
+  const toPx = (px, py, pz) => { v.set(px, py, pz).project(cam); return { x: (v.x * 0.5 + 0.5) * 100, y: (-v.y * 0.5 + 0.5) * 100 }; };
+  for (const m of marks) {
+    const el = document.createElement('div');
+    if (m.c) {
+      const s = (m.c.scale || 3) / 3;
+      const p = toPx(wx(m.c.x), wy(0) + 19.5 * s * (PALETTES2[m.type].bodyH || 1), wz(m.c.y));
+      el.className = 'tag';
+      el.textContent = m.label;
+      el.style.color = COLORS2[m.type] || (m.type.startsWith('p2_') ? '#ff9d3c' : '#e0e4ea');
+      el.style.left = p.x + '%'; el.style.top = p.y + '%';
+    } else {
+      const p = toPx(wx((m.x0 + m.x1) / 2 * 3), 0, 0);
+      el.className = 'side';
+      el.textContent = m.side;
+      el.style.left = p.x + '%';
+    }
+    tags.append(el);
+  }
+}
+document.documentElement.dataset.ready = '1';
+</script>
+</body>
+</html>
