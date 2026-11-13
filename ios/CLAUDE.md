@@ -102,7 +102,7 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | TestFlight 内部グループ | 「自分」 38b530a4-230e-46cb-a927-fe57421ac250（全ビルド自動配布） |
 | バージョン 1.0 | **READY_FOR_SALE（2026-11-06 公開）** |
 | バージョン 1.0.1 | READY_FOR_SALE（2026-11-13 までに公開） |
-| バージョン 1.0.2 | PREPARE_FOR_SUBMISSION（ビルド4）／ releaseType=AFTER_APPROVAL |
+| バージョン 1.0.2 | **WAITING_FOR_REVIEW（2026-11-13 23:18 提出・ビルド4）** ／ releaseType=AFTER_APPROVAL |
 | 上がっているビルド | 1（1.0）／ 2（未使用）／ 3（1.0.1）／ 4（1.0.2 用） |
 | 価格・配信 | 無料 / **日本のみ**（新しい国には自動で広げない） |
 | 年齢区分 | **12+**（ブラジル14・韓国12） |
@@ -194,7 +194,8 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
 - ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
-- 1.0.2 の提出（テストプレイの指摘の修正）。詳細は下の「テストプレイで直したこと」
+- 1.0.2 の審査結果待ち（2026-11-13 提出）。落ちたら理由を見て直す
+- OP の曲が「ドラクエっぽい」という指摘は未対応（曲は本人の判断。下の表を参照）
 
 ## 登場人物の名前は伏せ字（2026-11-07）
 
