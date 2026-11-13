@@ -232,13 +232,18 @@
   .g.full .label{color:#9ad8ff}
   .dots i.mate{background:#6fd39a}
   /* 待合室。敵は出てこない。ただ待たされている、という画面 */
-  #wait{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
-    justify-content:center;gap:calc(8px * var(--u));background:rgba(8,10,14,0.55);
-    pointer-events:none;z-index:6;text-align:center}
+  /* 待合室（第3章の最初の18秒）。以前は画面全体を55%暗くしていたが、待合室そのものを
+     3Dの場面で建てた（タイルの壁・速く回る時計・増えていく便箋）ので、部屋を隠さないよう
+     文字だけを下寄りの小さな札にする。文言は今までのまま */
+  #wait{position:absolute;left:50%;bottom:24%;transform:translateX(-50%);display:none;
+    flex-direction:column;align-items:center;gap:calc(4px * var(--u));
+    background:rgba(10,14,20,.74);border:1px solid rgba(160,184,210,.18);
+    border-radius:calc(12px * var(--u));padding:calc(10px * var(--u)) calc(22px * var(--u));
+    box-shadow:0 8px 26px rgba(0,0,0,.45);pointer-events:none;z-index:6;text-align:center;white-space:nowrap}
   #wait.show{display:flex}
-  #wait b{font-size:max(15px, 20px * var(--u));color:#8fa0b4}
-  #wait span{font-size:max(11px, 13px * var(--u));color:#6a7686}
-  #wait i{font-size:max(10px, 12px * var(--u));color:#4e94c8;font-style:normal;font-weight:700}
+  #wait b{font-size:max(14px, 18px * var(--u));color:#c8d4e2}
+  #wait span{font-size:max(11px, 13px * var(--u));color:#9aa8b8}
+  #wait i{font-size:max(10px, 12px * var(--u));color:#6fb0e0;font-style:normal;font-weight:700}
 
   /* ボスゲージ: 下中央のパネル。
      画面最上部の3pxの線だと、足元を見て戦っている最中はまず目に入らない。
