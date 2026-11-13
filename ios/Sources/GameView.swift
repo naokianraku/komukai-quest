@@ -45,7 +45,7 @@ struct GameView: UIViewRepresentable {
         if #available(iOS 16.4, *) { web.isInspectable = true }
         #endif
 
-        web.load(URLRequest(url: GameSchemeHandler.url(query: Self.query)))
+        web.load(URLRequest(url: Self.startURL))
 
         if let probe { context.coordinator.watch(web, probe: probe) }
         return web
@@ -53,11 +53,29 @@ struct GameView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
+    /// 最初に開くページ。ふだんは2作品の選択画面。
+    /// シミュレーターで確かめるときは起動引数で変えられる:
+    ///   -page game2-3d             ゴールデンエイジ編のタイトルから
+    ///   -page game3d               本編のタイトルから
+    /// `-game` だけを渡したときは、今まで通り本編を開く（場面確認の手順を変えないため）。
+    static var startPath: String {
+        if let p = UserDefaults.standard.string(forKey: "page"), !p.isEmpty {
+            return p.hasSuffix(".html") ? p : p + "/index.html"
+        }
+        if let g = UserDefaults.standard.string(forKey: "game"), !g.isEmpty {
+            return "game3d/index.html"
+        }
+        return GameSchemeHandler.entry
+    }
+
+    static var startURL: URL { GameSchemeHandler.url(path: startPath, query: query) }
+
     /// 最初に開く URL のクエリ。
     /// `app=1` はページの枠（角丸・影・キーボードの案内）を出さず画面いっぱいにする指定。
     /// シミュレーターで場面を確かめるときは起動引数を足す（塚越ナビと同じやり方）:
-    ///   -game "stage=3&demo=1010"   第3ステージの途中から
-    ///   -game "stage=ura&boss=1"    魔王戦をすぐ
+    ///   -game "stage=3&demo=1010"             第3ステージの途中から
+    ///   -game "stage=ura&boss=1"              魔王戦をすぐ
+    ///   -page game2-3d -game "ch=3&demo=400"  続編の第3章の途中から
     static var query: String {
         var q = "app=1"
         if let extra = UserDefaults.standard.string(forKey: "game"), !extra.isEmpty {
@@ -90,6 +108,12 @@ struct GameView: UIViewRepresentable {
         window.__peak = Math.max(window.__peak === undefined ? -999 : window.__peak, warm);
       } catch (e) {}
       const tag = document.querySelector('#labels .tag');
+      // どのページにいるか（選択画面／本編／続編）と、選択画面・戻るボタンの位置
+      const at = (sel) => {
+        const e = document.querySelector(sel); if (!e) return '';
+        const b = e.getBoundingClientRect();
+        return b.width > 0 ? Math.round(b.left + b.width / 2) + ',' + Math.round(b.top + b.height / 2) : '';
+      };
       // タイトルは「はじめる」を押さないと始まらない（空振りのタップは音の解禁だけ）。
       // ボタンの位置もここから渡す。
       const sb = document.querySelector('#screen .startbtn');
@@ -104,6 +128,9 @@ struct GameView: UIViewRepresentable {
         cam: tag ? tag.style.transform : '',
         atk: pt(437, 231), jump: pt(415, 188), stick: pt(110, 200), stick2: pt(176, 200),
         mid: pt(240, 150),
+        page: location.pathname, search: location.search,
+        pick1: at('#pick1'), pick2: at('#pick2'), back: at('#screen .backlink'),
+        framed: !document.documentElement.dataset.app,
       });
     })()
     """
@@ -113,6 +140,9 @@ struct GameView: UIViewRepresentable {
         let handler = GameSchemeHandler(root: Bundle.main.bundleURL)
         private var task: Task<Void, Never>?
         private var retried = false
+        /// 今いるページ。裏で回収されたとき、起動時のページではなくここへ戻す
+        /// （続編の途中で回収されて本編や選択画面に飛ばされないように）。
+        private var current: URL?
 
         deinit { task?.cancel() }
 
@@ -139,18 +169,23 @@ struct GameView: UIViewRepresentable {
         /// 戻すものが無いと、画面いっぱいの WKWebView が空になって真っ黒のまま固まる。
         /// アプリ側に他のUIが無いので、押せる場所も無い。必ず貼り直す。
         /// 独自スキームだと履歴が無く reload() が空振りすることがあるので、
-        /// 起動時と同じ URL を投げ直す。
+        /// 今いたページの URL を投げ直す（無ければ起動時のページ）。
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            webView.load(URLRequest(url: GameSchemeHandler.url(query: GameView.query)))
+            webView.load(URLRequest(url: current ?? GameView.startURL))
         }
 
-        /// 最初の読み込みに失敗したときも、同じく黒いままになる。1回だけやり直す。
+        /// 読み込みに失敗したときも、同じく黒いままになる。続けて失敗しないかぎり1回だけやり直す。
+        /// 読み込めたら数え直す（一生に1回だと、2回目の失敗で黒いまま固まる）。
         func webView(_ webView: WKWebView,
                      didFailProvisionalNavigation navigation: WKNavigation!,
                      withError error: Error) {
             guard !retried else { return }
             retried = true
-            webView.load(URLRequest(url: GameSchemeHandler.url(query: GameView.query)))
+            webView.load(URLRequest(url: current ?? GameView.startURL))
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            retried = false
         }
 
         /// 外のリンク（あそびかた等）はアプリの中で開かず、Safari に渡す。
@@ -163,6 +198,20 @@ struct GameView: UIViewRepresentable {
                 decisionHandler(.cancel); return
             }
             if url.scheme == GameSchemeHandler.scheme {
+                // target=_blank / window.open（targetFrame が nil）は、同じ画面で開く
+                let mainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+                // ページを移るときに app=1 が落ちていたら、付けて開き直す（行き先に枠を出さない）
+                if mainFrame, let fixed = GameSchemeHandler.withApp(url) {
+                    decisionHandler(.cancel)
+                    webView.load(URLRequest(url: fixed))
+                    return
+                }
+                if navigationAction.targetFrame == nil {
+                    decisionHandler(.cancel)
+                    webView.load(navigationAction.request)
+                    return
+                }
+                if mainFrame { current = url }
                 decisionHandler(.allow)
             } else {
                 decisionHandler(.cancel)

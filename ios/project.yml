@@ -36,12 +36,23 @@ targets:
       - path: ../game
         type: folder
         buildPhase: resources
+      # ゴールデンエイジ編。3D のシェル（game2-3d）と、それが読むロジック（game2/src）。
+      - path: ../game2-3d
+        type: folder
+        buildPhase: resources
+      - path: ../game2
+        type: folder
+        buildPhase: resources
+      # アプリを開いたときの2作品の選択画面（アプリだけのページ。Web には出さない）
+      - path: launcher
+        type: folder
+        buildPhase: resources
     info:
       path: Info.plist
       properties:
         CFBundleDisplayName: 小向クエスト
-        CFBundleShortVersionString: "1.0.2"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "1.1.0"
+        CFBundleVersion: "5"
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:

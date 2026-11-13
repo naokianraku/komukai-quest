@@ -33,7 +33,9 @@ registerTypeMeta(LABELS2, COLORS2);
 class Game2_3D extends Game2 {
   constructor() {
     super();
-    this.exitHref = '../game3d/';
+    // エピローグのあと本編へ。アプリの中なら app=1 を引き継ぐ（落とすと本編に枠が出る）。
+    // ほかのクエリ（ch や demo）は本編では別の意味になるので持っていかない。
+    this.exitHref = Q.has('app') ? '../game3d/index.html?app=1' : '../game3d/';
   }
 
   loadChapter(i) {
@@ -222,6 +224,7 @@ function renderScreen() {
         ${touch() ? '<button class="startbtn">② ▶ はじめる</button>' : ''}
         ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）',
                '画面を押すと音が出ます（🔊 で BGM 入／切）')}
+        <a class="backlink" href="../launcher/index.html?app=1">◀ 作品の選択へ</a>
       </div>`, true);
       break;
     }
@@ -315,8 +318,14 @@ function renderScreen() {
 
 // 画面の上のタップ。#screen は canvas を覆っているので、ここで拾って Input に渡す。
 screenEl.addEventListener('click', (ev) => {
+  // 「作品の選択へ」はリンクに任せる（ここで決定にすると、遷移の前にゲームが始まる）
+  if (ev.target.closest('.backlink')) return;
   const btn = ev.target.closest('.dbtn');
   if (btn) { game.difficulty = btn.dataset.diff; renderScreen(); Audio.resume(); return; }
+  // 指で遊ぶ端末のタイトルは「はじめる」を押したときだけ始める（本編と同じ）。
+  // どこを押しても始まると、最初のタップが音の解禁と開始を兼ねてしまい、
+  // タイトルの曲が一度も鳴らないまま作業指示書に変わる。空振りは音を出すだけ。
+  if (touch() && game.state === 'title' && !ev.target.closest('.startbtn')) { Audio.resume(); return; }
   Audio.resume();
   Input.tapConfirm();
 });
@@ -366,6 +375,9 @@ function updateAudio() {
 function renderMute() { hud.mute.textContent = Audio.muted ? '🔇 BGM' : '🔊 BGM'; }
 hud.mute.addEventListener('click', () => { Audio.resume(); Audio.toggleMute(); renderMute(); });
 renderMute();
+// タブが裏に回ったら曲を止め、戻ったら続きから（本編と同じ。裏では setInterval が間引かれて
+// BGM がスローモーションになる）
+document.addEventListener('visibilitychange', () => Audio.setMusicPaused(document.hidden));
 
 // ===== ループ =====
 const STEP = 1 / 60;
@@ -380,8 +392,11 @@ function loop(now) {
   if (SHOT > 0) frame = shotDone ? 0 : Math.min(SHOT, 30);
   acc += frame;
   while (acc >= STEP) {
+    const wasTitle = game.state === 'title';
     game.update(STEP);
-    if (Input.pressed('KeyM')) { Audio.toggleMute(); renderMute(); }
+    // タイトルでは2D側（game2/src/main2.js の title）が M を処理する。ここでも反転させると
+    // 同じ押下で2回ひっくり返って効かない。タイトル以外だけここで反転し、表示は毎回合わせる。
+    if (Input.pressed('KeyM')) { if (!wasTitle) Audio.toggleMute(); renderMute(); }
     Input.endFrame();
     acc -= STEP;
   }

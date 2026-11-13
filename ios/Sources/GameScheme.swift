@@ -10,8 +10,9 @@ import WebKit
 final class GameSchemeHandler: NSObject, WKURLSchemeHandler {
     static let scheme = "komukai"
     static let host = "game"
-    /// 入口。ここから下のファイルしか返さない。
-    static let entry = "game3d/index.html"
+    /// アプリを開いたときに最初に出すページ（2作品の選択画面）。
+    /// 配るのはこの下に限らず、root（アプリのバンドル）の下ぜんぶ。
+    static let entry = "launcher/index.html"
 
     private let root: URL
 
@@ -52,16 +53,32 @@ final class GameSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 
     /// URL をアプリの中のファイルに直す。root の外へは絶対に出さない。
+    /// `url.path` は末尾のスラッシュを落とす（"komukai://game/game3d/" → "/game3d"）ので、
+    /// 「/ で終わっていたら index.html」は効かない。ファイルを引いてからフォルダかどうかで決める。
     private func resolve(_ url: URL) -> URL? {
-        var path = url.path
+        var path = url.path(percentEncoded: false)
         if path.isEmpty || path == "/" { path = "/" + Self.entry }
-        if path.hasSuffix("/") { path += "index.html" }
-        let decoded = path.removingPercentEncoding ?? path
-        let file = root.appendingPathComponent(decoded).standardizedFileURL
+        var file = root.appendingPathComponent(path).standardizedFileURL
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: file.path, isDirectory: &isDir), isDir.boolValue {
+            file = file.appendingPathComponent("index.html")
+        }
         // `..` で同梱物の外を読まれないようにする
         guard file.path.hasPrefix(root.path + "/") else { return nil }
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
         return file
+    }
+
+    /// クエリに app が無ければ app=1 を足した URL を返す（あれば nil）。
+    /// app=1 はページの枠（角丸・影・キーボードの案内）を消す指定で、ページを移るたびに
+    /// 付け直さないと、行った先のページに枠が出る。
+    static func withApp(_ url: URL) -> URL? {
+        guard var c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        var items = c.queryItems ?? []
+        if items.contains(where: { $0.name == "app" }) { return nil }
+        items.insert(URLQueryItem(name: "app", value: "1"), at: 0)
+        c.queryItems = items
+        return c.url
     }
 
     private static func mime(for ext: String) -> String {

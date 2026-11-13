@@ -7,11 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0EFFE6D13E29F7E0DCE92230 /* game2-3d in Resources */ = {isa = PBXBuildFile; fileRef = F5516B19170E8EF5F623324B /* game2-3d */; };
+		168D8AB470F9C01DECEA025E /* game2 in Resources */ = {isa = PBXBuildFile; fileRef = 8A1791D3123647DA99817DA5 /* game2 */; };
 		181AA049F34E88068D69D38E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC7BC4E572BD848DFA67233E /* Assets.xcassets */; };
 		7292D12788DCC62AF70E379F /* KomukaiQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */; };
 		94037B42574E82982EAC163B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0BF71370111EE49876BDEC92 /* PrivacyInfo.xcprivacy */; };
 		952324466A6FD8BEE135ED4D /* GameUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2638C659BA74EF1196ED672 /* GameUITests.swift */; };
 		AEC1192483AD6514E66223BE /* game in Resources */ = {isa = PBXBuildFile; fileRef = F98FBDC0B386E3121043AD7B /* game */; };
+		B84D2A3DE0D4B4DF4B87151B /* launcher in Resources */ = {isa = PBXBuildFile; fileRef = 6A4E157325CAF1D0BBC4460B /* launcher */; };
 		C039F78D8E2ACA473972EE1A /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F480B9E32EC1A5044448760A /* GameView.swift */; };
 		CCBD6F1F0DBA880B7292990A /* GameScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EC5CD8E8CD2F868D9E2E61 /* GameScheme.swift */; };
 		FD5119EB5BF0482606C02D50 /* game3d in Resources */ = {isa = PBXBuildFile; fileRef = 20FD478F833969F119D65FF1 /* game3d */; };
@@ -33,10 +36,13 @@
 		20FD478F833969F119D65FF1 /* game3d */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game3d; path = ../game3d; sourceTree = SOURCE_ROOT; };
 		544CCCB6B02D4AD823EB3B36 /* KomukaiQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KomukaiQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64F7C12BD56AC7F98B65CAFE /* KomukaiQuestUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KomukaiQuestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6A4E157325CAF1D0BBC4460B /* launcher */ = {isa = PBXFileReference; lastKnownFileType = folder; path = launcher; sourceTree = SOURCE_ROOT; };
 		74C83A3C1F71BF847DE28113 /* KomukaiQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KomukaiQuestApp.swift; sourceTree = "<group>"; };
+		8A1791D3123647DA99817DA5 /* game2 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game2; path = ../game2; sourceTree = SOURCE_ROOT; };
 		A2638C659BA74EF1196ED672 /* GameUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameUITests.swift; sourceTree = "<group>"; };
 		DC7BC4E572BD848DFA67233E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F480B9E32EC1A5044448760A /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		F5516B19170E8EF5F623324B /* game2-3d */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "game2-3d"; path = "../game2-3d"; sourceTree = SOURCE_ROOT; };
 		F98FBDC0B386E3121043AD7B /* game */ = {isa = PBXFileReference; lastKnownFileType = folder; name = game; path = ../game; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -45,7 +51,10 @@
 			isa = PBXGroup;
 			children = (
 				F98FBDC0B386E3121043AD7B /* game */,
+				8A1791D3123647DA99817DA5 /* game2 */,
+				F5516B19170E8EF5F623324B /* game2-3d */,
 				20FD478F833969F119D65FF1 /* game3d */,
+				6A4E157325CAF1D0BBC4460B /* launcher */,
 				CFFB3F86319813380C853B9F /* Resources */,
 				8C1D8A46C11AF9FB4669B75B /* Sources */,
 				6ECF42BEB319CE4C9DEFE615 /* Tests */,
@@ -176,7 +185,10 @@
 				181AA049F34E88068D69D38E /* Assets.xcassets in Resources */,
 				94037B42574E82982EAC163B /* PrivacyInfo.xcprivacy in Resources */,
 				AEC1192483AD6514E66223BE /* game in Resources */,
+				168D8AB470F9C01DECEA025E /* game2 in Resources */,
+				0EFFE6D13E29F7E0DCE92230 /* game2-3d in Resources */,
 				FD5119EB5BF0482606C02D50 /* game3d in Resources */,
+				B84D2A3DE0D4B4DF4B87151B /* launcher in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

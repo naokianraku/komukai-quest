@@ -194,6 +194,8 @@ const DIFFS = [
   ['hell',   '地獄',     '3', `雑魚が2倍＋残機少なめ（有休 ${LIVES.hell}）`],
 ];
 screenEl.addEventListener('click', (ev) => {
+  // 「作品の選択へ」はリンクに任せる（ここで決定にすると、遷移の前にゲームが始まる）
+  if (ev.target.closest('.backlink')) return;
   const b = ev.target.closest('[data-diff]');
   if (b) { game.difficulty = b.dataset.diff; renderScreen(); return; }
   // ブラウザは最初のユーザー操作がないと音を鳴らせない。タイトルで「どこを押しても開始」に
@@ -240,6 +242,7 @@ function renderScreen() {
         ${touch ? '<button class="startbtn">② ▶ はじめる</button>' : ''}
         ${hint('Enter キー、または上のボタン以外を押して開始（M キーで BGM 入／切）',
                '画面を押すと音が出ます（🔊 で BGM 入／切）')}
+        <a class="backlink" href="../launcher/index.html?app=1">◀ 作品の選択へ</a>
       </div>`, true);
       break;
     }

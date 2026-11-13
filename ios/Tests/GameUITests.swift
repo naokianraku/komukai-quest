@@ -16,9 +16,12 @@ final class GameUITests: XCTestCase {
 
     // MARK: - 下ごしらえ
 
-    private func launch(_ game: String? = nil) -> XCUIApplication {
+    /// page: 開くページ。nil ならアプリを開いたときと同じ選択画面。
+    /// 既定は本編（今までのテストは本編のタイトルから始める前提）。
+    private func launch(_ game: String? = nil, page: String? = "game3d") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uitest", "1"]
+        if let page { app.launchArguments += ["-page", page] }
         if let game { app.launchArguments += ["-game", game] }
         app.launch()
         return app
@@ -143,5 +146,73 @@ final class GameUITests: XCTestCase {
                           "景色が動いた状態")
         XCTAssertNotEqual(after["cam"] as? String, camBefore,
                           "スティックを倒しても景色が動かない＝歩けていない")
+    }
+
+    // MARK: - 2作品の選択（1.1.0）
+
+    /// アプリを開くと、最初に「小向クエスト」と「小向クエスト２」を選ぶ画面が出ること。
+    func testアプリを開くと作品を選べる() {
+        let app = launch(page: nil)
+        let s = state(app, until: {
+            ($0["page"] as? String) == "/launcher/index.html"
+                && !(($0["pick1"] as? String) ?? "").isEmpty
+                && !(($0["pick2"] as? String) ?? "").isEmpty
+        }, "選択画面")
+        XCTAssertNotNil(point(app, s["pick1"]), "本編のカードの位置が取れない")
+        XCTAssertNotNil(point(app, s["pick2"]), "続編のカードの位置が取れない")
+    }
+
+    /// 続編を選ぶと続編のタイトルが開き、枠が出ず（app=1 が効いている）、
+    /// 「はじめる」で作業指示書へ進むこと。
+    func test続編を選ぶと続編が始められる() {
+        let app = launch(page: nil)
+        let menu = state(app, until: { !(($0["pick2"] as? String) ?? "").isEmpty }, "選択画面")
+        guard let pick2 = point(app, menu["pick2"]) else { return XCTFail("続編のカードの位置が取れない") }
+        pick2.tap()
+
+        let title = state(app, until: {
+            ($0["page"] as? String) == "/game2-3d/index.html" && !(($0["start"] as? String) ?? "").isEmpty
+        }, "続編のタイトル")
+        XCTAssertEqual(title["framed"] as? Bool, false, "続編に枠が出ている＝app=1 が引き継がれていない")
+        XCTAssertEqual(title["touch"] as? Bool, true, "続編が指で遊ぶ端末だと認識していない")
+
+        // 空振りのタップでは始まらない（本編と同じ。音の解禁だけ）
+        if let mid = point(app, title["mid"]) {
+            mid.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            let still = state(app, timeout: 5, "空振り後のタイトル")
+            XCTAssertFalse(((still["start"] as? String) ?? "").isEmpty, "空振りのタップで続編が始まってしまった")
+        }
+        guard let start = point(app, title["start"]) else { return XCTFail("続編の「はじめる」の位置が取れない") }
+        start.tap()
+        let intro = state(app, until: { (($0["start"] as? String) ?? "").isEmpty }, "続編の作業指示書")
+        XCTAssertEqual(intro["screen"] as? String, "flex", "続編の作業指示書が出ていない")
+    }
+
+    /// 本編を選ぶと本編のタイトルが枠なしで開くこと。
+    func test本編を選ぶと本編が開く() {
+        let app = launch(page: nil)
+        let menu = state(app, until: { !(($0["pick1"] as? String) ?? "").isEmpty }, "選択画面")
+        guard let pick1 = point(app, menu["pick1"]) else { return XCTFail("本編のカードの位置が取れない") }
+        pick1.tap()
+        let title = state(app, until: {
+            ($0["page"] as? String) == "/game3d/index.html" && !(($0["start"] as? String) ?? "").isEmpty
+        }, "本編のタイトル")
+        XCTAssertEqual(title["framed"] as? Bool, false, "本編に枠が出ている")
+    }
+
+    /// 本編・続編のタイトルから「作品の選択へ」で選択画面に戻れること。
+    func test作品の選択へ戻れる() {
+        for page in ["game3d", "game2-3d"] {
+            let app = launch(page: page)
+            let title = state(app, until: { !(($0["back"] as? String) ?? "").isEmpty },
+                              "\(page) のタイトルの「作品の選択へ」")
+            guard let back = point(app, title["back"]) else { return XCTFail("\(page): 戻るボタンの位置が取れない") }
+            back.tap()
+            let menu = state(app, until: { ($0["page"] as? String) == "/launcher/index.html" },
+                             "\(page) から選択画面に戻った状態")
+            XCTAssertFalse(((menu["pick1"] as? String) ?? "").isEmpty, "\(page): 戻った先に本編のカードが無い")
+            app.terminate()
+        }
     }
 }

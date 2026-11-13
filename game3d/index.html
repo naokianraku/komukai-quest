@@ -136,6 +136,12 @@
     background:var(--accent);color:#15171a;border:0;border-radius:12px;padding:13px 10px;
     box-shadow:0 6px 18px rgba(255,127,14,.35)}
   #screen .startbtn:active{transform:translateY(1px)}
+  /* アプリの中だけ出す「作品の選択へ」。Web には選択画面が無いので出さない（data-app のときだけ） */
+  #screen .backlink{display:none}
+  html[data-app] #screen .backlink{display:block;width:max-content;margin:12px auto 0;padding:7px 16px;
+    font-size:12px;font-weight:700;letter-spacing:.06em;color:#6c737c;text-decoration:none;
+    border:1px solid #d3d8dd;border-radius:999px;background:rgba(255,255,255,.6)}
+  html[data-app] #screen .backlink:active{transform:translateY(1px)}
   #screen .diffdesc.hell{color:#b3261e;font-weight:700}
   #screen .title{text-align:center}
 

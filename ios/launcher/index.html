@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja" data-app="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>小向クエスト — 作品の選択</title>
+<style>
+  /* アプリを開いたときの最初の画面。2作品を選ぶだけ。
+     見た目は両作品のタイトル画面の「社内システムの書類」をそのまま2枚並べたもの。
+     文言も各タイトル画面にある言葉だけを使い、新しく作らない。 */
+  :root{
+    --bg:#15171a; --ink:#f0f3f5; --sub:#9aa0a8; --accent:#ff7f0e;
+    --paper:#f6f7f9; --paper-ink:#1b1e23; --paper-sub:#6c737c; --line:#d3d8dd;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body{
+    /* 切り欠き（Dynamic Island）と角丸をよける */
+    padding:max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+            max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,3.2vh,22px);
+    /* background の一括指定は色を透明に戻してしまい、下端に継ぎ目が出る。色と繰り返しを明示する */
+    background:var(--bg) radial-gradient(120% 90% at 50% 0%, #1f232a 0%, var(--bg) 62%) no-repeat;
+  }
+  .head{display:flex;align-items:center;gap:10px;font-size:clamp(11px,2.1vh,13px);
+    color:var(--sub);letter-spacing:.14em}
+  .head .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
+  .cards{display:flex;gap:clamp(12px,2.4vw,24px);width:100%;max-width:960px;justify-content:center}
+  .card{flex:1 1 0;min-width:0;max-width:440px;display:flex;flex-direction:column;
+    text-decoration:none;color:var(--paper-ink);background:var(--paper);
+    border-radius:14px;border-top:5px solid var(--accent);
+    box-shadow:0 20px 60px rgba(0,0,0,.55);overflow:hidden;
+    transition:transform .08s ease, box-shadow .08s ease}
+  .card:active{transform:translateY(2px) scale(.995);box-shadow:0 10px 30px rgba(0,0,0,.55)}
+  .card:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  /* 画面写真。無ければ消えるだけ（文字だけでも選べる） */
+  .shot{width:100%;aspect-ratio:16/9;max-height:34vh;object-fit:cover;display:block;background:#0c0e11}
+  .body{padding:clamp(10px,2.6vh,18px) clamp(14px,2.4vw,22px) clamp(12px,3vh,20px);
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(3px,.9vh,6px)}
+  .eyebrow{font-size:clamp(9px,1.7vh,11px);letter-spacing:.24em;color:var(--paper-sub)}
+  h2{font-size:clamp(18px,4.6vh,30px);color:var(--accent);letter-spacing:.02em;line-height:1.05;font-weight:800}
+  .jp{font-size:clamp(11px,2.2vh,14px);letter-spacing:.34em;color:#3a3f46}
+  .lead{font-size:clamp(10px,2vh,13px);color:#3a3f46;line-height:1.6}
+  .go{margin-top:clamp(4px,1.4vh,10px);display:block;width:100%;
+    font-weight:700;font-size:clamp(12px,2.4vh,15px);letter-spacing:.06em;
+    background:var(--accent);color:#15171a;border-radius:10px;padding:clamp(7px,1.8vh,11px) 0}
+  .note{font-size:clamp(9px,1.7vh,11px);color:var(--paper-sub)}
+  /* とても低い画面（横向きの小さい iPhone）では写真を省いて文字だけにする */
+  @media (max-height:340px){ .shot{display:none} }
+</style>
+</head>
+<body>
+  <div class="head"><span class="dot"></span>起動するシステムを選択</div>
+  <div class="cards">
+    <a class="card" id="pick1" href="../game3d/index.html?app=1" data-game="game3d">
+      <img class="shot" src="shot1.jpg" alt="" onerror="this.remove()">
+      <div class="body">
+        <div class="eyebrow">小向工場 業務支援システム　Ver 2.4</div>
+        <h2>KOMUKAI QUEST</h2>
+        <div class="jp">小 向 ク エ ス ト</div>
+        <p class="lead">小向戦士となり、小向工場を生き残れ。</p>
+        <span class="go">▶ 本編をプレイ</span>
+        <span class="note">まずはこちらから</span>
+      </div>
+    </a>
+    <a class="card" id="pick2" href="../game2-3d/index.html?app=1" data-game="game2-3d">
+      <img class="shot" src="shot2.jpg" alt="" onerror="this.remove()">
+      <div class="body">
+        <div class="eyebrow">小向工場 工程管理システム　Ver 1.0</div>
+        <h2>KOMUKAI QUEST 2</h2>
+        <div class="jp">ゴ ー ル デ ン エ イ ジ 編</div>
+        <p class="lead">— 後にそう呼ばれる者たちの物語 —</p>
+        <span class="go">▶ ゴールデンエイジ編をプレイ</span>
+        <span class="note">前日譚・本編クリア後がおすすめ</span>
+      </div>
+    </a>
+  </div>
+</body>
+</html>
