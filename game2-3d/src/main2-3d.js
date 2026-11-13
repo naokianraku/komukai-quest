@@ -259,7 +259,7 @@ function updateHUD(dt) {
     bossRef = null; bossShown = 1;
   }
 
-  hud.loc.textContent = st.location || st.data.location || '';
+  hud.loc.textContent = locFor(st);
   if (st.bannerT > 0 && st.banner) {
     hud.banner.textContent = st.banner;
     hud.banner.classList.add('show');
@@ -269,6 +269,21 @@ function updateHUD(dt) {
   } else hud.banner.classList.remove('show');
   // 待合室。敵が出ない代わりに、残工期だけが減っていく時間
   hud.wait.classList.toggle('show', game.state === 'playing' && st.waitT > 0);
+}
+
+// 右上の作業場所。章のデータは章に1つ（2D版と同じ）なので、3Dで部屋が変わる区間では、
+// 今ある文言から作る（新しい名前は足さない）:
+//  ・帰社の区間（自社の執務室）… 波の見出し「帰社 — PM（課長）」の「帰社」
+//  ・章の場所名のうち部屋の名前より前（「研修センター 大講堂」→「研修センター」、「GR社 工場 待合室」→「GR社 工場」）
+//    … その部屋ではない区間（実習場・寮・古い工場・古い会議室）
+const LOC_JISHA = '帰社';
+const LOC_TRIM = new Set(['g2_kenshu', 'g2_ryo', 'g2_gr_kojo', 'g2_gr_kaigi']);
+function locFor(st) {
+  const base = st.location || st.data.location || '';
+  const key = getScene();
+  if (key === 'g2_jisha') return LOC_JISHA;
+  if (LOC_TRIM.has(key)) { const w = base.split(' '); return w.length > 1 ? w.slice(0, -1).join(' ') : base; }
+  return base;
 }
 
 // ===== 画面 =====
