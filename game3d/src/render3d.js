@@ -138,6 +138,60 @@ function box(w, h, d, color, x, y, z, opts = {}) {
   return m;
 }
 
+// 場面の外から足した物（円柱・時計の針など）も、張り替えでまとめて捨てられるよう scenery に入れる
+function addScenery(obj) { scenery.add(obj); return obj; }
+
+// 動かない箱を、色ごとに分けずにまとめて1つのメッシュにする（頂点カラー）。
+// box() は1つ置くたびに描画が1回増える。場面に数百個並ぶと iPhone で効いてくるので、
+// 続編の場面はこれで建てる。影を落とす物と落とさない物で分けて、最大2回の描画で済む。
+// 自発光（emissive）・半透明（opacity）の箱はまとめられないので、それだけ box() で置く。
+//   const b = boxBatch();  b.box(w,h,d,'#色',x,y,z,{cast,rotY});  …  b.done();
+function boxBatch() {
+  const groups = { cast: [], plain: [] };
+  return {
+    box(w, h, d, color, x, y, z, opts = {}) {
+      (opts.cast ? groups.cast : groups.plain).push([w, h, d, color, x, y, z, opts.rotY || 0]);
+    },
+    count() { return groups.cast.length + groups.plain.length; },
+    done() {
+      const out = [];
+      for (const [kind, list] of Object.entries(groups)) {
+        if (!list.length) continue;
+        const pos = [], nor = [], col = [], idx = [];
+        const c = new THREE.Color();
+        const v = new THREE.Vector3(), n = new THREE.Vector3();
+        for (const [w, h, d, color, x, y, z, ry] of list) {
+          const g = new THREE.BoxGeometry(w, h, d);
+          if (ry) g.rotateY(ry);
+          g.translate(x, y, z);
+          c.set(color);   // ColorManagement が効いているので r,g,b は linear。頂点カラーにそのまま入れてよい
+          const base = pos.length / 3;
+          const P = g.attributes.position, N = g.attributes.normal;
+          for (let i = 0; i < P.count; i++) {
+            v.fromBufferAttribute(P, i); n.fromBufferAttribute(N, i);
+            pos.push(v.x, v.y, v.z); nor.push(n.x, n.y, n.z); col.push(c.r, c.g, c.b);
+          }
+          for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.array[i]);
+          g.dispose();
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        geo.setIndex(idx);
+        const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+        m.castShadow = kind === 'cast';
+        m.receiveShadow = true;
+        m.matrixAutoUpdate = false; m.updateMatrix();
+        scenery.add(m);
+        out.push(m);
+      }
+      groups.cast.length = 0; groups.plain.length = 0;
+      return out;
+    },
+  };
+}
+
 // ===== 炎 =====
 // 箱を3段に積んだだけでは炎に見えない（オレンジの荷物に見える）。
 // 先細りの舌を3枚重ね、毎フレーム伸び縮みさせて揺らす。さらに火の粉を昇らせ、
@@ -1046,10 +1100,12 @@ function buildMeeting(W, halfD) {
     for (let i = 0; i < 5; i++) box(5.2, 0.6, 5.2, R.chair, x, 1.2 + i * 1.4, BACK + 13, { cast: true });
     box(5.6, 7.5, 5.6, R.chair, x, 4.2, BACK + 13);
   }
+  // フリップチャートは奥の壁ぎわに立てる。以前は手前（z=halfD+12）に立てていて、板（y=14〜30）が
+  // カメラと人の間に入り、中ボスが丸ごと隠れた（ストアの画像で発覚。ゲーム座標 300/720/1140/1560）。
   for (let x = 100; x < W; x += 140) {
-    box(0.6, 20, 0.6, '#9aa096', x - 5, 10, halfD + 12);
-    box(0.6, 20, 0.6, '#9aa096', x + 5, 10, halfD + 12);
-    box(13, 16, 0.4, '#fbfcfa', x, 22, halfD + 12, { receive: false });
+    box(0.6, 20, 0.6, '#9aa096', x - 5, 10, BACK + 16);
+    box(0.6, 20, 0.6, '#9aa096', x + 5, 10, BACK + 16);
+    box(13, 16, 0.4, '#fbfcfa', x, 22, BACK + 16.3, { receive: false });
   }
 }
 
@@ -1104,7 +1160,10 @@ function buildBoardroom(W, halfD) {
     // 椅子は必ず歩行帯側（手前）に置く。机の向こうに置くと壁を隠してしまう
     for (const dx of [-19, -6, 7, 20]) {
       box(7.5, 1.0, 7.5, R.chair, x + dx, 6.2, z + 11 * back, { cast: true });        // 座面
-      box(7.5, 13, 1.2, R.chair, x + dx, 12.7, z + 14 * back, { cast: true });        // 高い背もたれ
+      // 手前の列（back=-1）の背もたれはカメラと人の間に入る。高いままだと帯の手前端に立つ人の
+      // 下半身を隠す（最終ボス戦で自機が隠れた）。手前の列だけ、胴の線より低い背もたれにする
+      if (back > 0) box(7.5, 13, 1.2, R.chair, x + dx, 12.7, z + 14 * back, { cast: true });   // 高い背もたれ
+      else box(7.5, 5, 1.2, R.chair, x + dx, 8.7, z + 14 * back, { cast: true });                // 低い背もたれ
       box(1.4, 5.4, 1.4, '#6a6270', x + dx, 3.0, z + 11 * back);
       box(7.0, 0.6, 7.0, '#6a6270', x + dx, 0.5, z + 11 * back);
     }
@@ -1399,7 +1458,9 @@ function buildFactory(W, halfD) {
 
 const SCENES = {
   gate: buildGate, factory: buildFactory,
-  office_win: buildOffice, office: buildOfficeInner, meeting: buildMeeting,
+  // office は2引数で包む。applyScene は第3引数に { stage, data } を渡すので、buildOfficeInner の
+  // 第3引数（部屋の配色 R）に入って R.binder で落ちる（f143a6f で本編第2ステージが壊れていた）
+  office_win: buildOffice, office: (W, halfD) => buildOfficeInner(W, halfD), meeting: buildMeeting,
   kanren: (W, halfD) => buildOfficeInner(W, halfD, ROOM.kanren),
   boardroom: buildBoardroom, hellfire: buildHellfire,
   shrine: buildShrine, shokudo: buildShokudo, yard: buildYard,
@@ -1408,13 +1469,35 @@ const SCENES = {
 // 外から場面を足す口。続編（ゴールデンエイジ編）の場面は本編の SCENES に混ぜず、
 // 続編のファイル（game2-3d/src/scenes2.js）で書いてここから登録する。
 // 本編のページは続編のファイルを読まないので、本編の容量も動きも変わらない。
-export function registerScene(key, build) { SCENES[key] = build; }
+// hooks.onEvent(name, arg) を渡すと、その場面が張られている間だけ sceneEvent が届く
+// （待合室の扉が開く・HPバーが見えて照明が点く・作り直しで試験品が壊れる、など）。
+const SCENE_HOOKS = {};
+export function registerScene(key, build, hooks = null) {
+  if (SCENES[key] && !SCENE_HOOKS[key] && !hooks) console.warn('registerScene: 既にある場面を上書きする', key);
+  SCENES[key] = build;
+  if (hooks) SCENE_HOOKS[key] = hooks;
+}
+// 今の場面に出来事を知らせる。場面が受け取らなければ何もしない（本編の場面は受け取らない）。
+export function sceneEvent(name, arg) {
+  const h = curScene && SCENE_HOOKS[curScene];
+  if (!h || !h.onEvent) return;
+  try { h.onEvent(name, arg); } catch (err) { console.error('sceneEvent: 場面の出来事で落ちた', curScene, name, err); }
+}
 
 function applyScene(key, data) {
   clearScenery();
   const W = data.width * S;
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
-  (SCENES[key] || buildOffice)(W, halfD);
+  // 知らないキーは本編の執務室で代用する（今まで通り）。ただし黙って化けると気づけないので知らせる
+  if (!SCENES[key]) console.warn('applyScene: 登録されていない場面', key, '→ 執務室で代用');
+  // 場面の関数が落ちても、ゲームのループは止めない（真っ黒で固まるのを避ける）。執務室で代用する
+  try {
+    (SCENES[key] || buildOffice)(W, halfD, { stage, data });
+  } catch (err) {
+    console.error('applyScene: 場面を建てる途中で落ちた', key, err);
+    clearScenery();
+    buildOffice(W, halfD);
+  }
   // 「出向」の入り口は場面の一部ではなくステージの仕掛け。場面を張り替えても消えないよう、
   // どの場面のあとにも足す（ボス戦で稲荷社に変わったあとも、来た道に残っていてよい）。
   if (stage && stage.door) buildInariDoor(stage.door);
@@ -1433,11 +1516,14 @@ let curScene = null;
 
 // タイトルの背景は正門。ステージの場面とは別に張り替える。
 // タイトルへ戻るときは必ずここを通す（戻り先が執務室のままだと開始画面が暗いだけになる）。
-export function buildTitleScenery(width) {
+// key を渡すと、登録した場面をタイトルの背景にする（続編は続編専用のタイトル場面）。
+export function buildTitleScenery(width, key = 'gate') {
   clearScenery();
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
-  buildGate(width * S, halfD);
-  curScene = 'gate';
+  const build = key === 'gate' ? buildGate : SCENES[key];
+  if (!build) console.warn('buildTitleScenery: 登録されていない場面', key, '→ 正門で代用');
+  (build || buildGate)(width * S, halfD, { stage, data: null, title: true });
+  curScene = build ? key : 'gate';
 }
 
 // 場面の読み書き。章の途中で背景が変わるステージは、シェルがここを突いて張り替える。
@@ -1694,9 +1780,12 @@ function syncEntities(dt) {
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
     // 倒れかけ（捨てセリフ中）は、膝から崩れるように前のめりへ倒していく。
     const fall = e.dying ? Math.min(1, 1 - (e.downT / (e.downMax || e.downDur || 2.8))) : 0;
-    r.body.rotation.x = e.dying ? 0.16 + fall * 0.9
+    const lean = e.dying ? 0.16 + fall * 0.9
       : e.state === 'cast' ? -0.34
       : e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
+    // 傾きはワールドのx軸まわり（yaw のあと）なので、背中をこちらに向けた体では前後が逆になる。
+    // そのままだと「のけぞりながら殴る」ので、背中向きのときだけ符号を返す（本編の種別は通らない）
+    r.body.rotation.x = (r.look.faceAway && Math.cos(face) < 0) ? -lean : lean;
     // 崩れ方: 前半は言わせたいので形を保ち、後半で一気に縮んで消える。
     // 横にも潰すので、瓦礫になって落ちていくように見える。
     const crumble = Math.max(0, (fall - 0.45) / 0.55);
@@ -2271,7 +2360,9 @@ function syncLabels() {
       placed.push({ text, cx: tx, cy: ty, half });
       tagH = tagPx;
     };
-    if (label) putTag(label, e.betrayed ? '#ff5a5a' : (TYPE_COLOR[e.spriteKey] || '#cfd6de'));
+    // 着替えている間（続編の第1章＝研修中は同期も研修生の格好）は、配属先の色を名札に出さない
+    const dressed = modelKeyOf(e, stage) !== e.spriteKey;
+    if (label) putTag(label, e.betrayed ? '#ff5a5a' : dressed ? '#cfd6de' : (TYPE_COLOR[e.spriteKey] || '#cfd6de'));
     else if (e === stage.player) putTag('▼', '#ff7f0e');
     else tag.style.display = 'none';
 
@@ -2407,6 +2498,7 @@ export {
   box, applyScene, sceneAt, buildScenery, clearScenery, clearStageObjects,
   // 場面を書くための道具（続編の scenes2.js が使う）
   hex, zones, setLighting, ceilingSlab, chair, fireRow, hemi, sun, fill, ROOM,
+  boxBatch, addScenery,
   addFloat, burst, meteorBoom,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,

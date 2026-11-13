@@ -48,7 +48,7 @@ import { registerPalettes, registerTypeMeta, TYPE_LABEL } from '../game/src/spri
 import { Char } from '../game/src/entities.js';
 import { playMid } from '../game/src/config.js';
 import { CHAPTERS, PALETTES2, LABELS2, COLORS2, UNIT_TYPES2, defFor2 } from '../game2/src/stages2.js';
-import { registerChars2 } from './src/chars2.js';
+import { registerChars2, PALETTES2_3D } from './src/chars2.js';
 
 // ゲーム本体（main2-3d.js）と同じ順で登録する
 registerPalettes(PALETTES2);
@@ -120,10 +120,10 @@ for (const row of ROWS) {
       // 味方は右向き、相手は左向き（ゲームの中で主人公に向かってくる向き）
       c.facing = side === 'ally' ? 1 : -1;
       // 振り向く前のプロマネ（bossFaceLock）。ゲームと同じく faceLock=-1 にしておく
-      if (PALETTES2[type].faceAway === 'locked' && mode !== 'turned') c.faceLock = -1;
+      if (PALETTES2_3D[type].faceAway === 'locked' && mode !== 'turned') c.faceLock = -1;
       ents.push(c);
       marks.push({ c, label: labelOf(type, row.ch), type });
-      maxH = Math.max(maxH, 19 * s * (PALETTES2[type].bodyH || 1));
+      maxH = Math.max(maxH, 19 * s * (PALETTES2_3D[type].bodyH || 1));
       x += gap(t);
     }
     marks.push({ side: SIDE[side], x0, x1: x });
@@ -179,7 +179,7 @@ for (const row of ROWS) {
     const el = document.createElement('div');
     if (m.c) {
       const s = (m.c.scale || 3) / 3;
-      const p = toPx(wx(m.c.x), wy(0) + 19.5 * s * (PALETTES2[m.type].bodyH || 1), wz(m.c.y));
+      const p = toPx(wx(m.c.x), wy(0) + 19.5 * s * (PALETTES2_3D[m.type].bodyH || 1), wz(m.c.y));
       el.className = 'tag';
       el.textContent = m.label;
       el.style.color = COLORS2[m.type] || (m.type.startsWith('p2_') ? '#ff9d3c' : '#e0e4ea');
