@@ -40,6 +40,11 @@ export const Input = {
   forceTouch: false,
   gameplayActive: false, // プレイ中(かつ一時停止していない)のみ true。フローティングスティックの誤作動防止
   specialReady: false,   // 奥の手が残っているか。ボタンを出すかどうかもこれで決める
+  // その場だけ使える操作のボタン（続編のレター＝R／設計に口を出す＝E）。奥の手Ｋと同じ位置に出す
+  // （続編は奥の手を使わないので重ならない）。ゲーム側が { key: 'KeyR', label: 'レター' } を
+  // 入れている間だけ出て、押すとそのキーを押したのと同じに届く。本編は使わない（null のまま）。
+  ctxButton: null,
+  _ctxCode: null,        // 押したときのキー。離すまでに ctxButton が変わっても正しく離すため
   _canvas: null,
 
   init() {
@@ -88,16 +93,27 @@ export const Input = {
     if (dist(x, y, BTN_A.cx, BTN_A.cy) < BTN_A.r + BTN_PAD) return 'attack';
     if (dist(x, y, BTN_B.cx, BTN_B.cy) < BTN_B.r + BTN_PAD) return 'jump';
     if (this.specialReady && dist(x, y, BTN_C.cx, BTN_C.cy) < BTN_C.r + BTN_PAD) return 'special';
+    if (this.ctxButton && dist(x, y, BTN_C.cx, BTN_C.cy) < BTN_C.r + BTN_PAD) return 'ctx';
     return 'tap';
   },
 
   _code(role) {
     return role === 'attack' ? 'TouchAttack' : role === 'jump' ? 'TouchJump'
-      : role === 'special' ? 'TouchSpecial' : null;
+      : role === 'special' ? 'TouchSpecial'
+      : role === 'ctx' ? (this.ctxButton ? this.ctxButton.key : null) : null;
   },
 
-  _pressBtn(role) { const c = this._code(role); if (c) { pressed.add(c); held.add(c); } },
-  _releaseBtn(role) { const c = this._code(role); if (c) held.delete(c); },
+  _pressBtn(role) {
+    const c = this._code(role);
+    if (!c) return;
+    pressed.add(c); held.add(c);
+    if (role === 'ctx') this._ctxCode = c;
+  },
+  _releaseBtn(role) {
+    const c = role === 'ctx' ? this._ctxCode : this._code(role);
+    if (c) held.delete(c);
+    if (role === 'ctx') this._ctxCode = null;
+  },
 
   _onDown(e) {
     e.preventDefault();
@@ -245,6 +261,18 @@ export const Input = {
     this._btn(ctx, BTN_B, '跳', held.has('TouchJump'));
     // 奥の手は使い切ったら消す。押せないボタンが残っていると迷わせる
     if (this.specialReady) this._btn(ctx, BTN_C, 'Ｋ', held.has('TouchSpecial'));
+    else if (this.ctxButton) {
+      // 使える間だけ出るので、出たことに気づけるようオレンジの輪を脈打たせる
+      const down = held.has(this.ctxButton.key);
+      if (!down) {
+        const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000;
+        ctx.globalAlpha = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 6));
+        ctx.strokeStyle = '#ff7f0e'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(BTN_C.cx, BTN_C.cy, BTN_C.r + 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+      this._btn(ctx, BTN_C, this.ctxButton.label, down);
+    }
     ctx.restore();
   },
 

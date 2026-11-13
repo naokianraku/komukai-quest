@@ -161,7 +161,7 @@ function updateHUD(dt) {
     const full = game.letter >= game.letterMax;
     hud.letterFill.style.width = (game.letter / game.letterMax * 100).toFixed(1) + '%';
     hud.gLetter.classList.toggle('full', full);
-    hud.letterLabel.textContent = full ? 'レター（R で撃てる）' : 'レター';
+    hud.letterLabel.textContent = full ? (touch() ? 'レター（ボタンで撃てる）' : 'レター（R で撃てる）') : 'レター';
   }
 
   // ボスのゲージ。L3社のように情報が出てこない相手は「？？？」のまま
@@ -330,6 +330,19 @@ screenEl.addEventListener('click', (ev) => {
   Input.tapConfirm();
 });
 
+// 指で遊ぶ端末の「その場のボタン」。続編の2つの仕掛けはキーボードの R／E でしか出せず、
+// iPhone では使えなかった。使える間だけ、奥の手Ｋの位置にボタンを出す（続編は奥の手を使わない）。
+// 条件は game2/src/main2.js のボス戦の判定（R: レターが満タン／E: 作り直しの残りがある）と同じ。
+// レターは第3章、口出しは第5章だけなので、同時に2つ出ることはない。
+function ctxAction() {
+  const st = game.stage;
+  if (game.state !== 'playing' || game.paused || !st || !st.boss || !st.boss.alive) return null;
+  const g = st.data.gauges || {};
+  if (g.letter && game.letter >= game.letterMax) return { key: 'KeyR', label: 'レター' };
+  if (st.reviveLeft > 0) return { key: 'KeyE', label: '口出し' };
+  return null;
+}
+
 // ===== 画面の大きさ =====
 let uiScale = 1;
 function resize() {
@@ -393,6 +406,7 @@ function loop(now) {
   acc += frame;
   while (acc >= STEP) {
     const wasTitle = game.state === 'title';
+    Input.ctxButton = ctxAction();
     game.update(STEP);
     // タイトルでは2D側（game2/src/main2.js の title）が M を処理する。ここでも反転させると
     // 同じ押下で2回ひっくり返って効かない。タイトル以外だけここで反転し、表示は毎回合わせる。
