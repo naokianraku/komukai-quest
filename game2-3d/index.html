@@ -42,6 +42,8 @@
   /* メテオ着弾の赤い閃光。詠唱中もうっすら点く */
   #flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:12;
     background:radial-gradient(110% 80% at 50% 62%, rgba(255,120,50,.30), rgba(150,15,0,.80))}
+  /* 章の途中で場所が変わるときの短い暗転（場面を建て直す一瞬の引っかかりを隠す）。HUD の下、3D の上 */
+  #fade{position:absolute;inset:0;pointer-events:none;opacity:0;background:#0b0d12}
   #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
   /* 役職名。級数は体格に合わせて JS 側で入れ替える（下の .bubble と同じ考え方） */
   #labels .tag{position:absolute;left:0;top:0;white-space:nowrap;
@@ -338,6 +340,7 @@
   <div id="frame">
     <div id="stage">
       <canvas id="c3d"></canvas>
+      <div id="fade"></div>
       <canvas id="pad"></canvas>
       <pre id="err" style="position:absolute;left:12px;bottom:12px;z-index:99;color:#ff8a8a;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;max-width:70%"></pre>
       <div id="bossWrap">

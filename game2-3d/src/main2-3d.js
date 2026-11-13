@@ -110,6 +110,10 @@ let bossSceneApplied = false;
 // k は scenes3d[k-1]。進むだけで戻らない（戦闘中に自機が後ろへ下がっても、前の場面へ張り戻さない。
 // 地獄では敵が自機の後ろにも出るので、下がるたびに部屋が入れ替わってしまう）。
 let segIdx = 0;
+// 区間の切り替えの暗転（下の updateFade）。attach が起動直後にも呼ぶので、ここで先に用意する
+const fadeEl = document.getElementById('fade');
+const labelsEl = document.getElementById('labels');
+const fade = { phase: 0, a: 0, pending: null };
 function segIndexAt(data, x) {
   let k = 0;
   for (const seg of data.scenes3d || []) if (x >= seg.x) k++;
@@ -135,6 +139,7 @@ function attach(st, data) {
   st.fx.meteor = (x, y, r) => { oMeteor(x, y, r); meteorBoom(x, y, r); };
   buildScenery(data);
   segIdx = segIndexAt(data, st.player.x);
+  clearFade();
   camPos.set(wx(st.player.x), CAM.height, wz(st.player.y) + CAM.dist);
   camLook.set(wx(st.player.x), CAM.lookY, wz(st.player.y) - 3);
 }
@@ -586,6 +591,37 @@ function keepRespawnInRoom(st, livesBefore) {
   st.player.x = Math.max(st.player.x, st.width - 220);
 }
 
+// ===== 区間の切り替えの暗転 =====
+// phase 0: なし / 1: 暗くしていく / 2: 暗いうちに張り替えて明けていく
+const FADE_IN = 0.16, FADE_OUT = 0.34;
+function updateFade(frameDt) {
+  if (fade.phase === 0) return;
+  // 建て直しの重い1フレームで dt が大きくなっても、明ける途中が飛ばないよう上限を置く
+  const dt = Math.min(frameDt, 0.1);
+  if (fade.phase === 1) {
+    fade.a = Math.min(1, fade.a + dt / FADE_IN);
+    if (fade.a >= 1 && fade.pending) {
+      const { seg, data, st } = fade.pending;
+      fade.pending = null;
+      if (st === game.stage) {   // 暗転の間に章が変わっていたら張り替えない
+        setScene(seg.scene, data);
+        if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
+        sceneEvent('segment', { index: segIdx, scene: seg.scene });
+      }
+      fade.phase = 2;
+    }
+  } else {
+    fade.a = Math.max(0, fade.a - dt / FADE_OUT);
+    if (fade.a <= 0) fade.phase = fade.pending ? 1 : 0;
+  }
+  fadeEl.style.opacity = fade.a.toFixed(3);
+  labelsEl.style.opacity = (1 - fade.a).toFixed(3);
+}
+function clearFade() {
+  fade.phase = 0; fade.a = 0; fade.pending = null;
+  fadeEl.style.opacity = '0'; labelsEl.style.opacity = '1';
+}
+
 // ===== ループ =====
 const STEP = 1 / 60;
 const SHOT = parseFloat(Q.get('shot') || '0');
@@ -635,12 +671,15 @@ function loop(now) {
     if (segIdx !== from) {
       const seg = segScene(st.data, segIdx);
       if (seg.scene !== getScene()) {
-        setScene(seg.scene, st.data);
-        if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
+        // すぐには張り替えず、短く暗転してから（建て直す一瞬の引っかかりと、部屋が入れ替わる瞬間を隠す）
+        fade.pending = { seg, data: st.data, st };
+        if (fade.phase === 0) fade.phase = 1;
+      } else {
+        sceneEvent('segment', { index: segIdx, scene: seg.scene });
       }
-      sceneEvent('segment', { index: segIdx, scene: seg.scene });
     }
   }
+  updateFade(frame);
   // ボス戦で場面が変わる章（会議室 → 相手の工場 など）
   if (st && st.bossStarted && !bossSceneApplied && (st.data.bossScene3d || st.data.bossBg) && !Q.get('scene')) {
     bossSceneApplied = true;
