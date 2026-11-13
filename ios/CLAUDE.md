@@ -1,7 +1,9 @@
 # 小向クエスト（iPhone アプリ）— Claude 作業ガイド
 
-Web 版の 3D（`game3d/`）をそのまま WKWebView に入れただけのアプリ。**ゲームのコードはここには無い**。
-直すのは親リポジトリの `game3d/` と `game/src/`。このフォルダが持つのは、入れ物（Swift）とアイコンと
+Web 版の 3D をそのまま WKWebView に入れたアプリ。**1.1.0 から2作品入り**で、開くと
+「小向クエスト／小向クエスト２（ゴールデンエイジ編）」を選ぶ画面（`launcher/index.html`）が出る。
+**ゲームのコードはここには無い**。直すのは親リポジトリの `game3d/` `game/src/`（本編）と
+`game2-3d/` `game2/src/`（続編）。このフォルダが持つのは、入れ物（Swift）・選択画面・アイコン・
 ビルドの手順だけ。MaxSauna / MaxRecovery / 塚越ナビとは別のアプリ。
 
 ## 決まりごと
@@ -20,7 +22,7 @@ Web 版の 3D（`game3d/`）をそのまま WKWebView に入れただけのア�
 | 対象 | iOS 18.0+、iPhone、**横向きのみ**、全画面（ステータスバーなし） |
 | Team | Y5GK3529Q4 |
 | 言語 | Swift 6、SwiftUI、外部ライブラリなし |
-| 中身 | `game3d/` と `game/` を丸ごと同梱（約 2MB） |
+| 中身 | `game3d/` `game/`（本編）・`game2-3d/` `game2/`（続編）・`launcher/`（選択画面）を丸ごと同梱（約 2.1MB） |
 
 ## ビルド・確認
 
@@ -40,6 +42,14 @@ xcrun simctl install "$SIM" "$APP"
 xcrun simctl launch  "$SIM" com.anraku.komukai
 ```
 
+開くページは起動引数 `-page` で変えられる（無ければ選択画面）。`-game` だけを渡したときは
+今まで通り本編を開くので、下の手順はそのまま使える。
+
+```bash
+xcrun simctl launch "$SIM" com.anraku.komukai -page game2-3d                  # 続編のタイトル
+xcrun simctl launch "$SIM" com.anraku.komukai -page game2-3d -game "ch=3&demo=400"  # 続編の第3章
+```
+
 場面を確かめるときは起動引数 `-game` に Web 版と同じクエリを渡す（塚越ナビの `-boardSide` と同じやり方）。
 
 ```bash
@@ -47,7 +57,9 @@ xcrun simctl launch "iPhone 17 Pro" com.anraku.komukai -game "stage=3&demo=1010"
 xcrun simctl launch "iPhone 17 Pro" com.anraku.komukai -game "stage=ura&boss=1&nosheet=1"
 ```
 
-使えるクエリは Web 版と同じ（`stage` `ch` `demo` `boss` `meteor` `diff` `cast` `looks` `scene` `nosheet` `noshadow`）。
+使えるクエリは Web 版と同じ。本編と続編で違うので注意:
+- 本編（game3d）: `stage` `demo` `boss` `meteor` `diff` `cast` `looks` `scene` `nosheet` `noshadow` `shot` `touch` `dbg` `atk`
+- 続編（game2-3d）: `ch`（章番号）`demo` `boss` `diff` `scene` `shot` `touch`（`nosheet` `stage` は無い）
 アプリは常に `app=1` を付けて開く＝ページの枠（角丸・影・キーボードの案内）を出さず画面いっぱいにする。
 
 アイコンを作り直すとき:
@@ -58,7 +70,8 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 
 ## UIテスト（本物のタップで確かめる）
 
-`Tests/GameUITests.swift`。シミュレーターに実際にタップとドラッグを流して、4つを見る。
+`Tests/GameUITests.swift`。シミュレーターに実際にタップとドラッグを流して、8つを見る
+（下の4つは本編を `-page game3d` で直接開く。選択画面まわりの4つは 1.1.0 で足した）。
 
 | 見るもの | なぜ要るか |
 |---|---|
@@ -66,6 +79,10 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | 「はじめる」を押すと始まる | タイトルはボタン以外を押しても始まらない作り。押せているかは外からしか分からない |
 | 攻撃ボタンを押すと光る | タッチが WKWebView を越えて canvas まで届いている証拠 |
 | スティックを倒すと景色が動く | 歩けている証拠 |
+| アプリを開くと作品を選べる | 入口が選択画面になっている |
+| 続編を選ぶと続編が始められる | 続編に `app=1` が引き継がれて枠が出ない／空振りでは始まらず「はじめる」で進む |
+| 本編を選ぶと本編が開く | 本編にも枠が出ない |
+| 作品の選択へ戻れる | 両作品のタイトルの「◀ 作品の選択へ」で戻れる |
 
 仕組み: WKWebView の中（canvas と three.js の絵）は XCUITest から一切見えない。
 アプリを `-uitest 1` で起動すると、`GameView.probeJS` が 0.25 秒ごとにページを覗いて、
@@ -90,6 +107,14 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 - 画面は 16:9 固定（カメラの画角を 2D 版と揃える決まり）。19.5:9 の端末では左右が黒帯になる。引き伸ばさない
 - BGM は `.ambient`＝消音スイッチに従う。ゲーム内にもミュートがある
 - 攻撃ボタンが下端に近いので `.defersSystemGestures(on: .bottom)` を入れてある（1回目の下端スワイプでホームに戻らない）
+- **フォルダ形式の URL（`../game3d/`）は `url.path` だと末尾の `/` が落ちる。** 「/ で終わったら index.html」は
+  効かないので、ファイルを引いてからフォルダかどうかで index.html を足す（`GameScheme.resolve`、1.1.0 で修正）
+- **ページを移ると `app=1` が落ちる。** 付け直さないと行き先に枠が出る。`decidePolicyFor` で本体フレームの遷移に
+  `app` が無ければ付けて開き直す保険がある（`GameSchemeHandler.withApp`）。ページ側のリンクも `?app=1` を付ける
+- 裏で回収されたときは「今いたページ」に戻す（`Coordinator.current`）。起動時のページに戻すと、続編の途中で
+  選択画面に飛ばされる。読み込み失敗の再試行は成功するたびに数え直す
+- 続編の R（レター）・E（設計に口を出す）はキーボード専用だった。`Input.ctxButton`（奥の手Ｋの位置に、
+  使える間だけ出るボタン。押すとそのキーとして届く）で指でも出せる。本編は使わない
 
 ## App Store Connect の登録内容（2026-11-06 時点）
 
@@ -192,7 +217,8 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 
 ## まだやっていないこと
 
-- ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
+- ~~ゴールデンエイジ編は入れていない~~ 1.1.0 で同梱（2026-11-14）。**ただし本人の正式レビュー前なので
+  App Store には出さない**（TestFlight の内部テストまで）。続編の3Dは全面作り直し中（下の節）
 - ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
 - 1.0.2 の審査結果待ち（2026-11-13 提出）。落ちたら理由を見て直す
 
@@ -227,6 +253,14 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
   ローカル確認は `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new
   --enable-logging=stderr --virtual-time-budget=5000 --dump-dom URL` で起動し、stderr の
   CONSOLE 行でエラーを拾う。DOM に名札や体力バーが出ていればループは回っている
+- **ヘッドレス Chrome でも 3D の画は撮れる。ただし `shot=` を付けないこと。** `shot` は描画を止めるので
+  WebGL の画面が真っ黒で撮れる。描画を回したまま撮る:
+  `--headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --run-all-compositor-stages-before-draw
+  --virtual-time-budget=5000 --window-size=960,540 --screenshot=out.png URL`（`--use-gl=angle
+  --use-angle=swiftshader-webgl` は固まるので使わない）。シミュレーターを取り合わずに何枚でも並行で撮れる
+- アプリの中と同じ並びのローカル配信: scratchpad に `game game2 game2-3d game3d` と `launcher`
+  （= ios/launcher）へのシンボリックリンクを作って `python3 -m http.server --bind 127.0.0.1` で配る。
+  選択画面からの相対リンクがそのまま通る
 - 音の状態機械は `scripts/test-headless.mjs` の [25] に Node のモックで固定した
 - UI テストは作業指示書を押す前に **1.4 秒**待つ（ゲーム側が 1.0 秒待つため）。待ちを縮めると
   タップが無視されて `screen == none` 待ちでタイムアウトする
