@@ -128,7 +128,7 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | バージョン 1.0 | **READY_FOR_SALE（2026-11-06 公開）** |
 | バージョン 1.0.1 | READY_FOR_SALE（2026-11-13 までに公開） |
 | バージョン 1.0.2 | **WAITING_FOR_REVIEW（2026-11-13 23:18 提出・ビルド4）** ／ releaseType=AFTER_APPROVAL |
-| 上がっているビルド | 1（1.0）／ 2（未使用）／ 3（1.0.1）／ 4（1.0.2 用） |
+| 上がっているビルド | 1（1.0）／ 2（未使用）／ 3（1.0.1）／ 4（1.0.2 用）／ **5（1.1.0・続編入り。TestFlight 内部のみ、2026-11-14 03:00）** |
 | 価格・配信 | 無料 / **日本のみ**（新しい国には自動で広げない） |
 | 年齢区分 | **12+**（ブラジル14・韓国12） |
 | 提出 ID | 589f4756-b439-4976-8ea3-1d506286fbfc |
@@ -218,7 +218,13 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 ## まだやっていないこと
 
 - ~~ゴールデンエイジ編は入れていない~~ 1.1.0 で同梱（2026-11-14）。**ただし本人の正式レビュー前なので
-  App Store には出さない**（TestFlight の内部テストまで）。続編の3Dは全面作り直し中（下の節）
+  App Store には出さない**（TestFlight の内部テストまで。1.1.0 の審査提出は本人の「出してよい」を待つ）
+- 続編の3Dは 2026-11-14 に作り直した。場面は `game2-3d/src/scenes2/<キー>.js`（1場面1ファイル・15本）、
+  キャラの3Dの見た目は `game2-3d/src/chars2.js`（PALETTES2_3D・顔の固定・持ち物。**2D版の PALETTES2 は変えていない**）、
+  段取り（撃破の間・配属発表・解散・エピローグ・区間の暗転）は `game2-3d/src/main2-3d.js`。
+  ヘッドレスで6章を通す確認は scratchpad の fullrun.js（`?dbg=1` の `window.__g2` を使う）
+- **アプリはフォルダごと同梱するので、作業ツリーの追跡外のファイルも入る**（例: `game/src/taunts.js.bak`）。
+  TestFlight 用は `git worktree add --detach <一時の場所> HEAD` のきれいな写しからアーカイブする
 - ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
 - 1.0.2 の審査結果待ち（2026-11-13 提出）。落ちたら理由を見て直す
 
