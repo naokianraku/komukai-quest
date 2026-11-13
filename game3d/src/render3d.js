@@ -1792,8 +1792,10 @@ function syncEntities(dt) {
     r.legA.rotation.y = r.legB.rotation.y = face;
     // 予備動作でのけぞり、攻撃で前に倒す。動きを読めるようにする。
     // 倒れかけ（捨てセリフ中）は、膝から崩れるように前のめりへ倒していく。
-    const fall = e.dying ? Math.min(1, 1 - (e.downT / (e.downMax || e.downDur || 2.8))) : 0;
-    const lean = e.dying ? 0.16 + fall * 0.9
+    // downStyle 'stand': 倒れかけでも崩れずに立ったまま（続編の支援の章の握手）。本編は使わない
+    const crumbling = e.dying && e.downStyle !== 'stand';
+    const fall = crumbling ? Math.min(1, 1 - (e.downT / (e.downMax || e.downDur || 2.8))) : 0;
+    const lean = crumbling ? 0.16 + fall * 0.9
       : e.state === 'cast' ? -0.34
       : e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
     // 傾きはワールドのx軸まわり（yaw のあと）なので、背中をこちらに向けた体では前後が逆になる。
@@ -1802,13 +1804,13 @@ function syncEntities(dt) {
     // 崩れ方: 前半は言わせたいので形を保ち、後半で一気に縮んで消える。
     // 横にも潰すので、瓦礫になって落ちていくように見える。
     const crumble = Math.max(0, (fall - 0.45) / 0.55);
-    const sink = e.dying ? (1 - fall * 0.42) * (1 - crumble * 0.9) : 1;
-    const squash = e.dying ? 1 - crumble * 0.75 : 1;
+    const sink = crumbling ? (1 - fall * 0.42) * (1 - crumble * 0.9) : 1;
+    const squash = crumbling ? 1 - crumble * 0.75 : 1;
     r.body.scale.set(sx * squash, sy * sink, sx * squash);
     r.legA.scale.set(sx * squash, sy * sink, sx * squash);
     r.legB.scale.set(sx * squash, sy * sink, sx * squash);
     // ガラガラと瓦礫を落としながら崩れる。崩れが進むほど頻度を上げる。
-    if (e.dying) {
+    if (crumbling) {
       const now = performance.now();
       if (!e._crumbleT || now - e._crumbleT > 90 + (1 - fall) * 240) {
         e._crumbleT = now;

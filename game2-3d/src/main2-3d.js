@@ -78,6 +78,45 @@ class Game2_3D extends Game2 {
 // 吹き出しには、その章の報告書に載る一言（clearLine。既存の文言）をそのまま出す。新しい文は足さない。
 // 作り直しの残りがある（第5章でまだ復活する）ときは挟まない。
 const DOWN_SEC = 3.2;
+const DOWN_SEC_HAND = 4.6;
+// 握手のカット（支援の章）。倒して0.5秒後に暗転し、暗いうちに主担当をボスの正面へ、主人公をその後ろへ置いて明ける。
+// 主担当はガラスの外（見ているだけの人の場所）にいるので、歩かせずにカットで移す（ガラスを抜けて歩く絵にしない）
+const hs = { st: null, b: null, t: 0, cut: false, pins: null };
+function startHandshake(st, b) {
+  Object.assign(hs, { st, b, t: 0, cut: false, pins: null });
+}
+function stepHandshake(dt) {
+  if (!hs.st) return;
+  if (hs.st !== game.stage || !hs.b.alive) { hs.st = null; return; }
+  hs.t += dt;
+  if (!hs.cut && hs.t >= 0.5) {
+    hs.cut = true;
+    const { st, b } = hs;
+    cutTo(() => {
+      if (st !== game.stage || !b.alive) return;
+      const s = st.supportUnit, p = st.player;
+      delete s._pin;
+      const y = Math.min(Math.max(b.y, PLAY.top + 30), PLAY.bottom - 24);
+      hs.pins = [
+        { e: s, x: b.x - 30, y, f: 1 },          // 主担当: ボスの正面で向き合う
+        { e: p, x: b.x - 66, y: y - 18, f: 1 },  // 主人公: 一歩うしろ（奥）に立っている
+        { e: b, x: b.x, y, f: -1 },
+      ];
+      // 代理店が残っていれば、ボスの脇へ（主人公と重ならないように）
+      if (st.agent && st.agent.alive) hs.pins.push({ e: st.agent, x: b.x + 30, y: y - 14, f: -1 });
+      pinHandshake();
+    });
+  }
+}
+// 握手の間は位置と向きを毎ステップ書き戻す（主人公は動かせない。攻撃も止める）
+function pinHandshake() {
+  if (!hs.pins || hs.st !== game.stage) return;
+  for (const q of hs.pins) {
+    const e = q.e;
+    e.x = q.x; e.y = q.y; e.facing = q.f; e.kbx = 0; e.moving = false;
+    if (e !== hs.b) { e.attack = null; e.attackActive = false; e.state = 'idle'; }
+  }
+}
 function holdForDown(g, before) {
   const st = g.stage;
   const b = st && st.boss;
@@ -88,7 +127,11 @@ function holdForDown(g, before) {
   if (ended) { g.state = 'playing'; g.screenT = 0; st.cleared = false; }
   b.__down = true;
   b.alive = true; b.hp = 0;
-  b.dying = true; b.downT = b.downMax = DOWN_SEC;
+  // 支援の章（第3・5章）は、倒したあとの決着を主担当が持っていく（構成案）。ボスは崩れずに立ったまま、
+  // 少し間を置いてカットで握手の絵へ（stepHandshake）。主担当がいない（やられた等）ときは普通に崩れる
+  const hand = !!(st.data.support && st.supportUnit && st.supportUnit.alive);
+  if (hand) { b.downStyle = 'stand'; startHandshake(st, b); }
+  b.dying = true; b.downT = b.downMax = hand ? DOWN_SEC_HAND : DOWN_SEC;
   b.taunt = st.data.clearLine || null;
   b.tauntT = b.taunt ? DOWN_SEC : 0;
   b.chatterT = 99;
@@ -746,14 +789,10 @@ function updateFade(frameDt) {
   const dt = Math.min(frameDt, 0.1);
   if (fade.phase === 1) {
     fade.a = Math.min(1, fade.a + dt / FADE_IN);
-    if (fade.a >= 1 && fade.pending) {
-      const { seg, data, st } = fade.pending;
+    if (fade.a >= 1) {
+      const job = fade.pending;
       fade.pending = null;
-      if (st === game.stage) {   // 暗転の間に章が変わっていたら張り替えない
-        setScene(seg.scene, data);
-        if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
-        sceneEvent('segment', { index: segIdx, scene: seg.scene });
-      }
+      if (job) job.run();
       fade.phase = 2;
     }
   } else {
@@ -762,6 +801,12 @@ function updateFade(frameDt) {
   }
   fadeEl.style.opacity = fade.a.toFixed(3);
   labelsEl.style.opacity = (1 - fade.a).toFixed(3);
+}
+// 短く暗転して、真っ暗なうちに run を実行して明ける（区間の張り替え・握手のカット）。
+// 暗転の途中でもう一度呼ばれたら、あとの方だけを実行する
+function cutTo(run) {
+  fade.pending = { run };
+  if (fade.phase === 0) fade.phase = 1;
 }
 function clearFade() {
   fade.phase = 0; fade.a = 0; fade.pending = null;
@@ -787,7 +832,7 @@ function loop(now) {
     // ボスが崩れていく間の R／E は捨てる（R が読まれると、倒れる途中で HP が書き戻されて消えてしまう）
     if (st0 && st0.boss && st0.boss.dying) Input.dropPressed('KeyR', 'KeyE');
     game.update(STEP);
-    if (game.stage === st0 && game.state === 'playing') { pinWatchers(st0); keepRespawnInRoom(st0, livesBefore); }
+    if (game.stage === st0 && game.state === 'playing') { pinWatchers(st0); keepRespawnInRoom(st0, livesBefore); pinHandshake(); }
     // タイトルでは2D側（game2/src/main2.js の title）が M を処理する。ここでも反転させると
     // 同じ押下で2回ひっくり返って効かない。タイトル以外だけここで反転し、表示は毎回合わせる。
     if (Input.pressed('KeyM')) { if (!wasTitle) Audio.toggleMute(); renderMute(); }
@@ -818,8 +863,13 @@ function loop(now) {
       const seg = segScene(st.data, segIdx);
       if (seg.scene !== getScene()) {
         // すぐには張り替えず、短く暗転してから（建て直す一瞬の引っかかりと、部屋が入れ替わる瞬間を隠す）
-        fade.pending = { seg, data: st.data, st };
-        if (fade.phase === 0) fade.phase = 1;
+        const data = st.data;
+        cutTo(() => {
+          if (st !== game.stage) return;   // 暗転の間に章が変わっていたら張り替えない
+          setScene(seg.scene, data);
+          if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
+          sceneEvent('segment', { index: segIdx, scene: seg.scene });
+        });
       } else {
         sceneEvent('segment', { index: segIdx, scene: seg.scene });
       }
@@ -835,6 +885,7 @@ function loop(now) {
   pumpSceneEvents(st, frame);
   stepAct(st, frame);
   stepHaizoku(st, frame);
+  stepHandshake(frame);
 
   // 詠唱の圧と閃光（本編と同じ）
   const cast = st ? st.entities.some((e) => e.alive && e.state === 'cast') : false;
