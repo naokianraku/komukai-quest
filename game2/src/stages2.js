@@ -7,65 +7,93 @@
 //   mob   … 中間管理職・通行人（攻撃も被弾もしない。ただ見ている）
 
 // ===== スプライト（1のパレット差し替え方式に追加登録する） =====
+// 色のキーは2D版のドット絵と共有する（b 上衣 / a 肩・縁 / p ズボン / t ネクタイ / h ヘルメット・
+// 帽子の色。スーツ型では髪 / s 肌 / e 目）。2Dのドット絵が使わないキー（w 中のシャツ / v ベスト・白衣 /
+// l 反射テープ / x 差し色）と、形の指定（outfit 服の型 / headwear かぶりもの / pose 姿勢 / props 持ち物
+// / eyes 光る目 / aura まとう光 / faceAway 背中を向ける / age / keepSkinHair / weapon / bodyW・bodyH
+// など）は3Dだけが読む。語彙の意味は game/src/sprites.js の SHAPE_KEYS と game/src/voxel.js を参照。
+// 顔（髪型・眼鏡・体格）の固定と持ち物の形は game2-3d/src/chars2.js にある。
+//
+// 他社の人は自社の作業着（空色に紺のヨーク）を着ない。社ごとに服の型と色を1つに決め、
+// 同じ社の役は帽子・着方・持ち物で分ける。社の色は物語のテーマ色から取り、実在企業の
+// コーポレートカラーには寄せない。社章・頭文字に見える記号は描かない。
 export const PALETTES2 = {
   // 主人公: 第1章は白（新人）→ 配属後は緑（＝1のally色）→ エピローグで橙（＝1のplayer色）
-  p2_shinjin: { map: 'worker', h: '#e6edf2' },
-  p2_haizoku: { map: 'worker', h: '#36b06a' },
+  // 3Dでも h はヘルメットの色（2D と同じ意味）。自社の作業着に保護帽。
+  p2_shinjin: { map: 'worker', h: '#e6edf2', outfit: 'work', headwear: 'helmet', age: 'young' },
+  p2_haizoku: { map: 'worker', h: '#36b06a', outfit: 'work', headwear: 'helmet', age: 'young' },
 
-  // 同期3人（配属先の色）
-  douki_sekkei: { map: 'worker', h: '#4a7ad0' }, // 設計: 青
-  douki_genba:  { map: 'cap',    h: '#44507a' }, // 現場: 製造なのでキャップ（紺）
-  douki_hinsho: { map: 'worker', h: '#9a6ad0' }, // 品証: 紫
-  shutantou:    { map: 'worker', h: '#40b0a8' }, // 主担当（支援章のみ）: 青緑
+  // 同期3人（配属先の色。設計=青 / 現場=黄 / 品証=紫）。第1章は主人公と同じ白（chars2.js）
+  douki_sekkei: { map: 'worker', h: '#4a7ad0', outfit: 'work', headwear: 'helmet', age: 'young' }, // 設計: 青
+  douki_genba:  { map: 'worker', h: '#e8c838', outfit: 'work', headwear: 'helmet', age: 'young' }, // 現場: 黄（名札と同じ）
+  douki_hinsho: { map: 'worker', h: '#9a6ad0', outfit: 'work', headwear: 'helmet', age: 'young' }, // 品証: 紫
+  shutantou:    { map: 'worker', h: '#40b0a8', outfit: 'work', headwear: 'helmet', age: 'young' }, // 主担当（支援章のみ）: 青緑
 
-  // モブ（中間管理職・通行人）— くすんだ色で背景に沈める
-  chukan: { map: 'worker', h: '#6e737a' },
-  tsukou: { map: 'worker', h: '#8a8f96' },
+  // モブ（中間管理職・通行人）— くすんだ色で背景に沈める。部長・課長はスーツで腕を組んで見ている、
+  // 社員は腕まくりのワイシャツに社員証
+  chukan: { map: 'suit', b: '#4a4e56', p: '#3c4048', t: '#6a6e78', h: '#2a2420', outfit: 'suit', pose: 'cross' },
+  tsukou: { map: 'suit', b: '#e2e4e6', p: '#4a4e58', t: '#e2e4e6', h: '#241c14', a: '#b8bcc2', x: '#8a8f96',
+            outfit: 'shirt', roll: true, props: ['badge'] },
 
-  // 直属PM（課長）— 全章に出る反復エネミー。黒に近い作業着
-  pm: { map: 'worker', h: '#2a2a30' },
+  // 直属PM（課長）— 全章に出る反復エネミー。黒に近い作業着。顔は最後まで見せない（声と背中だけ）。
+  // 自社の作業着の型のまま色だけ沈め、背中のヨーク・後ろで立つ襟・後頭部を足して後ろ姿を読ませる
+  pm: { map: 'worker', h: '#2a2a30', b: '#3a404c', a: '#22262e', p: '#30343e', outfit: 'work', back: true, faceAway: true },
 
   // 第1章 社内（研修）
-  jinji:  { map: 'suit',   b: '#4a4a58', p: '#3c3c48', t: '#8a8a9a', h: '#20180f' },
-  manner: { map: 'suit',   b: '#6a4a5a', p: '#583e4c', t: '#d0c0c8', h: '#241a12' },
-  anzen:  { map: 'worker', h: '#d05a20' },
-  ryocho: { map: 'worker', h: '#7a6a40' },
-  kyoiku: { map: 'suit',   b: '#2c3348', p: '#242a3c', t: '#a03030', h: '#1a1410' },
+  jinji:  { map: 'suit',   b: '#4a4a58', p: '#3c3c48', t: '#8a8a9a', h: '#20180f', outfit: 'suit', props: ['clipboard'], weapon: 'binder' },
+  manner: { map: 'suit',   b: '#6a4a5a', p: '#583e4c', t: '#d0c0c8', h: '#241a12', w: '#efe6ea', outfit: 'suit', tie: false },
+  anzen:  { map: 'worker', h: '#d05a20', x: '#2f8a4a', outfit: 'work', headwear: 'helmet', props: ['armband'] }, // 安全衛生: 保護帽と腕章
+  ryocho: { map: 'suit',   b: '#7a6a48', a: '#5a4e34', p: '#4a4a52', t: '#e8e6dc', w: '#e8e6dc', h: '#3a3026', outfit: 'cardigan', weapon: 'binder' },
+  kyoiku: { map: 'suit',   b: '#2c3348', p: '#242a3c', t: '#a03030', h: '#1a1410', outfit: 'suit', shoulder: 1, weapon: 'binder' },
 
-  // 第2章 M菱重工（機体メーカー）— 機体側は白〜銀系
-  m_kikai:  { map: 'cap',    h: '#8a9099' }, // 機械設計。現場に降りるのでキャップ
-  m_denso:  { map: 'worker', h: '#a8b4c0' },
-  m_sekkei: { map: 'worker', h: '#8e9aa8' },
-  m_pm:     { map: 'suit',   b: '#3a4250', p: '#303643', t: '#b0b8c2', h: '#1e1a14' },
+  // 第2章 M菱重工（機体メーカー）— 機体側は白〜銀系。銀の作業ジャンパー（前ファスナー・裾を絞る）。
+  // 機械設計は帽子と図面の筒、電装は肩から掛けたケーブル、設計課長はファスナーを下ろしてネクタイ
+  m_kikai:  { map: 'cap',    h: '#c4c9cf', b: '#c8ccd2', a: '#5a6068', p: '#6a7078', outfit: 'jumper', props: ['tube'], weapon: 'roll' },
+  m_denso:  { map: 'worker', h: '#9aa2ac', b: '#c8ccd2', a: '#5a6068', p: '#6a7078', x: '#4a5058', outfit: 'jumper', props: ['cable', 'badge'], weapon: 'wrench' },
+  m_sekkei: { map: 'worker', h: '#8e9aa8', b: '#c8ccd2', a: '#5a6068', p: '#6a7078', t: '#46526e', x: '#4a5058', outfit: 'jumper', tie: true, props: ['clipboard', 'badge'], weapon: 'binder' },
+  // プロマネは銀鼠の三つ揃い（機体側の白〜銀）。肩を張って少し背を高く。振り向くまでは背中を向けている（bossFaceLock）
+  m_pm:     { map: 'suit',   b: '#5c6878', p: '#4a5464', t: '#c8ccd2', h: '#1e1a14', v: '#46505e', outfit: 'suit', vest3: true, shoulder: 1, bodyH: 1.04, faceAway: 'locked', weapon: 'binder' },
 
-  // 第3章 GR社 — 古い工場。褪せた黄土
-  gr_chotatsu: { map: 'worker', h: '#b09040' },
-  gr_gijutsu:  { map: 'worker', h: '#967a38' },
-  gr_seizo:    { map: 'cap',    h: '#6b5a2c' }, // GR社 製造: キャップ
-  gr_pm:       { map: 'suit',   b: '#5a4a2e', p: '#4a3d26', t: '#9a8a5a', h: '#3a2a18' },
+  // 第3章 GR社 — 古い工場。褪せた黄土のつなぎ（上下同じ布）。
+  // 調達は書類の束、技術は上を脱いで腰で結び工具袋、製造は帽子と革手袋
+  gr_chotatsu: { map: 'worker', h: '#9a8048', b: '#b09a64', a: '#7a6a44', p: '#b09a64', outfit: 'coverall', props: ['papers'], weapon: 'binder' },
+  gr_gijutsu:  { map: 'worker', h: '#8a7240', b: '#b09a64', a: '#7a6a44', p: '#b09a64', w: '#d6d2c6', outfit: 'coverall', roll: true, props: ['toolpouch'], weapon: 'wrench' },
+  gr_seizo:    { map: 'cap',    h: '#6b5a2c', b: '#b09a64', a: '#7a6a44', p: '#b09a64', outfit: 'coverall', props: ['gloves'], weapon: 'wrench' },
+  // プロマネは腕まくりのワイシャツに緩めたネクタイ。太った体格で、上着は着ていない
+  gr_pm:       { map: 'suit',   b: '#d8cc9e', p: '#5a4a2e', t: '#6a4a2a', h: '#3a2a18', a: '#a89a70', outfit: 'shirt', tie: true, roll: true, bodyW: 1.1, weapon: 'roll' },
 
-  // 第4章 L3社 — 藍。閉じている
-  l3_toiawase: { map: 'worker', h: '#3f51b5' },
-  l3_yushutsu: { map: 'worker', h: '#2e3a86' },
-  l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610' },
+  // 第4章 L3社 — 藍。閉じている。藍のポロシャツに身分証。責任者は腕を組む
+  l3_toiawase: { map: 'worker', h: '#3f51b5', b: '#3a4470', a: '#8a92b8', p: '#4a4a52', x: '#b03a3a', outfit: 'polo', props: ['badge', 'folder'], weapon: 'binder' },
+  l3_yushutsu: { map: 'worker', h: '#2e3a86', b: '#3a4470', a: '#8a92b8', p: '#4a4a52', x: '#b03a3a', outfit: 'polo', pose: 'cross', props: ['badge'], weapon: 'stamp' },
+  // プロマネは顎まで立った襟の長い上着。細く背が高い（中身の見えない人）
+  l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610', outfit: 'coat', collar: 'high', skirt: 11, bodyW: 0.94, bodyH: 1.08, weapon: 'binder' },
 
-  // 第5章 LM社 — 巨大。濃紺と金
-  lm_keiyaku: { map: 'suit',   b: '#2a3050', p: '#232842', t: '#c0a040', h: '#1a1410' },
-  lm_cr:      { map: 'worker', h: '#5a6480' },
-  lm_shiken:  { map: 'cap',    h: '#3b4458' }, // 試験は現場仕事なのでキャップ
-  lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109' },
-  lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c' },
+  // 第5章 LM社 — 巨大。濃紺と金。現場（変更要求・試験）は紺のシャツに金の安全ベスト、
+  // 事務方は形で分ける: 契約は腕まくりしないワイシャツ、契約管理は三つ揃い、プロマネは肩の張った長い上着
+  lm_keiyaku: { map: 'suit',   b: '#eef0f2', p: '#232842', t: '#c0a040', h: '#1a1410', a: '#c8ccd2', outfit: 'shirt', tie: true, props: ['binder'], weapon: 'binder' },
+  lm_cr:      { map: 'worker', h: '#5a6480', b: '#2a3352', a: '#1e2640', p: '#3a3f4c', v: '#d8b030', outfit: 'vest', props: ['papers'], weapon: 'roll' },
+  lm_shiken:  { map: 'cap',    h: '#2a3352', b: '#2a3352', a: '#1e2640', p: '#3a3f4c', v: '#d8b030', outfit: 'vest', props: ['gloves'], weapon: 'wrench' }, // 試験は現場仕事なのでキャップ
+  lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109', v: '#6a5a2a', outfit: 'suit', vest3: true, props: ['binder'], weapon: 'binder' },
+  lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c', outfit: 'suit', skirt: 12, shoulder: 2, bodyW: 1.08, faceAway: 'locked', weapon: 'binder' },
 
-  // 代理店（商社）— 攻撃してこない。灰色のスーツで「間に立つ」
-  dairiten: { map: 'suit', b: '#8a8f98', p: '#767b84', t: '#5a5f68', h: '#241c14' },
+  // 代理店（商社）— 攻撃してこない。灰色のスーツで「間に立つ」。鞄を提げている
+  dairiten: { map: 'suit', b: '#8a8f98', p: '#767b84', t: '#5a5f68', h: '#241c14', outfit: 'suit', props: ['briefcase'] },
 
   // 最終章 発注官庁 ＋ 四騎士
-  kensakan:   { map: 'suit',   b: '#3a4038', p: '#30352e', t: '#8a9080', h: '#1c1810' },
-  kancho_pm:  { map: 'suit',   b: '#1c2018', p: '#161a14', t: '#7a8068', h: '#141008' },
-  kishi_kigen:    { map: 'suit', b: '#101014', p: '#0c0c10', t: '#c04a1a', h: '#d8d8d8', s: '#8a7a6a', e: '#ff6a1a' },
-  kishi_seinou:   { map: 'suit', b: '#101014', p: '#0c0c10', t: '#1a7ac0', h: '#d8d8d8', s: '#8a7a6a', e: '#3aa0ff' },
-  kishi_sonshitsu:{ map: 'suit', b: '#101014', p: '#0c0c10', t: '#c0a01a', h: '#d8d8d8', s: '#8a7a6a', e: '#ffd23a' },
-  kishi_keisou:   { map: 'suit', b: '#101014', p: '#0c0c10', t: '#8a1a1a', h: '#d8d8d8', s: '#8a7a6a', e: '#ff2a2a' },
+  kensakan:   { map: 'suit',   b: '#3a4038', p: '#30352e', t: '#8a9080', h: '#1c1810', x: '#d8c040', outfit: 'suit', props: ['armband', 'clipboard'], weapon: 'stamp' },
+  kancho_pm:  { map: 'suit',   b: '#1c2018', p: '#161a14', t: '#7a8068', h: '#141008', outfit: 'coat', skirt: 9, shoulder: 1, bodyH: 1.05, weapon: 'stamp' },
+  // 四騎士 — 人ではなく、5年で溜まった数字が立ち上がったもの。灰の肌・白髪はパレットのまま
+  // （keepSkinHair。個体差で人の色に戻さない）。目が光り（eyes）、足元に光をまとう（aura）。
+  // 4体は形と持ち物で分ける: 期限＝顎まで襟の立った長い外套と砂時計、性能＝白衣と計器、
+  // 損失＝三つ揃いの太った体と帳簿、係争＝足首までの法衣と木槌（本編の黒スーツ組とは別物にする）
+  kishi_kigen:    { map: 'suit', b: '#1a1a20', p: '#101014', t: '#c04a1a', h: '#d8d8d8', s: '#8a7a6a', e: '#ff6a1a', x: '#ff6a1a',
+                    outfit: 'coat', collar: 'high', skirt: 8, props: ['hourglass'], eyes: true, aura: 1, keepSkinHair: true, bodyW: 0.92, bodyH: 1.1, weapon: 'fist' },
+  kishi_seinou:   { map: 'suit', b: '#101014', p: '#0c0c10', t: '#1a7ac0', h: '#d8d8d8', s: '#8a7a6a', e: '#3aa0ff', x: '#3aa0ff', v: '#c8ccd0',
+                    outfit: 'labcoat', skirt: 10, props: ['gauge'], eyes: true, aura: 1, keepSkinHair: true, weapon: 'fist' },
+  kishi_sonshitsu:{ map: 'suit', b: '#101014', p: '#0c0c10', t: '#c0a01a', h: '#d8d8d8', s: '#8a7a6a', e: '#ffd23a', x: '#ffd23a', v: '#4a3e10',
+                    outfit: 'suit', vest3: true, props: ['ledger'], eyes: true, aura: 1, keepSkinHair: true, bodyW: 1.14, bodyH: 0.96, weapon: 'fist' },
+  kishi_keisou:   { map: 'suit', b: '#24141c', p: '#160c12', t: '#8a1a1a', h: '#d8d8d8', s: '#8a7a6a', e: '#ff2a2a', x: '#ff2a2a',
+                    outfit: 'robe', skirt: 6, props: ['gavel'], eyes: true, aura: 1, keepSkinHair: true, bodyW: 1.06, bodyH: 1.06, weapon: 'fist' },
 };
 
 export const LABELS2 = {

@@ -19,11 +19,13 @@ import {
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
 } from '../../game3d/src/render3d.js';
 import { loadSequelScenes } from './scenes2.js';
+import { registerChars2 } from './chars2.js';
 
 // 続編の役職パレットと名札を先に登録する。voxel.js は sprites.js の CHAR_PALETTES を
 // 直接読むので、これを忘れると続編のキャラが全員「部下」の見た目で出てくる。
 registerPalettes(PALETTES2);
 registerTypeMeta(LABELS2, COLORS2);
+registerChars2();   // 顔の固定・持ち物・第1章の着替え（chars2.js）
 
 // ===== ゲーム本体 =====
 // 2D版の Game2 をそのまま継承する。違うのは
