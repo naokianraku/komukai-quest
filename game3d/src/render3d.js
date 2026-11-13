@@ -1772,6 +1772,11 @@ function syncEntities(dt) {
       r.yaw = r.yaw == null ? want : turnToward(r.yaw, want, dt * 5.5);
       face = r.yaw;
     }
+    // 外から向きを決める口（続編の解散で、背中を見せたまま扉へ出ていく同期）。本編は使わない
+    if (e.yawOverride != null) {
+      r.yaw = turnToward(r.yaw == null ? face : r.yaw, e.yawOverride, dt * 5.5);
+      face = r.yaw;
+    } else if (!r.look.faceAway) r.yaw = null;
     if (r.aura) {   // まとう光はゆっくり脈打たせる。足元は陣営の輪より一回り大きく、後ろの光は体を包む大きさ
       const s = (e.scale || 3) / 3, k = s * (r.look.aura || 1);
       const p = 1 + 0.08 * Math.sin(performance.now() / 1000 * 2.2 + e.id);
@@ -1793,7 +1798,7 @@ function syncEntities(dt) {
       : e.state === 'telegraph' ? -0.12 : (e.attackActive ? 0.16 : 0);
     // 傾きはワールドのx軸まわり（yaw のあと）なので、背中をこちらに向けた体では前後が逆になる。
     // そのままだと「のけぞりながら殴る」ので、背中向きのときだけ符号を返す（本編の種別は通らない）
-    r.body.rotation.x = (r.look.faceAway && Math.cos(face) < 0) ? -lean : lean;
+    r.body.rotation.x = ((r.look.faceAway || e.yawOverride != null) && Math.cos(face) < 0) ? -lean : lean;
     // 崩れ方: 前半は言わせたいので形を保ち、後半で一気に縮んで消える。
     // 横にも潰すので、瓦礫になって落ちていくように見える。
     const crumble = Math.max(0, (fall - 0.45) / 0.55);
@@ -2486,7 +2491,8 @@ function updateCamera(dt) {
   const bossOn = stage.bossStarted && stage.boss && stage.boss.alive;
   const dist = bossOn ? CAM.dist * 0.82 : CAM.dist;   // ボス戦は寄る（案D）
   const height = bossOn ? CAM.height * 0.86 : CAM.height;
-  const tx = wx(p.x) + (bossOn ? 6 : 0);
+  // CAM.xOff: 外から横へずらす口（続編のエピローグで、中央の書類に自機が隠れないようにする）。本編は使わない
+  const tx = wx(p.x) + (bossOn ? 6 : 0) + (CAM.xOff || 0);
   const a = Math.min(1, Math.max(0, 1 - Math.pow(0.0015, Math.max(0, dt))));
   camPos.lerp(new THREE.Vector3(tx, height, wz(p.y) + dist), a);
   camLook.lerp(new THREE.Vector3(tx, CAM.lookY, wz(p.y) - 3), a);

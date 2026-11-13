@@ -11,7 +11,7 @@ import { CHAPTERS, PALETTES2, LABELS2, COLORS2, defFor2 } from '../../game2/src/
 import { Game2, Stage2 } from '../../game2/src/main2.js';
 import {
   THREE, wx, wz, Q, renderer, scene, camera, CAM, camPos, camLook,
-  SHARD, flames, domes, flashEl, FX,
+  SHARD, flames, domes, flashEl, FX, meshes,
   buildScenery, clearStageObjects, sceneAt, getScene, setScene,
   setStage, setGame, setGaugeTarget, setHudTop, sceneEvent, buildTitleScenery,
   addFloat, burst, meteorBoom,
@@ -203,7 +203,7 @@ function updateHUD(dt) {
   const t = Math.max(0, p.hp / p.maxhp);
   hpShown += (t - hpShown) * Math.min(1, dt * 8);
   scoreShown += (game.score - scoreShown) * Math.min(1, dt * 6);
-  hud.rank.textContent = st.data.playerRank || '';
+  hud.rank.textContent = act.senshi ? '小向戦士' : (st.data.playerRank || '');   // 小向戦士: エピローグの書類と同じ文言
   const d = DIFFS.find((x) => x[0] === game.difficulty) || DIFFS[1];
   hud.diffchip.textContent = d[1];
   hud.diffchip.className = 'diff ' + game.difficulty;
@@ -591,6 +591,96 @@ function keepRespawnInRoom(st, livesBefore) {
   st.player.x = Math.max(st.player.x, st.width - 220);
 }
 
+// ===== 解散とエピローグ（最終章。3D版だけの段取り） =====
+// 2D版は書類だけを出すが、3D版は書類（薄い暗幕で下に寄せてある）の上に大会議室が見えている。
+// 撃破した瞬間のまま全員が止まって映らないよう、ステージの外から人を動かす（ロジックは止まっている）。
+//  解散  0秒〜: 係争・残った敵・見ていた人は左へ歩いて出ていく（来た道。カメラの外で消える）
+//        2.6秒〜（3.4秒に「最後の同期が呼ばれて出ていく。振り返らない。」）: 最後の同期が帯の奥の縁を右へ歩き、
+//             右端の扉（g2_daikaigi が同じ3.4秒に開けて、5.9秒から閉める）へ背中を見せたまま入っていく
+//  エピローグ: 自機だけが残る。6.2秒（「— 小向戦士 —」）でヘルメットが緑から橙へ、等級が「小向戦士」へ
+//             （どちらも構成案のとおり）。カメラはゆっくり引く
+const act = { on: null, t: 0, leavers: [], last: null, senshi: false, cam0: null };
+function stepAct(st, dt) {
+  if (!st) return;
+  if (game.state !== act.on) {
+    if (game.state === 'disband') startDisband(st);
+    else if (game.state === 'epilogue') startEpilogue(st);
+    else if (act.on) endAct();
+    act.on = (game.state === 'disband' || game.state === 'epilogue') ? game.state : null;
+  }
+  if (!act.on) return;
+  act.t += dt;
+  if (act.on === 'disband') stepDisband(st, dt);
+  else stepEpilogue(st, dt);
+}
+function startDisband(st) {
+  act.t = 0;
+  const p = st.player;
+  const douki = (st.doukiUnits || []).filter((e) => e.alive);
+  act.last = douki[douki.length - 1] || null;
+  // 同期はふだん自機について歩いている。離れた所に取り残されていたら（確認用の ?boss=1 など）、自機のそばへ
+  if (act.last && Math.abs(act.last.x - p.x) > 140) { act.last.x = p.x - 46; act.last.y = p.y - 10; }
+  act.leavers = st.entities.filter((e) => e.alive && e !== p && !douki.includes(e)).map((e, i) => ({ e, at: 0.25 + i * 0.2 }));
+  for (const e of st.entities) {   // 殴りかけ・吹き出しの途中で止まっている人も、ここで手を止める
+    e.attack = null; e.attackActive = false; e.hitstun = 0; e.kbx = 0; e.state = 'idle'; e.taunt = null; e.tauntT = 0;
+  }
+}
+function stepDisband(st, dt) {
+  const p = st.player;
+  for (const L of act.leavers) {
+    const e = L.e;
+    if (!e.alive || act.t < L.at) continue;
+    e.facing = -1;
+    e.x -= 78 * dt;
+    if (e.x < p.x - 330) e.alive = false;   // カメラの左の外
+  }
+  const d = act.last;
+  if (d && d.alive && act.t >= 2.6) {   // 扉は3.4秒に開いて5.9秒から閉まる。閉まりきる前に入れるよう少し早めに歩き出す
+    const laneY = PLAY.top + 2;                 // 帯の奥の縁（机の列の手前）
+    const doorX = st.width + 36;                // 扉の真ん中（g2_daikaigi の DX = W + 12）
+    const doorY = (PLAY.top + PLAY.bottom) / 2 + (-72 + 5) * 3;  // 扉の前（奥の壁 BACK = -72 の少し手前。ワールド z → ゲーム y）
+    if (d.x < st.width - 6) {                   // 机の列は W-14 で終わる。そこまでは帯の縁を右へ
+      d.facing = 1;
+      d.x = Math.min(st.width - 6, d.x + 115 * dt);
+      d.y += (laneY - d.y) * Math.min(1, dt * 4);
+    } else {                                    // 扉へ。振り返らない
+      d.yawOverride = Math.PI;
+      d.x += (doorX - d.x) * Math.min(1, dt * 3);
+      d.y = Math.max(doorY, d.y - 125 * dt);
+      if (d.y <= doorY + 0.5) d.alive = false;
+    }
+  }
+}
+function startEpilogue(st) {
+  act.t = 0;
+  // 書類を早送りして来ても、部屋には自機しか残さない
+  for (const e of st.entities) if (e !== st.player) e.alive = false;
+  act.cam0 = { dist: CAM.dist, height: CAM.height };
+}
+function stepEpilogue(st, dt) {
+  const k = Math.min(1, act.t / 7);
+  const ease = k * k * (3 - 2 * k);
+  CAM.dist = act.cam0.dist * (1 + 0.16 * ease);
+  CAM.height = act.cam0.height * (1 + 0.06 * ease);
+  // 書類は画面の真ん中に立つので、自機が書類の右（扉と白板の側）に来るよう、最初の2.5秒でカメラを左へ振る
+  const k2 = Math.min(1, act.t / 2.5);
+  CAM.xOff = -58 * k2 * k2 * (3 - 2 * k2);
+  if (!act.senshi && act.t >= 6.2) {
+    act.senshi = true;
+    const p = st.player;
+    p.spriteKey = 'p2_senshi';
+    // 3Dの人形は最初に作ったものを使い回すので、作り直させる（次の描画で新しい色で作られる）
+    const r = meshes.get(p.id);
+    if (r) { scene.remove(r.root); if (r.ring) scene.remove(r.ring); meshes.delete(p.id); }
+    burst(p.x, p.y - 20, '#ff7f0e');
+  }
+}
+function endAct() {
+  if (act.cam0) { CAM.dist = act.cam0.dist; CAM.height = act.cam0.height; act.cam0 = null; }
+  CAM.xOff = 0;
+  act.senshi = false; act.leavers = []; act.last = null;
+}
+
 // ===== 区間の切り替えの暗転 =====
 // phase 0: なし / 1: 暗くしていく / 2: 暗いうちに張り替えて明けていく
 const FADE_IN = 0.16, FADE_OUT = 0.34;
@@ -687,6 +777,7 @@ function loop(now) {
     setScene(st.data.bossScene3d || st.data.bossBg.scene, st.data);
   }
   pumpSceneEvents(st, frame);
+  stepAct(st, frame);
 
   // 詠唱の圧と閃光（本編と同じ）
   const cast = st ? st.entities.some((e) => e.alive && e.state === 'cast') : false;

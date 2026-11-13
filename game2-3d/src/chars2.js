@@ -30,6 +30,8 @@ export const PALETTES2_3D = {
   // 3Dでも h はヘルメットの色（2D と同じ意味）。自社の作業着に保護帽。
   p2_shinjin: { map: 'worker', h: '#e6edf2', outfit: 'work', headwear: 'helmet', age: 'young' },
   p2_haizoku: { map: 'worker', h: '#36b06a', outfit: 'work', headwear: 'helmet', age: 'young' },
+  // エピローグで「一人になった」主人公（ヘルメットが緑から橙＝本編の自機の色へ。構成案のとおり）。3D版だけの種別
+  p2_senshi:  { map: 'worker', h: '#ff7f0e', outfit: 'work', headwear: 'helmet', age: 'young' },
 
   // 同期3人（配属先の色。設計=青 / 現場=黄 / 品証=紫）。第1章は主人公と同じ白（chars2.js）
   douki_sekkei: { map: 'worker', h: '#4a7ad0', outfit: 'work', headwear: 'helmet', age: 'young' }, // 設計: 青
@@ -115,6 +117,7 @@ export const FACES2 = {
   // 主人公。本編の自機と同じ顔（5年前の同じ人）。ヘルメットで髪型はほぼ隠れる
   p2_shinjin:   [0, 0, 0, 0, 0, 1],
   p2_haizoku:   [0, 0, 0, 0, 0, 1],
+  p2_senshi:    [0, 0, 0, 0, 0, 1],
   // 同期3人と主担当。入社1年目なので白髪・薄毛・髭は当てない。研修中は全員同じ白い
   // ヘルメットなので、眼鏡・肌・体格で見分けがつくようにしてある
   douki_sekkei: [4, 2, 0, 2, 1, 0],   // 設計: 銀縁・細身で背が高い
