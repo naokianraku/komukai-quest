@@ -1431,6 +1431,11 @@ const SCENES = {
   shrine: buildShrine, shokudo: buildShokudo, yard: buildYard,
 };
 
+// 外から場面を足す口。続編（ゴールデンエイジ編）の場面は本編の SCENES に混ぜず、
+// 続編のファイル（game2-3d/src/scenes2.js）で書いてここから登録する。
+// 本編のページは続編のファイルを読まないので、本編の容量も動きも変わらない。
+export function registerScene(key, build) { SCENES[key] = build; }
+
 function applyScene(key, data) {
   clearScenery();
   const W = data.width * S;
@@ -2317,6 +2322,8 @@ export {
   THREE, S, wx, wy, wz, Q, renderer, scene, camera, CAM, camPos, camLook,
   APPEARANCES, SHARD, flames, domes, doorFx, meshes, flashEl,
   box, applyScene, sceneAt, buildScenery, clearScenery, clearStageObjects,
+  // 場面を書くための道具（続編の scenes2.js が使う）
+  hex, zones, setLighting, ceilingSlab, chair, fireRow, hemi, sun, fill, ROOM,
   addFloat, burst, meteorBoom,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
