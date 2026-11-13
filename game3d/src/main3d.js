@@ -208,9 +208,15 @@ screenEl.addEventListener('click', (ev) => {
   screenTap = true;
 });
 const confirmed = () => Input.confirm || screenTap;
+// 書類を出してから「決定」を受け付けるまでの秒数。ボス戦で攻撃を連打したまま倒すと、
+// その連打が決定になって書類を突き抜ける（TouchAttack も confirm に入っている）。
+// エンディングは1周の締めくくりなので読めるだけ待たせる（ゴールデンエイジ編は 5.0 秒）。
+// 案内文（hint）もこの秒数が明けてから出す。
+const WAIT = { intro: 1.0, clear: 1.0, gameover: 1.2, ending: 4.0 };
 
 // 画面下の案内。指で遊ぶ端末に「Enter キー」と出しても押せないので、言い回しを変える。
-const hint = (t, touch) => `<p class="k">${Input.controlsActive() ? (touch || t) : t}</p>`;
+const hint = (t, touch, delay = 0) =>
+  `<p class="k"${delay ? ` style="--d:${delay}s"` : ''}>${Input.controlsActive() ? (touch || t) : t}</p>`;
 function renderScreen() {
   // 出向・裏ステージは STAGES に入っていないので、今読み込んでいるステージのデータを使う
   const ch = (stage && stage.data) || STAGES[game.stageIndex];
@@ -247,7 +253,7 @@ function renderScreen() {
           <tr><th>難易度</th><td>${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[1]}　<span style="color:#6c737c">${(DIFFS.find((d) => d[0] === game.difficulty) || DIFFS[1])[3]}</span></td></tr>
           <tr><th>指示事項</th><td>${(ch.intro || '').replace(/\n/g, '<br>')}</td></tr>
         </table>
-        ${hint('Enter で作業開始', '画面を押して作業開始')}
+        ${hint('Enter で作業開始', '画面を押して作業開始', WAIT.intro)}
       </div>`);
       break;
     case 'clear':
@@ -259,7 +265,7 @@ function renderScreen() {
           <tr><th>結果</th><td>所定の作業を完了した</td></tr>
           <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter で次の作業へ', '画面を押して次の作業へ')}
+        ${hint('Enter で次の作業へ', '画面を押して次の作業へ', WAIT.clear)}
       </div>`);
       break;
     case 'gameover':
@@ -270,7 +276,7 @@ function renderScreen() {
           <tr><th>事由</th><td>組織に敗れたため</td></tr>
           <tr><th>評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter でタイトルへ', '画面を押してタイトルへ')}
+        ${hint('Enter でタイトルへ', '画面を押してタイトルへ', WAIT.gameover)}
       </div>`);
       break;
     case 'ending':
@@ -281,7 +287,7 @@ function renderScreen() {
         <table class="form">
           <tr><th>最終評価ポイント</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
         </table>
-        ${hint('Enter でタイトルへ', '画面を押してタイトルへ')}
+        ${hint('Enter でタイトルへ', '画面を押してタイトルへ', WAIT.ending)}
       </div>`);
       break;
     default: hideScreen();
@@ -335,6 +341,9 @@ hud.mute.addEventListener('click', () => { Audio.resume(); Audio.toggleMute(); r
 renderMute();
 addEventListener('keydown', () => Audio.resume(), { once: true });
 addEventListener('pointerdown', () => Audio.resume(), { once: true });
+// タブが裏に回ったら曲を止め、戻ったら続きから。裏では setInterval が 1 秒に 1 回に
+// 間引かれるので、止めないと BGM がスローモーションで鳴り続ける。
+document.addEventListener('visibilitychange', () => Audio.setMusicPaused(document.hidden));
 
 // BGM。2D版の Game.updateAudio と同じ割り当て。Audio.play は同じ曲なら何もしないので毎フレーム呼べる。
 function updateAudio() {
@@ -398,7 +407,7 @@ function loop(now) {
         break;
       }
       case 'intro':
-        if (game.screenT > 0.4 && confirmed()) { game.state = 'playing'; hideScreen(); }
+        if (game.screenT > WAIT.intro && confirmed()) { game.state = 'playing'; hideScreen(); }
         break;
       case 'playing':
         if (FX.hitstop > 0) FX.hitstop -= STEP;        // 打撃の手応え（案D）
@@ -424,19 +433,20 @@ function loop(now) {
         }
         break;
       case 'clear':
-        if (game.screenT > 0.5 && confirmed()) {
+        if (game.screenT > WAIT.clear && confirmed()) {
           game.stageIndex++; loadStage(game.stageIndex);
           game.state = 'intro'; game.screenT = 0; renderScreen();
         }
         break;
       case 'gameover':
-      case 'ending':
-        if (game.screenT > 0.6 && confirmed()) {
+      case 'ending': {
+        if (game.screenT > WAIT[game.state] && confirmed()) {
           game.state = 'title'; game.screenT = 0;
           stage = new Stage(STAGES[0], game);   // 自機を門前に立たせ直す
           buildTitleScenery(); renderScreen();
         }
         break;
+      }
     }
     if (Input.pressed('KeyM')) { Audio.toggleMute(); renderMute(); }   // どの画面でもMでミュート
     Input.endFrame(); screenTap = false;

@@ -111,9 +111,17 @@ export const Audio = {
     if (!this.ctx) return;
     // WebKit には標準に無い4つめの状態 'interrupted' がある（電話・Siri・タイマー）。
     // 'suspended' だけを見ていると、割り込みのあと二度と音が戻らない。
-    if (this.ctx.state !== 'running') this.ctx.resume();
     this.enabled = true;
-    if (this._track) this._start(this._track);
+    // 鳴っている最中に呼ばれても、頭から鳴らし直さない。
+    // タイトルで画面を押すたびにファンファーレが鳴り直す／BGMボタンを押すと曲が最初に
+    // 戻る、のがこれだった。止まっているとき（初回の解禁・割り込み明け）だけ始め、
+    // そのときも途中からにする。一時停止中は setMusicPaused(false) 側が再開する。
+    const kick = () => {
+      if (this._track && !this._timer && !this._musicPaused && !this._done) this._start(this._track, true);
+    };
+    // resume() は非同期。走り出す前に予約すると最初の音符が落ちるので、走ってから始める。
+    if (this.ctx.state !== 'running') this.ctx.resume().then(kick, kick);
+    else kick();
   },
 
   setMuted(m) {
@@ -125,20 +133,25 @@ export const Audio = {
   // 曲を切替（同じ曲なら何もしない）。enable前は予約だけ。
   play(name) {
     if (this._track === name) return;
-    this._track = name;
-    if (this.enabled) this._start(name);
+    this._track = name; this._done = false;
+    if (this.enabled && !this._musicPaused) this._start(name);
+    else { clearInterval(this._timer); this._timer = null; }   // 一時停止中は予約だけ（鳴っていた前の曲は止める）
   },
 
-  // 一時停止: スケジューラを止める（鳴っている音は短いのですぐ消える）／解除で再開
+  // 一時停止: スケジューラを止める（鳴っている音は短いのですぐ消える）／解除で続きから再開。
+  // タブが裏に回ったときにも使う。裏では setInterval が 1 秒に 1 回に間引かれるので、
+  // 止めないと BGM がスローモーションで鳴り続ける。
   setMusicPaused(p) {
     this._musicPaused = p;
     if (p) { clearInterval(this._timer); this._timer = null; }
-    else if (this.enabled && this._track) this._start(this._track);
+    else if (this.enabled && this._track && !this._done) this._start(this._track, true);
   },
 
-  _start(name) {
+  // keep=true なら曲の位置（_step）を保って続きから鳴らす
+  _start(name, keep = false) {
     clearInterval(this._timer);
-    this._step = 0;
+    if (!keep) this._step = 0;
+    this._done = false;
     const t = TRACKS[name];
     if (!t || !this.ctx) { this._timer = null; return; }
     this._timer = setInterval(() => this._tick(t), t.step);
@@ -155,17 +168,22 @@ export const Audio = {
   _tick(t) {
     if (!this.ctx) return;
     const i = this._step % t.len;
-    const L = this._at(t.lead, i), H = this._at(t.harm, i), B = this._at(t.bass, i);
-    const v = (pre) => ({
-      voices: t[pre + 'Voices'] || 1, detune: t[pre + 'Detune'] || 0,
-      atk: t[pre + 'Atk'], cut: t[pre + 'Cut'],
-    });
-    if (L) this._note(midi(L.n), t.step / 1000 * 0.95 * L.len, t.leadType || 'sawtooth', t.leadGain ?? 0.24, v('lead'));
-    if (H) this._note(midi(H.n), t.step / 1000 * 0.95 * H.len, t.harmType || t.leadType || 'sawtooth', t.harmGain ?? 0.12, v('harm'));
-    if (B) this._note(midi(B.n), t.step / 1000 * 1.8 * B.len, t.bassType || 'triangle', t.bassGain ?? 0.5, v('bass'));
-    if (t.drum && t.drum[i]) this._kick();
+    // 割り込み中（電話・Siri・タイマー）は currentTime が止まる。そのまま予約すると
+    // 全部同じ時刻に積まれ、復帰した瞬間に一斉に鳴る。止まっている間は予約せず、
+    // 拍だけ進める（復帰したら、その時点の続きから鳴る）。
+    if (this.ctx.state === 'running') {
+      const L = this._at(t.lead, i), H = this._at(t.harm, i), B = this._at(t.bass, i);
+      const v = (pre) => ({
+        voices: t[pre + 'Voices'] || 1, detune: t[pre + 'Detune'] || 0,
+        atk: t[pre + 'Atk'], cut: t[pre + 'Cut'],
+      });
+      if (L) this._note(midi(L.n), t.step / 1000 * 0.95 * L.len, t.leadType || 'sawtooth', t.leadGain ?? 0.24, v('lead'));
+      if (H) this._note(midi(H.n), t.step / 1000 * 0.95 * H.len, t.harmType || t.leadType || 'sawtooth', t.harmGain ?? 0.12, v('harm'));
+      if (B) this._note(midi(B.n), t.step / 1000 * 1.8 * B.len, t.bassType || 'triangle', t.bassGain ?? 0.5, v('bass'));
+      if (t.drum && t.drum[i]) this._kick();
+    }
     this._step++;
-    if (t.once && this._step >= t.len) { clearInterval(this._timer); this._timer = null; } // _trackは保持＝再生しない
+    if (t.once && this._step >= t.len) { clearInterval(this._timer); this._timer = null; this._done = true; } // _trackは保持＝再生しない
   },
 
   // opts.voices>1 で少しずつ音程をずらした同じ音を重ねる（厚みが出る）。

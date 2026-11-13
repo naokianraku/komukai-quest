@@ -92,7 +92,7 @@ final class GameUITests: XCTestCase {
 
         // 指示書はどこを押しても進む（タイトルだけが「はじめる」限定）
         guard let mid = point(app, intro["mid"]) else { return XCTFail("画面中央の位置が取れない") }
-        Thread.sleep(forTimeInterval: 0.8)   // ゲーム側が 0.4 秒は受け付けない
+        Thread.sleep(forTimeInterval: 1.4)   // ゲーム側が 1.0 秒は受け付けない（連打で突き抜けない対策）
         mid.tap()
 
         let playing = state(app, until: { ($0["screen"] as? String) == "none" }, "ゲームが始まった状態")

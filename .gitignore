@@ -14,3 +14,6 @@ game/src/taunts.js.bak
 ios/build/
 ios/**/xcuserdata/
 ios/**/*.xcuserstate
+
+# Claude Code のプロジェクト設定（ブラウザ拡張の許可など）。ゲームとは無関係
+.claude/

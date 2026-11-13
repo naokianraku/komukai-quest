@@ -40,8 +40,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: 小向クエスト
-        CFBundleShortVersionString: "1.0.1"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "1.0.2"
+        CFBundleVersion: "4"
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:

@@ -109,7 +109,11 @@
     background:#e9ecef;border:1px solid #d3d8dd;color:#4a5058;font-weight:700}
   #screen .form td{padding:7px 10px;border:1px solid #d3d8dd;line-height:1.6}
   #screen .mono{font:700 14px ui-monospace,monospace;font-variant-numeric:tabular-nums}
-  #screen .k{margin-top:18px;font-size:12px;color:#6c737c;text-align:center}
+  /* 案内文。--d を渡した画面では、決定を受け付けるまでの待ち時間が明けてから出す
+     （先に出ていると「押しても効かない」ように見える） */
+  #screen .k{margin-top:18px;font-size:12px;color:#6c737c;text-align:center;
+    opacity:0;animation:kin .35s ease forwards;animation-delay:var(--d,0s)}
+  @keyframes kin{to{opacity:1}}
   /* 難易度。キー操作の案内文だけだと気づかれないので、押せるボタンにする。
      #screen は canvas を覆っているのでタップは canvas に届かない。ここで拾う。 */
   #screen .diffwrap{margin-top:20px}

@@ -205,7 +205,7 @@ export function drawStageIntro(ctx, stage, t) {
   center(ctx, stage.data.stageLabel || ('STAGE ' + stage.data.id), 100, 'bold 13px system-ui, sans-serif', ACCENT);
   center(ctx, stage.data.name, 122, 'bold 14px system-ui, sans-serif', INK);
   multiline(ctx, stage.data.intro, VIEW_W / 2, 150, 15, '10px system-ui, sans-serif', SUB);
-  if (Math.floor(t * 2) % 2 === 0) {
+  if (t > 1.0 && Math.floor(t * 2) % 2 === 0) {
     center(ctx, 'PRESS  ENTER  TO  START', 188, 'bold 11px system-ui, sans-serif', INK);
   }
 }
@@ -214,14 +214,14 @@ export function drawStageClear(ctx, stage, t) {
   dim(ctx, 0.6);
   center(ctx, 'STAGE CLEAR!', 120, 'bold 26px system-ui, sans-serif', ACCENT);
   center(ctx, stage.data.name + ' を突破', 150, '12px system-ui, sans-serif', INK);
-  if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 190, 'bold 12px system-ui, sans-serif', SUB);
+  if (t > 1.0 && Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 190, 'bold 12px system-ui, sans-serif', SUB);
 }
 
 export function drawRankUp(ctx, newRank, t) {
   dim(ctx, 0.7);
   center(ctx, '昇 進 !', 110, 'bold 30px system-ui, sans-serif', ACCENT);
   center(ctx, 'あなたは「' + newRank + '」になった', 148, 'bold 14px system-ui, sans-serif', INK);
-  if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 192, 'bold 12px system-ui, sans-serif', SUB);
+  if (t > 1.0 && Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 192, 'bold 12px system-ui, sans-serif', SUB);
 }
 
 export function drawEnding(ctx, game, t) {
@@ -232,7 +232,8 @@ export function drawEnding(ctx, game, t) {
   center(ctx, '数々の困難と理不尽、そして裏切りを越え、小向の頂点に立った。', 156, '10px system-ui, sans-serif', SUB);
   center(ctx, '小向戦士の伝説、ここに完結。', 172, '10px system-ui, sans-serif', SUB);
   center(ctx, 'FINAL SCORE  ' + String(game.score).padStart(6, '0'), 198, 'bold 14px ui-monospace, monospace', ACCENT);
-  if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 230, 'bold 11px system-ui, sans-serif', SUB);
+  // 決定を受け付ける（4.0秒）まで案内は出さない。先に出ていると「押しても効かない」ように見える
+  if (t > 4.0 && Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER', 230, 'bold 11px system-ui, sans-serif', SUB);
 }
 
 export function drawGameOver(ctx, game, t) {
@@ -240,7 +241,7 @@ export function drawGameOver(ctx, game, t) {
   center(ctx, 'GAME OVER', 116, 'bold 30px system-ui, sans-serif', '#c73333');
   center(ctx, '組織に敗れた…。', 146, '12px system-ui, sans-serif', INK);
   center(ctx, 'SCORE ' + String(game.score).padStart(6, '0'), 174, 'bold 12px ui-monospace, monospace', SUB);
-  if (Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER TO RETRY', 210, 'bold 12px system-ui, sans-serif', SUB);
+  if (t > 1.2 && Math.floor(t * 2) % 2 === 0) center(ctx, 'PRESS ENTER TO RETRY', 210, 'bold 12px system-ui, sans-serif', SUB);
 }
 
 // 一時停止ボタン（プレイ中に表示・タップ/クリック可。Pキーでも）

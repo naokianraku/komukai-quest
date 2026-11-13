@@ -689,7 +689,7 @@ export class Game {
         break;
       }
       case 'intro':
-        if (this.screenT > 0.3 && Input.confirm) { this.state = 'playing'; this.paused = false; }
+        if (this.screenT > 1.0 && Input.confirm) { this.state = 'playing'; this.paused = false; }
         break;
       case 'playing': {
         // 一時停止トグル（Pキー / Escape / 画面のボタン）
@@ -717,20 +717,21 @@ export class Game {
         break;
       }
       case 'clear':
-        if (this.screenT > 0.4 && Input.confirm) { this.state = 'rankup'; this.screenT = 0; }
+        if (this.screenT > 1.0 && Input.confirm) { this.state = 'rankup'; this.screenT = 0; }
         break;
       case 'rankup':
-        if (this.screenT > 0.4 && Input.confirm) {
+        if (this.screenT > 1.0 && Input.confirm) {
           this.stageIndex++;
           this.loadStage(this.stageIndex);
           this.state = 'intro'; this.screenT = 0;
         }
         break;
       case 'ending':
-        if (this.screenT > 0.6 && Input.confirm) { this.state = 'title'; this.screenT = 0; }
+        // 連打したまま突き抜けないよう、読めるだけ待たせる（3D版・ゴールデンエイジ編と同じ）
+        if (this.screenT > 4.0 && Input.confirm) { this.state = 'title'; this.screenT = 0; }
         break;
       case 'gameover':
-        if (this.screenT > 0.5 && Input.confirm) { this.state = 'title'; this.screenT = 0; }
+        if (this.screenT > 1.2 && Input.confirm) { this.state = 'title'; this.screenT = 0; }
         break;
     }
     this.updateAudio();
@@ -800,6 +801,9 @@ function boot() {
   addEventListener('keydown', resumeAudio, { once: true });
   addEventListener('pointerdown', resumeAudio, { once: true });
   const game = new Game();
+  // タブが裏に回ったら曲を止め、戻ったら続きから（裏では setInterval が間引かれて
+  // BGM がスローモーションになる）。ポーズ中に戻ってきても鳴らさない。
+  document.addEventListener('visibilitychange', () => Audio.setMusicPaused(document.hidden || game.paused));
 
   const STEP = 1 / 60;
   let acc = 0;
