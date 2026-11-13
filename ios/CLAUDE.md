@@ -101,8 +101,9 @@ swift scripts/make_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/icon.
 | 配布用プロファイル | Komukai Quest App Store（2027-11-03まで）。`~/.config/apple-signing/profiles/komukai_appstore.mobileprovision` |
 | TestFlight 内部グループ | 「自分」 38b530a4-230e-46cb-a927-fe57421ac250（全ビルド自動配布） |
 | バージョン 1.0 | **READY_FOR_SALE（2026-11-06 公開）** |
-| バージョン 1.0.1 | **WAITING_FOR_REVIEW（2026-11-07 21:49 提出・ビルド3）** ／ releaseType=AFTER_APPROVAL |
-| 上がっているビルド | 1（1.0・公開中）／ 2（未使用）／ 3（1.0.1 用） |
+| バージョン 1.0.1 | READY_FOR_SALE（2026-11-13 までに公開） |
+| バージョン 1.0.2 | PREPARE_FOR_SUBMISSION（ビルド4）／ releaseType=AFTER_APPROVAL |
+| 上がっているビルド | 1（1.0）／ 2（未使用）／ 3（1.0.1）／ 4（1.0.2 用） |
 | 価格・配信 | 無料 / **日本のみ**（新しい国には自動で広げない） |
 | 年齢区分 | **12+**（ブラジル14・韓国12） |
 | 提出 ID | 589f4756-b439-4976-8ea3-1d506286fbfc |
@@ -193,7 +194,7 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 
 - ゴールデンエイジ編（`game2-3d/`）は入れていない。本編だけのアプリ
 - ~~実機での確認~~ 済み（2026-11-06・TestFlight のビルド1）。本人から「いい出来」との返事
-- 1.0.1 の審査結果待ち（2026-11-07 提出）。落ちたら理由を見て直す
+- 1.0.2 の提出（テストプレイの指摘の修正）。詳細は下の「テストプレイで直したこと」
 
 ## 登場人物の名前は伏せ字（2026-11-07）
 
@@ -204,3 +205,28 @@ API キーを付けた `-allowProvisioningUpdates` も Authentication failed で
 **セリフの正本は `セリフ一覧.md`（gitignore・ローカルのみ）で、`game/src/taunts.js` は
 `scripts/serifs-to-taunts.mjs` が生成する。** taunts.js だけ直しても次の変換で戻るので、
 必ず正本を直してから変換し、生成前後を diff して他のセリフが動いていないことを確かめる。
+
+## テストプレイで直したこと（2026-11-13・1.0.2）
+
+同僚が遊んでくれて3つ指摘をもらった。原因と直し方。
+
+| 指摘 | 原因 | 直したこと |
+|---|---|---|
+| クリアしたのに連打していたらすぐタイトルに戻った | エンディングは 0.6 秒で決定を受け付けていた。`TouchAttack` も `confirm` なので、ボス戦の連打がそのまま決定になる | 待ち時間を `WAIT` 表（main3d.js）にまとめ、作業指示書 1.0／作業報告 1.0／休職願 1.2／辞令 4.0 秒。案内文は待ちが明けてからフェードイン（`.k` の `--d`）。2D 版も同じ |
+| クリックすると音楽が頭から鳴り直す | `Audio.resume()` が呼ばれるたび `_start()` していた。タイトルで画面を押すたび／🔊 ボタンを押すたびに起きる | 鳴っている最中の `resume()` は何もしない。止まっているときだけ、続きから |
+| OP がドラクエっぽい | 出だしが「属音を3つ→主音へ跳ぶ」ファンファーレの定型で、同じ型 | **直していない。** 曲は本人の判断。言われたらメロディの出だしを変える |
+
+副産物で直したもの（音）:
+- 電話・Siri の割り込み中は `currentTime` が止まるのに `setInterval` は回り、音符が同じ時刻に積まれて
+  復帰の瞬間に一斉に鳴っていた → `ctx.state !== 'running'` の間は予約せず拍だけ進める
+- ブラウザでタブを裏に回すと `setInterval` が 1 秒 1 回に間引かれ BGM がスローモーションになる
+  → `visibilitychange` で止め、戻ったら続きから（`_start(name, keep=true)`）
+
+確かめ方の覚え書き:
+- **Claude in Chrome（拡張）は 127.0.0.1 / localhost のページを開けない**（curl は 200 なのに error page）。
+  ローカル確認は `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new
+  --enable-logging=stderr --virtual-time-budget=5000 --dump-dom URL` で起動し、stderr の
+  CONSOLE 行でエラーを拾う。DOM に名札や体力バーが出ていればループは回っている
+- 音の状態機械は `scripts/test-headless.mjs` の [25] に Node のモックで固定した
+- UI テストは作業指示書を押す前に **1.4 秒**待つ（ゲーム側が 1.0 秒待つため）。待ちを縮めると
+  タップが無視されて `screen == none` 待ちでタイムアウトする
