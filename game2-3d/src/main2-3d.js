@@ -47,6 +47,7 @@ class Game2_3D extends Game2 {
   }
 
   update(dt) {
+    const before = this.state;
     // 打撃の手応え。止めている間はステージを進めないが、画面の状態遷移は進める
     this.hitstopStep = this.state === 'playing' && !this.paused && FX.hitstop > 0;
     if (this.hitstopStep) {
@@ -54,10 +55,47 @@ class Game2_3D extends Game2 {
       const st = this.stage;
       st.update = () => {};
       try { super.update(dt); } finally { delete st.update; }
-      return;
+    } else {
+      super.update(dt);
     }
-    super.update(dt);
+    holdForDown(this, before);
+    // 離脱届からタイトルへ戻ったら、負けた章の敵や同期を片付けて第1章を置き直す（起動したときと同じ）。
+    // そのままだと、タイトルの絵の中に負けた章の敵が立ったまま残る。
+    if (before !== 'title' && this.state === 'title') {
+      this.roster = [];
+      this.stage = new Stage2(CHAPTERS[0], this);
+      attach(this.stage, CHAPTERS[0]);
+      enterTitleScene();
+    }
   }
+}
+
+// ===== 撃破の間（3D版だけ） =====
+// 続編のボスは捨てセリフ（lastLine）を持たないので、2D版と同じく倒した瞬間に報告書が出る。
+// 3Dではそれだと、ボスが崩れる絵も、場面が撃破で変わるところ（講堂の棚のヘルメットが配属色に
+// 変わる、など）も、報告書の暗幕に隠れて見えない。そこで3D版だけ、最後の一撃のあと本編のボスと
+// 同じ「倒れかけ」（膝から崩れて瓦礫になる）を挟んでから報告書へ進む。
+// 吹き出しには、その章の報告書に載る一言（clearLine。既存の文言）をそのまま出す。新しい文は足さない。
+// 作り直しの残りがある（第5章でまだ復活する）ときは挟まない。
+const DOWN_SEC = 3.2;
+function holdForDown(g, before) {
+  const st = g.stage;
+  const b = st && st.boss;
+  if (!b || b.alive || b.__down || !st.bossStarted || (st.reviveLeft || 0) > 0) return;
+  // 撃破で章が終わったところ（報告書・通知書へ移る直前）か、レターでとどめを刺した直後（次の更新で終わる）
+  const ended = before === 'playing' && (g.state === 'clear' || g.state === 'disband');
+  if (!ended && g.state !== 'playing') return;
+  if (ended) { g.state = 'playing'; g.screenT = 0; st.cleared = false; }
+  b.__down = true;
+  b.alive = true; b.hp = 0;
+  b.dying = true; b.downT = b.downMax = DOWN_SEC;
+  b.taunt = st.data.clearLine || null;
+  b.tauntT = b.taunt ? DOWN_SEC : 0;
+  b.chatterT = 99;
+  b.hitstun = 0; b.kbx = 0; b.attack = null; b.attackActive = false; b.state = 'idle';
+  if (!st.entities.includes(b)) st.entities.push(b);
+  FX.hitstop = Math.max(FX.hitstop, 0.22); FX.shake = Math.max(FX.shake, 2.6);
+  burst(b.x, b.y - 14, '#ffd24a');
 }
 
 // 続編専用の場面を先に登録する（章を読み込むと場面を張るので、その前に済ませる）
@@ -68,6 +106,16 @@ setGame(game);
 if (Q.get('dbg') === '1') window.__g2 = game;
 
 let bossSceneApplied = false;
+// 章の途中で場面が変わる区間（scenes3d）の、いまの区間の番号。0 は章の頭の場面（bg.scene）、
+// k は scenes3d[k-1]。進むだけで戻らない（戦闘中に自機が後ろへ下がっても、前の場面へ張り戻さない。
+// 地獄では敵が自機の後ろにも出るので、下がるたびに部屋が入れ替わってしまう）。
+let segIdx = 0;
+function segIndexAt(data, x) {
+  let k = 0;
+  for (const seg of data.scenes3d || []) if (x >= seg.x) k++;
+  return k;
+}
+function segScene(data, k) { return k === 0 ? { scene: data.bg.scene, label: null } : data.scenes3d[k - 1]; }
 
 // 章の読み込み。fx のフックを張り直すのを忘れると、打撃の手応えと
 // ダメージ数字が出なくなるので必ずここを通す。
@@ -86,6 +134,7 @@ function attach(st, data) {
   const oMeteor = st.fx.meteor.bind(st.fx);
   st.fx.meteor = (x, y, r) => { oMeteor(x, y, r); meteorBoom(x, y, r); };
   buildScenery(data);
+  segIdx = segIndexAt(data, st.player.x);
   camPos.set(wx(st.player.x), CAM.height, wz(st.player.y) + CAM.dist);
   camLook.set(wx(st.player.x), CAM.lookY, wz(st.player.y) - 3);
 }
@@ -356,7 +405,7 @@ screenEl.addEventListener('click', (ev) => {
 // レターは第3章、口出しは第5章だけなので、同時に2つ出ることはない。
 function ctxAction() {
   const st = game.stage;
-  if (game.state !== 'playing' || game.paused || !st || !st.boss || !st.boss.alive) return null;
+  if (game.state !== 'playing' || game.paused || !st || !st.boss || !st.boss.alive || st.boss.dying) return null;
   const g = st.data.gauges || {};
   if (g.letter && game.letter >= game.letterMax) return { key: 'KeyR', label: 'レター' };
   if (st.reviveLeft > 0) return { key: 'KeyE', label: '口出し' };
@@ -418,16 +467,21 @@ document.addEventListener('visibilitychange', () => Audio.setMusicPaused(documen
 const evPrev = { st: null };
 let reviveFromBoss = false;   // 作り直しの残りが減ったのが、ボスの復活か E（口出し）かを分ける
 let sceneClock = 0;
+const spawnedCount = (st) => (st.data.waves || []).filter((_, i) => st.spawned && st.spawned[i]).length;
 function pumpSceneEvents(st, dt) {
   if (!st) return;
   if (evPrev.st !== st) {   // 章が変わった（attach の後）。差を取る起点を取り直す
     Object.assign(evPrev, { st, waiting: st.waitT > 0, bossStarted: !!st.bossStarted, reveal: !!st.bossBarRevealed,
-      bossAlive: !!(st.boss && st.boss.alive), reviveLeft: st.reviveLeft || 0, letter: game.letter, state: game.state });
+      bossAlive: !!(st.boss && st.boss.alive), dying: !!(st.boss && st.boss.dying), reviveLeft: st.reviveLeft || 0,
+      letter: game.letter, state: game.state, waves: spawnedCount(st), roster: [...(game.roster || [])],
+      turned: !!st.turned, agentDown: !!st.agentCleared, defeated: false });
     if (typeof st.reviveBoss === 'function' && !st.__reviveWrapped) {
       const o = st.reviveBoss.bind(st);
       st.reviveBoss = () => { reviveFromBoss = true; o(); };
       st.__reviveWrapped = true;
     }
+    // 確認用の ?boss=1 は、起点を取る前にボス戦が始まっている。そのままだと 'bossStart' が届かない
+    if (st.bossStarted) { sceneEvent('bossStart'); placeWatchers(st); }
   }
   sceneClock += dt;
   sceneEvent('tick', {
@@ -438,22 +492,36 @@ function pumpSceneEvents(st, dt) {
   });
   const waiting = st.waitT > 0;
   if (evPrev.waiting && !waiting) sceneEvent('waitEnd');
+  // 波が出た（第何波か・波の名前）
+  const waves = spawnedCount(st);
+  for (let i = evPrev.waves; i < waves; i++) sceneEvent('wave', { index: i, label: (st.data.waves[i] || {}).label || '' });
+  // 同期の加入・離脱（roster の差）
+  const roster = game.roster || [];
+  for (const t of roster) if (!evPrev.roster.includes(t)) sceneEvent('doukiJoin', { type: t });
+  for (const t of evPrev.roster) if (!roster.includes(t)) sceneEvent('doukiLeave', { type: t });
   if (!evPrev.bossStarted && st.bossStarted) { sceneEvent('bossStart'); placeWatchers(st); }
   if (!evPrev.reveal && st.bossBarRevealed) sceneEvent('reveal');
+  if (!evPrev.turned && st.turned) sceneEvent('turn');
+  if (!evPrev.agentDown && st.agentCleared) sceneEvent('agentDown');
   const rl = st.reviveLeft || 0;
   if (rl < evPrev.reviveLeft) sceneEvent(reviveFromBoss ? 'revive' : 'kuchidashi');
   reviveFromBoss = false;
   const lmax = game.letterMax || 100;
   if (evPrev.letter >= lmax && game.letter < evPrev.letter && st.bossStarted) { sceneEvent('letter'); fireLetterFx(st); }
+  // 撃破。3D版はボスが崩れていく間（holdForDown）を挟むので、その始まりで知らせる。
+  // 場面の撃破の変化（'defeated'）も同じ瞬間に送る。報告書が出てからでは暗幕に隠れて見えない
   const alive = !!(st.boss && st.boss.alive);
-  if (evPrev.bossAlive && !alive && rl === 0) sceneEvent('defeated');
+  const dying = !!(st.boss && st.boss.dying);
+  let defeated = evPrev.defeated;
+  if (!evPrev.dying && dying && rl === 0) { sceneEvent('down'); if (!defeated) { sceneEvent('defeated'); defeated = true; } }
+  if (evPrev.bossAlive && !alive && rl === 0 && !defeated) { sceneEvent('defeated'); defeated = true; }
   if (evPrev.state !== game.state) {
     if (game.state === 'disband') sceneEvent('disband');
     if (game.state === 'epilogue') sceneEvent('epilogue');
-    if (game.state === 'title' && evPrev.state && evPrev.state !== 'title') enterTitleScene();
   }
   Object.assign(evPrev, { waiting, bossStarted: !!st.bossStarted, reveal: !!st.bossBarRevealed,
-    bossAlive: alive, reviveLeft: rl, letter: game.letter, state: game.state });
+    bossAlive: alive, dying, reviveLeft: rl, letter: game.letter, state: game.state, waves, roster: [...roster],
+    turned: !!st.turned, agentDown: !!st.agentCleared, defeated });
 }
 
 // 社長宛レター（R）。待たされた時間が書かせた手紙が、自機から舞い上がってボスの頭上を越え、
@@ -496,7 +564,26 @@ function placeWatchers(st) {
   ws.forEach((e, i) => {
     e.x = Math.max(12, st.player.x - 150 + i * 24);
     e.y = PLAY.top + 6 + (i % 2) * 9;
+    e._pin = { x: e.x, y: e.y };
   });
+}
+// 下がった人は陣営が mob になり、ロジックの中では毎フレーム辺りをうろつく（向きも勝手に変わる）。
+// 置いたままにしないと、30〜60秒の戦いのうちにガラスを抜けて会議室へ入ってくる。
+// 毎ステップ、ロジックの更新のあとで位置と向き（会議室の方＝右）を書き戻す。見た目だけで、判定は変えない。
+function pinWatchers(st) {
+  if (!st || !st.bossStarted) return;
+  for (const e of st.entities) {
+    if (!e._pin || !e.alive) continue;
+    e.x = e._pin.x; e.y = e._pin.y; e.vx = 0; e.kbx = 0;
+    e.facing = 1; e.moving = false;
+  }
+}
+// 単騎のボス戦（第3〜5章）で自機がやられたとき、ロジックは2Dの画面の左端（2Dのカメラ +40）に
+// 立ち直らせる。3Dではそこはボス部屋のガラスの外（廊下）で、ボスも追って廊下へ出てくる。
+// 3Dだけ、ボス戦が始まる地点（章の右端から220）より左には戻さない。
+function keepRespawnInRoom(st, livesBefore) {
+  if (!st || !st.data.soloBoss || !st.bossStarted || game.lives >= livesBefore || !st.player.alive) return;
+  st.player.x = Math.max(st.player.x, st.width - 220);
 }
 
 // ===== ループ =====
@@ -514,7 +601,11 @@ function loop(now) {
   while (acc >= STEP) {
     const wasTitle = game.state === 'title';
     Input.ctxButton = ctxAction();
+    const st0 = game.stage, livesBefore = game.lives;
+    // ボスが崩れていく間の R／E は捨てる（R が読まれると、倒れる途中で HP が書き戻されて消えてしまう）
+    if (st0 && st0.boss && st0.boss.dying) Input.dropPressed('KeyR', 'KeyE');
     game.update(STEP);
+    if (game.stage === st0 && game.state === 'playing') { pinWatchers(st0); keepRespawnInRoom(st0, livesBefore); }
     // タイトルでは2D側（game2/src/main2.js の title）が M を処理する。ここでも反転させると
     // 同じ押下で2回ひっくり返って効かない。タイトル以外だけここで反転し、表示は毎回合わせる。
     if (Input.pressed('KeyM')) { if (!wasTitle) Audio.toggleMute(); renderMute(); }
@@ -534,12 +625,20 @@ function loop(now) {
   }
 
   const st = game.stage;
-  // 章の途中で場面が変わる区間（3D専用のキー）。ボス場面に入ったあとは戻さない。
-  if (st && !bossSceneApplied && st.data.scenes3d && !Q.get('scene')) {
-    const seg = sceneAt(st.data, st.player.x);
-    if (seg.scene !== getScene()) {
-      setScene(seg.scene, st.data);
-      if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
+  // 章の途中で場面が変わる区間（3D専用のキー）。前へ進んだときだけ張り替え、戻らない。
+  // タイトルの間は張り替えない（裏に置いた第1章の区間が、タイトルの場面を上書きしてしまう）。
+  // ボス場面に入ったあとも張り替えない。
+  if (st && game.state !== 'title' && !bossSceneApplied && st.data.scenes3d && !Q.get('scene')) {
+    const segs = st.data.scenes3d;
+    const from = segIdx;
+    while (segIdx < segs.length && st.player.x >= segs[segIdx].x) segIdx++;
+    if (segIdx !== from) {
+      const seg = segScene(st.data, segIdx);
+      if (seg.scene !== getScene()) {
+        setScene(seg.scene, st.data);
+        if (seg.label) { st.banner = seg.label; st.bannerColor = 'rgba(28,58,86,0.92)'; st.bannerT = 2.4; }
+      }
+      sceneEvent('segment', { index: segIdx, scene: seg.scene });
     }
   }
   // ボス戦で場面が変わる章（会議室 → 相手の工場 など）
@@ -632,6 +731,7 @@ function rosterAt(n) {
     for (const w of st.data.waves) if ((w.x || 0) <= d) pick = w;
     st.spawnWave(pick);
     camPos.x = wx(d); camLook.x = wx(d);
+    resyncScene();
   }
 }
 // ?boss=1 … ボス戦をすぐ始める
@@ -644,4 +744,15 @@ if (Q.get('boss') === '1' && game.stage) {
   st.player.x = st.width - 150;
   st.startBoss();
   camPos.x = wx(st.player.x); camLook.x = wx(st.player.x);
+  resyncScene();
+}
+
+// 確認用のパラメータで位置や待ち時間を書き換えたあと、場面をその状態から建て直す
+// （待合室の扉は建てるときの待ち時間で開け閉めを決める、など）。出来事の起点も取り直す。
+function resyncScene() {
+  const st = game.stage;
+  if (!st || Q.get('scene')) return;
+  segIdx = segIndexAt(st.data, st.player.x);
+  setScene(segScene(st.data, segIdx).scene, st.data);
+  evPrev.st = null;
 }

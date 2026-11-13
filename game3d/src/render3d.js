@@ -1522,8 +1522,16 @@ export function buildTitleScenery(width, key = 'gate') {
   const halfD = (PLAY.bottom - PLAY.top) * S / 2 + 3;
   const build = key === 'gate' ? buildGate : SCENES[key];
   if (!build) console.warn('buildTitleScenery: 登録されていない場面', key, '→ 正門で代用');
-  (build || buildGate)(width * S, halfD, { stage, data: null, title: true });
-  curScene = build ? key : 'gate';
+  try {
+    (build || buildGate)(width * S, halfD, { stage, data: null, title: true });
+    curScene = build ? key : 'gate';
+  } catch (err) {
+    // 外から登録した場面（続編のタイトル）が落ちても、真っ黒で止めない。正門で代用する
+    console.error('buildTitleScenery: 場面を建てる途中で落ちた', key, err);
+    clearScenery();
+    buildGate(width * S, halfD);
+    curScene = 'gate';
+  }
 }
 
 // 場面の読み書き。章の途中で背景が変わるステージは、シェルがここを突いて張り替える。

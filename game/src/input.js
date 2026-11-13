@@ -224,6 +224,8 @@ export const Input = {
   // 押した瞬間を次のフレームへ持ち越す（続編の R／E。ヒットストップでステージが止まっている間に
   // 押されると、読まれる前に endFrame で消えてしまうため）
   keepPressed(code) { pressed.add(code); },
+  // 押した瞬間を捨てる（続編の3D: ボスが倒れていく間の R。読まれると倒れる途中で消えてしまう）
+  dropPressed(...codes) { for (const c of codes) pressed.delete(c); },
 
   endFrame() { pressed.clear(); },
 
