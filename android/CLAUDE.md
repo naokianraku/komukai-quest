@@ -7,7 +7,8 @@ Web 版の 3D をそのまま WebView に入れたアプリ。中身も入口（
 
 ## 決まりごと
 
-- 配るのは Google Play の**内部テスト**だけ。中村氏と希望者に限る（2026-11-14 本人の決定）。
+- 配るのは Google Play の**クローズドテスト（Alpha）**。参加は Google グループ経由で、希望者が募集ページから
+  自分で入る（MaxRecovery と同じ形。2026-11-15 本人の決定。最初は内部テストだったが、グループは内部テストでは使えないため切り替えた）。
   製品版・オープンテストには出さない
 - 続編は選択画面で「開発中」のまま（iPhone 版と同じ。選べるようにするのは本人の OK のあと）
 - 社名・人名は伏せたまま（親リポジトリの決まりと同じ）
@@ -52,38 +53,64 @@ cd ~/Developer/komukai && git worktree remove --force $WT
   （game3d から `../../game/src/...` への相対の読み込みが通る）。`game2-3d/cast.html` は Web 版と同じく外す
 - `android/dist/` は gitignore（AAB の置き場）
 
-## Play に上げる
+## 配り方（クローズドテスト＋Google グループ）
+
+| もの | 値 |
+|---|---|
+| 募集ページ | **https://anraku-tech.com/komukai/android**（noindex。URL を知っている人に配る）。元は `~/Developer/website-anrakutech/public/komukai/android.html`（git 管理外。`npm run deploy` で公開）。冒頭の「準備中」の帯は、審査が通ったら消す |
+| Google グループ | 「小向クエスト テスター」 komukai-testers@googlegroups.com（https://groups.google.com/g/komukai-testers）。オーナーは開発者用の anraku.tech@gmail.com（個人のアドレスは出さない）。誰でも参加可・投稿とメンバー一覧は管理者だけ（MaxRecovery のグループと同じ設定） |
+| 参加用リンク（クローズド） | https://play.google.com/apps/testing/com.anraku.komukai |
+| トラック | クローズド テスト - Alpha。国は日本だけ。テスターはこのグループ |
+| 内部テスト | versionCode 1 を公開済みだが、テスターは誰もいない（https://play.google.com/apps/internaltest/4700482543915190230）。使わない |
 
 | 版 | 中身 | 上げた日・方法 | 状態 |
 |---|---|---|---|
-| versionCode 1（1.1.0） | iPhone 版 1.1.0 と同じ（続編は「開発中」） | 2026-11-15 06:11・API（play.py） | 内部テストに公開。アプリは「未審査」 |
+| versionCode 1（1.1.0） | iPhone 版 1.1.0 と同じ（続編は「開発中」） | 2026-11-15 06:11・API（play.py）で内部テストへ。同じ版をライブラリから Alpha へ | 2026-11-15 07:05 に審査へ送った（ストアの掲載情報・申告とまとめて 13 件。管理対象の公開はオフ＝通れば自動で公開） |
 
-- **参加用リンク: https://play.google.com/apps/internaltest/4700482543915190230**（テスターのリストに入っている
-  Google アカウントでだけ開ける。「テスターになる」→ Play ストアから入れる）
-- アプリの設定（ストアの掲載情報・アプリのコンテンツの申告）が済んで審査が通るまで、テスターに見えるアプリ名は
-  「com.anraku.komukai (unreviewed)」になる。内部テストはこのままでも入れられる
-- テスターは「テストとリリース」→「テスト」→「内部テスト」→「テスター」のメーリングリスト（Gmail）。
-  **メールのリストは API では編集できない**（API が扱えるのは Google グループだけ）ので Console で行う。
-  リストはデベロッパー アカウントで共通。既にある「tester-list」（2 人）は MaxRecovery 側のもので、小向クエストには使っていない
-- **このアプリは「変更が自動で審査に送られる」状態。** play.py の既定（審査に送らない保存）は
-  `changesNotSentForReview must not be set` で弾かれるので、`--send-for-review` を付けて送る（内部テストへの配信は
-  本人の包括許可あり。2026-11-15）
-- play.py が出す「versionCode は 1xxx の決まり」「-beta の目印が無い」の注意は MaxRecovery 用。小向クエストでは気にしない
-- API で上げるときは MaxRecovery の `play.py` を使う。サービスアカウント play-publisher に、小向クエストの
-  「テスト版トラックとしてのアプリのリリース」「テスト版トラックの管理、テスターリストの編集」「アプリ情報の閲覧」を
-  付けた（2026-11-15。製品版の権限と管理者は付けていない）。使い方は
+- テスターはグループのメンバーなので、Play Console でメールアドレスを集めたり登録したりしない（本人がアドレスを預からない）
+- 審査が通るまで、テスターに見えるアプリ名は「com.anraku.komukai (unreviewed)」
+- メールのテスターリストは API では編集できない（API が扱えるのは Google グループだけ）。リストはデベロッパー
+  アカウントで共通で、既にある「tester-list」（2 人）は MaxRecovery 側のもの。小向クエストには使っていない
+
+### ストアの掲載情報と申告（2026-11-15 に Console で入れた）
+
+| 項目 | 中身 |
+|---|---|
+| 掲載文 | `store/listing/ja-JP/`（title・short・full）。iPhone 版の説明文から「iPhone専用」「App内課金」の 2 か所だけ直したもの |
+| 画像 | アイコン `store/icon-512.png`、フィーチャー グラフィック `store/feature-1024x500.jpg`（`store/make_feature.swift` で作る）、スクリーンショット `store/phone/*.jpg`（iPhone 版の 6 枚の左右の黒帯を落として 16:9 の 2346×1320 にしたもの。順番も iPhone 版と同じ） |
+| AI アセットの申告 | ラベルを付けない（画像はゲームの画面と、コードで描いたもの） |
+| カテゴリ・連絡先 | ゲーム／アクション。anraku.tech@gmail.com、https://anraku-tech.com/komukai/support |
+| プライバシーポリシー | https://anraku-tech.com/komukai/privacy（iPhone 版と同じ） |
+| 広告・ログイン・広告 ID・行政・金融・健康 | どれも「なし」 |
+| データ セーフティ | 収集も共有もしない |
+| ターゲット ユーザー | 13〜15・16〜17・18 歳以上（iPhone 版の 12+ に合わせ、13 歳未満は入れない） |
+| コンテンツのレーティング | iPhone 版の年齢区分の答えに合わせた: 人間への暴力（空想・ドット絵風・非現実的な反応・遠目から頻繁・流血なし）、恐怖（まれ）、軽度ののしり（まれ）、アルコールへの言及（まれ）。結果は ESRB 10+・オーストラリア PG・韓国 15+・ブラジル L など。連絡先は anraku.tech@gmail.com |
+
+## API で上げる（2 回目から）
+
+- MaxRecovery の `play.py` を使う。サービスアカウント play-publisher に、小向クエストの
+  「テスト版トラックとしてのアプリのリリース」「テスト版トラックの管理、テスターリストの編集」「アプリ情報の閲覧」
+  「ストアでの表示の管理」を付けた（2026-11-15。製品版の権限と管理者は付けていない。ストアの表示の権限は付けてから
+  しばらく 403 のままだったので、その日の掲載情報は Console で入れた）。トラックは `alpha`。使い方は
   `~/Developer/max_sauna_timer_pixel/tools/play/README.md`。パッケージ名を必ず指定する:
 
 ```bash
 cd ~/Developer/max_sauna_timer_pixel
-python3 tools/play/play.py --package com.anraku.komukai whoami
-python3 tools/play/play.py --package com.anraku.komukai tracks
-python3 tools/play/play.py --package com.anraku.komukai upload-release --track internal \
-  --aab ~/Developer/komukai/android/dist/komukai-1.1.0-2.aab --notes-ja <ノートのファイル>   # まず dry-run、次に --apply
+# --package はサブコマンドの後ろに置く（前に置くと既定の MaxRecovery のパッケージになる）
+python3 tools/play/play.py whoami --package com.anraku.komukai
+python3 tools/play/play.py tracks --package com.anraku.komukai
+python3 tools/play/play.py upload-release --package com.anraku.komukai --track alpha \
+  --aab ~/Developer/komukai/android/dist/komukai-1.1.0-2.aab --notes-ja <ノートのファイル>   # まず dry-run、次に --apply --validate-only、最後に --apply --send-for-review
 ```
 
+- **このアプリは「変更が自動で審査に送られる」状態。** play.py の既定（審査に送らない保存）は
+  `changesNotSentForReview must not be set` で弾かれるので、`--send-for-review` を付けて送る（テスト版トラックへの配信は
+  本人の包括許可あり。2026-11-15）
+- play.py が出す「versionCode は 1xxx の決まり」「-beta の目印が無い」の注意は MaxRecovery 用。小向クエストでは気にしない
 - ブラウザ（Claude in Chrome）は Windows の Chrome しかつながっていない（2026-11-15 時点）。Play Console は
-  ログイン済み。AAB は API で上げられるので、ブラウザに渡す必要は無い
+  ログイン済み。Mac のファイルも `file_upload` でそのまま渡せる（掲載画像はこれで上げた）。Google グループは
+  開発者用の Tech Anraku（anraku.tech@gmail.com。`/u/1/`）に切り替えて操作する
+- Google グループの作成はロボット確認（reCAPTCHA）が出る。これは Claude は押せないので本人に頼む
 
 ## 確かめ方（エミュレーター）
 
