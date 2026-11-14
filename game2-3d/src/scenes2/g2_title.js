@@ -4,10 +4,12 @@
 // 本編の正門と同じタイトル用カメラ（updateCamera のタイトル分岐）で写す。
 // カメラは自機の x（wx(stage.player.x)）から左へ32ずらした所を中心に、左右へゆっくり振れる。
 // 画面の中央はタイトルの書類が覆うので、見せ場は左右に分ける。
-//   左: 満開の桜が3本と、その下のベンチ。奥に連窓の帯が走る研修棟と、縦長のガラスの階段室
-//   右: 玄関（ひさし・ガラス扉・柱）と、文字のない石の銘板。桜がもう2本
+//   左: 満開の桜が3本と、その下のベンチ。奥に連窓の帯が走る研修棟と、ガラス張りの階段室
+//   右: 玄関（ひさし・ガラス扉・柱）と、ひさしの下まで入るアスファルトの車寄せ、文字のない石の銘板。桜がもう2本
 //   上: 春霞の空と、遠くの山。建物の後ろの林（常緑と新緑）
 //   下: 歩行帯の石畳（散った花びら）と、手前のパンジーの花壇と低い生け垣
+// 学校の校舎に見えないようにする（時計・時計塔に見える塔・クリーム色の壁・チューリップは使わない）。
+// 会社の建物だと読める手がかりは、明るいコンクリートの壁、ガラスの階段室、2層の玄関ホール、車寄せ
 // 小さい画面（667x375）では書類が幅の7割を覆い、左右の端しか見えない。
 // 端だけでも「桜と建物」「玄関」が分かるよう、桜と玄関は画面の端寄りに置いてある。
 //
@@ -17,24 +19,27 @@ import {
   THREE, wx, box, boxBatch, addScenery, hex, setLighting, scene, hemi, sun, fill,
 } from '../../../game3d/src/render3d.js';
 
-// 配色。春の朝: 白っぽい建物、淡い桃色の桜、若い芝、霞んだ空
+// 配色。春の朝: 明るいコンクリートの建物、淡い桃色の桜、若い芝、霞んだ空。
+// 建物は学校のクリーム色にしない。本編の事務棟（#b7babb）と同じ系統の、明るい灰色のコンクリート
 const C = {
   sky: '#b9d6ec',
   lawn: '#8cad62', lawnDark: '#7d9f57', soil: '#6f5641',
   pave: '#d3ccbe', paveLine: '#bfb7a8', paveBand: '#c2baab', curb: '#e4dfd4',
-  approach: '#bdb7ab', approachLine: '#aaa396',
-  wall: '#ece6da', pilaster: '#e2dbcd', cap: '#d6cfc1', roof: '#b4b1a9', roofBox: '#c4c1ba',
-  glass: '#5e7487', glassHi: '#7f98ad', mull: '#d9d4ca', sill: '#f3efe7', blind: '#d9dde0',
-  tower: '#e4ddcf', towerGlass: '#8aa2b5',
-  hall: '#ddd5c6', hallGlass: '#8aa3b6', frame: '#3b4248', canopy: '#f1ede5', fascia: '#cfc8ba',
-  column: '#e9e4da', step: '#c9c3b7', stepLine: '#b3ada1', interior: '#efe0c2', handle: '#9aa3aa',
+  asphalt: '#75787b', asphaltLine: '#e6e6e0', curbStone: '#c4c3bc',
+  wall: '#e3e2dc', pilaster: '#d8d7d0', cap: '#cecdc6', roof: '#b4b3ad', roofBox: '#c6c5bf',
+  glass: '#5e7487', glassHi: '#7f98ad', mull: '#d2d2cc', sill: '#efefea', blind: '#d9dde0',
+  tower: '#d4d4ce', towerGlass: '#8aa2b5',
+  hall: '#d6d5cf', hallGlass: '#8aa3b6', frame: '#3b4248', canopy: '#ecebe6', fascia: '#c8c7c1',
+  column: '#e4e3de', step: '#c6c4bd', stepLine: '#b0aea7', handle: '#9aa3aa',
+  // ガラス扉: 朝の外から見ると、上は空と庇が映って暗い青灰、下に暖かいロビーが透ける
+  interior: '#c7b48e', interiorGlow: '#2a2216', doorGlass: '#6f8597', doorShine: '#b9cad8',
   stone: '#b9b2a5', stoneDark: '#9f988b', plate: '#eeeeea', bar: '#3e4954',
   louver: '#a9adb0', louverBack: '#5d646b',
   trunk: '#4b3a33', trunkDark: '#3a2c27',
   hedge: '#3f6a3d', hedgeTop: '#4f7c47', shrub: '#4a7743',
   bench: '#9a7650', benchLeg: '#6c7176',
   forest: ['#4a7a4a', '#5a8a50', '#3f6c45', '#6f9a5a', '#86ad66'],   // 常緑と新緑
-  mountain: '#90abb0',
+  mountain: '#a8c1cf',                                                // 空（#b9d6ec）に近い淡い青灰
   flower: ['#7a5bb0', '#f0c93a', '#f3f1ea', '#a991d6', '#e8a33a'], leaf: '#4f7f38',
 };
 // 桜の花。上ほど白く、下（影側）ほど濃い
@@ -78,18 +83,20 @@ export function build(W, halfD, ctx) {
   const near = (x, m = 150) => Math.abs(x - ox) < m;                         // 細かい物はカメラに入る所だけ
 
   // --- 地面: 芝。その上に広場の石畳（歩行帯）と玄関へのアプローチ ---
+  // 左右の端の面も重ねない（幅を少しずつ変える）
   b.box(Rt - L, 2, 900, C.lawn, ox, -1, -340);                               // 天面 y=0
   const PZ0 = -34, PZ1 = 48;                                                 // 広場の奥と手前
-  b.box(Rt - L, 0.3, PZ1 - PZ0, C.pave, ox, -0.11, (PZ0 + PZ1) / 2);        // 天面 y=0.04
-  // 薄い箱の天面は高さをはっきり分ける（石畳0.04／縁の帯0.07／目地0.11／散った花びら0.16）。
+  b.box(Rt - L - 2, 0.3, PZ1 - PZ0, C.pave, ox, -0.11, (PZ0 + PZ1) / 2);    // 天面 y=0.04
+  // 薄い箱の天面は高さをはっきり分ける（石畳0.04／縁の帯0.07／目地0.11・0.12／散った花びら0.16）。
   // 近いと遠くで点滅する
-  b.box(Rt - L, 0.06, 3.2, C.paveBand, ox, 0.04, PZ0 + 1.8);                 // 縁の帯（色違いの石）
-  b.box(Rt - L, 0.06, 3.2, C.paveBand, ox, 0.04, PZ1 - 1.8);
-  for (let z = PZ0 + 6; z < PZ1 - 3; z += 6) b.box(Rt - L, 0.06, 0.35, C.paveLine, ox, 0.08, z);
-  for (let x = L + 3; x < Rt; x += 9) if (near(x)) b.box(0.35, 0.06, PZ1 - PZ0, C.paveLine, x, 0.08, (PZ0 + PZ1) / 2);
+  b.box(Rt - L - 4, 0.06, 3.2, C.paveBand, ox, 0.04, PZ0 + 1.8);             // 縁の帯（色違いの石）
+  b.box(Rt - L - 4, 0.06, 3.2, C.paveBand, ox, 0.04, PZ1 - 1.8);
+  for (let z = PZ0 + 6; z < PZ1 - 3; z += 6) b.box(Rt - L - 6, 0.06, 0.35, C.paveLine, ox, 0.08, z);
+  // 縦の目地は横の目地より少しだけ高く（交わる所で同じ面が重ならないように）
+  for (let x = L + 3; x < Rt; x += 9) if (near(x)) b.box(0.35, 0.07, PZ1 - PZ0 - 1, C.paveLine, x, 0.085, (PZ0 + PZ1) / 2);
   // 縁石（奥は芝との境、手前は花壇との境）
-  b.box(Rt - L, 0.5, 1.2, C.curb, ox, 0.25, PZ0 - 0.6);
-  b.box(Rt - L, 0.5, 1.2, C.curb, ox, 0.25, PZ1 + 0.6);
+  b.box(Rt - L - 3, 0.5, 1.2, C.curb, ox, 0.25, PZ0 - 0.6);
+  b.box(Rt - L - 3, 0.5, 1.2, C.curb, ox, 0.25, PZ1 + 0.6);
 
   // --- 研修棟（3階建て。横長の連窓の帯、窓の上に薄い庇）---
   // 人の背丈18に合わせる: 1階（ロビー階）18、2・3階13、パラペット2で高さ46
@@ -103,6 +110,9 @@ export function build(W, halfD, ctx) {
   // 屋上: 奥へ下げた機械室と室外機（正面からは稜線に少し段が出るだけ）
   b.box(30, 7, 16, C.roofBox, ox + 20, BH + 4.7, FZ - 30, { cast: true });
   b.box(31, 0.7, 17, C.cap, ox + 20, BH + 8.5, FZ - 30);
+  // 機械室の正面のガラリ（階段室の正面には付けない。塔の上の暗いガラリは、時計の無い時計塔に見える）
+  b.box(12, 4.4, 0.3, C.louverBack, ox + 20, BH + 4.7, FZ - 21.8);
+  for (let n = 0; n < 4; n++) b.box(12.4, 0.5, 0.7, C.louver, ox + 20, BH + 3.05 + n * 1.1, FZ - 21.6);
   for (const x of [ox - 210, ox - 175, ox + 70]) b.box(10, 3.2, 7, C.roofBox, x, BH + 3.1, FZ - 33);
   // 連窓（階ごと）。玄関ホールの所は1・2階を抜く
   const FLOORS = [[4.0, 10.0], [21.5, 6.5], [34.5, 6.5]];
@@ -128,33 +138,39 @@ export function build(W, halfD, ctx) {
   // 付け柱（長い壁を区切る）
   for (let x = BX0 + 52; x < BX1 - 10; x += 52) {
     if (Math.abs(x - EX) < 26 || Math.abs(x - TX) < 14) continue;
-    b.box(1.8, BH, 1.4, C.pilaster, x, BH / 2, FZ + 0.75);
+    b.box(2.0, BH, 1.4, C.pilaster, x, BH / 2, FZ + 0.75);
   }
 
-  // --- 階段室（縦長のガラス。屋上へ抜けた所に機械室のガラリ）---
-  // 時計は付けない（学校の校舎に見えてしまうため）
-  const TH = BH + 11;
+  // --- 階段室（事務所ビルの、ガラス張りの階段室）---
+  // 屋上から高く突き出た塔に暗いガラリや時計があると、遠目には校舎の時計塔に見える。
+  // 突き出しは低く抑え、正面は下から上まで通しのガラスにする
+  const TH = BH + 4;
   b.box(15, TH, 10, C.tower, TX, TH / 2, FZ + 2, { cast: true });
   b.box(16, 1.0, 11, C.cap, TX, TH + 0.5, FZ + 2);
-  b.box(5, BH - 8, 0.6, C.towerGlass, TX, (BH - 8) / 2 + 3, FZ + 7.1);
-  for (let y = 6; y < BH - 5; y += 6.5) b.box(5.4, 0.5, 0.8, C.mull, TX, y, FZ + 7.3);
-  const KY = BH + 4.5;                                                       // ガラリの中心
-  b.box(10, 6.5, 0.4, C.louverBack, TX, KY, FZ + 7.15);
-  for (let n = 0; n < 5; n++) b.box(10.4, 0.55, 0.9, C.louver, TX, KY - 2.6 + n * 1.3, FZ + 7.4);
+  b.box(10, 45, 0.6, C.towerGlass, TX, 3 + 45 / 2, FZ + 7.1);                // y 3〜48
+  for (let k = 0; k <= 7; k++) b.box(10.4, 0.5, 0.8, C.mull, TX, 3 + k * 45 / 7, FZ + 7.3);   // 横桟（約6.4ごと）
+  b.box(0.5, 44.6, 0.9, C.mull, TX, 3 + 45 / 2, FZ + 7.35);                  // 縦の中桟（上端は横桟の中に収める）
 
   // --- 玄関ホール（少し前へ出た2階分の箱）とひさし・ガラス扉・柱 ---
   const HZ = FZ + 4;                                                         // ホールの正面
   const HH = 33;                                                             // ホールの高さ（2階分）
   b.box(40, HH, 5, C.hall, EX, HH / 2, FZ + 1.5, { cast: true });
   b.box(41, 1.0, 6, C.cap, EX, HH + 0.5, FZ + 1.5);
-  // 2階のガラス壁（方立の格子）
+  // 2階のガラス壁（方立の格子。7本を本数で並べる。足し算で回すと端数で右端の1本が落ちる）
   b.box(34, 9.5, 0.6, C.hallGlass, EX, 25.2, HZ + 0.1);
-  for (let x = EX - 17; x <= EX + 17.01; x += 5.67) b.box(0.6, 9.7, 0.9, C.frame, x, 25.2, HZ + 0.3);
-  b.box(34.6, 0.6, 0.9, C.frame, EX, 25.2, HZ + 0.3);
+  for (let k = 0; k <= 6; k++) b.box(0.6, 9.7, 0.9, C.frame, EX - 17 + k * 34 / 6, 25.2, HZ + 0.3);
+  b.box(34.6, 0.6, 1.0, C.frame, EX, 25.2, HZ + 0.3);                        // 中の横桟（方立より少し前）
+  b.box(34.6, 0.6, 1.0, C.frame, EX, 20.6, HZ + 0.3);                        // 下の横桟
   // 無地の銘板（文字なし。板と色の棒だけ）
   b.box(22, 2.2, 0.5, C.plate, EX, 31.6, HZ + 0.3);
   b.box(22, 0.5, 0.55, C.bar, EX, 30.25, HZ + 0.32);
-  // 1階: ガラス扉の枠（奥のロビーの明かりは下の自発光の箱）
+  // 1階: ガラス扉4枚と枠。朝の外から見るガラスは、上が空と庇を映して暗い青灰、下に暖かいロビーが透ける
+  // （一様に明るい板だと、ガラスではなく不透明なクリーム色の扉に見える）。ロビーの明かりは下の自発光の箱
+  b.box(29.4, 8.0, 0.2, C.doorGlass, EX, 13.2, HZ + 0.12);                   // 上の映り込み（y 9.2〜17.2）
+  for (const dx of [-13.2, -5.7, 1.8, 9.3]) {                                // 各扉の左寄りの、縦の映り込み
+    b.box(1.0, 13, 0.06, C.doorShine, EX + dx, 7.7, HZ + 0.26);
+    b.box(0.35, 10, 0.06, C.doorShine, EX + dx + 1.2, 7.2, HZ + 0.26);
+  }
   b.box(30, 0.9, 1.0, C.frame, EX, 14.6, HZ + 0.4);                          // 欄間の横桟
   b.box(30, 0.9, 1.0, C.frame, EX, 17.4, HZ + 0.4);
   for (const dx of [-15, -7.5, 0, 7.5, 15]) b.box(dx === 0 ? 0.55 : 0.9, 17.8, 1.0, C.frame, EX + dx, 8.9, HZ + 0.4);
@@ -165,16 +181,24 @@ export function build(W, halfD, ctx) {
   b.box(38, 1.6, CZ1 - CZ0, C.canopy, EX, CY, (CZ0 + CZ1) / 2, { cast: true });
   b.box(38.4, 2.6, 0.8, C.fascia, EX, CY - 0.2, CZ1 + 0.2);
   for (const dx of [-17, 17]) b.box(2.0, CY - 0.8, 2.0, C.column, EX + dx, (CY - 0.8) / 2, CZ1 - 1.8, { cast: true });
-  // 玄関前の床（一段上げた石張り）
-  b.box(40, 0.5, CZ1 - CZ0 + 3, C.step, EX, 0.25, (CZ0 + CZ1 + 3) / 2);
-  b.box(40, 0.12, 0.3, C.stepLine, EX, 0.55, CZ1 + 1.4);
 
-  // --- 前庭: 建物ぎわの植え込み、玄関へのアプローチ ---
-  const AZ0 = CZ1 + 3, AZ1 = PZ0 - 1.2;
-  b.box(34, 0.24, AZ1 - AZ0, C.approach, EX, 0.0, (AZ0 + AZ1) / 2);
-  for (let z = AZ0 + 4; z < AZ1; z += 4) b.box(34, 0.06, 0.3, C.approachLine, EX, 0.14, z);
-  b.box(0.8, 0.5, AZ1 - AZ0, C.curb, EX - 17.4, 0.25, (AZ0 + AZ1) / 2);
-  b.box(0.8, 0.5, AZ1 - AZ0, C.curb, EX + 17.4, 0.25, (AZ0 + AZ1) / 2);
+  // --- 車寄せ: ひさしの下まで車が入るアスファルトの車路と縁石。扉の前だけ一段上げた石張りの歩道 ---
+  // 学校の昇降口には無い「会社の玄関」の手がかり。柱はひさしの下の石張りの島に立つ
+  const WZ = HZ + 6.4;                                                       // 扉の前の歩道の手前の縁
+  const DW = 15.5;                                                           // 車路の半幅
+  const AZ1 = PZ0 - 1.2;                                                     // 車路の手前の端（広場の縁石の奥）
+  b.box(40, 0.5, WZ - HZ, C.step, EX, 0.25, (HZ + WZ) / 2);                 // 扉の前の歩道（天面0.5）
+  b.box(2 * DW + 0.4, 0.56, 0.6, C.stepLine, EX, 0.28, WZ + 0.3);            // 歩道の縁石（両端は柱の島に埋める）
+  for (const s of [-1, 1]) {
+    b.box(20 - DW, 0.5, CZ1 + 3 - WZ, C.step, EX + s * (DW + 20) / 2, 0.25, (WZ + CZ1 + 3) / 2);   // 柱の島
+    b.box(1.0, 0.45, AZ1 + 0.2 - CZ1 - 3, C.curbStone, EX + s * (DW + 0.5), 0.225, (CZ1 + 3 + AZ1 + 0.2) / 2); // 縁石
+    b.box(0.4, 0.04, AZ1 - WZ - 2, C.asphaltLine, EX + s * (DW - 1.2), 0.07, (WZ + AZ1 - 0.8) / 2); // 路肩の白線
+  }
+  // 車路（天面0.05）。両脇と手前の端は縁石・島・広場の縁石の中へ埋める（端の面を重ねない）
+  b.box(2 * DW + 1, 0.1, AZ1 + 0.4 - WZ, C.asphalt, EX, 0.0, (WZ + AZ1 + 0.4) / 2);
+  b.box(2 * DW - 4, 0.04, 0.8, C.asphaltLine, EX, 0.07, AZ1 - 3.5);          // 広場の手前の停止線
+
+  // --- 前庭: 建物ぎわの植え込み ---
   // 建物ぎわの低い生け垣（玄関と階段室の前は空ける）
   for (const [x0, x1] of [[BX0 + 2, TX - 9], [TX + 9, EX - 21], [EX + 21, BX1 - 2]]) {
     const xm = (x0 + x1) / 2;
@@ -182,10 +206,18 @@ export function build(W, halfD, ctx) {
     b.box(x1 - x0 - 0.4, 0.5, 4.2, C.hedgeTop, xm, 4.45, FZ + 4.9);
   }
   // 芝の色むら（刈り跡）
+  // 乱数を引く順は変えない（後ろの林の形が変わらないように）。車路に掛かる物と、
+  // 先に置いた刈り跡に重なる物（同じ高さの面が重なる）は、引いてから捨てる
+  const mown = [];
   for (let i = 0; i < 30; i++) {
     const x = L + 20 + R() * (Rt - L - 40), z = -84 + R() * 46;
     if (Math.abs(x - EX) < 18) continue;
-    b.box(6 + R() * 10, 0.05, 3 + R() * 5, C.lawnDark, x, 0.03, z, { rotY: R() * 0.6 - 0.3 });
+    const w = 6 + R() * 10, d = 3 + R() * 5, ry = R() * 0.6 - 0.3;
+    if (Math.abs(x - EX) < DW + 1 + (w + d * 0.3) / 2 + 0.5) continue;
+    const r = Math.hypot(w, d) / 2;
+    if (mown.some(([mx, mz, mr]) => Math.hypot(mx - x, mz - z) < mr + r)) continue;
+    mown.push([x, z, r]);
+    b.box(w, 0.05, d, C.lawnDark, x, 0.03, z, { rotY: ry });
   }
 
   // --- 文字のない石の銘板（低い石の壁に無地の板と色の棒）---
@@ -203,16 +235,28 @@ export function build(W, halfD, ctx) {
     [ox + 64, -58, 1.3], [ox + 152, -64, 1.45],                            // 右
   ];
   for (const [x, z, s] of trees) sakura(b, x, z, s, R);
-  // 桜の下の花びらの絨毯と、広場に散った花びら
+  // 桜の下の花びらの絨毯（天面0.13）と、広場に散った花びら（天面0.16）。
+  // 薄い箱どうしが同じ高さで重なると点滅するので、同じ層ですでに置いた花びらの中心から
+  // 1.25（花びらの対角より長い）未満の所には置かない。絨毯は広場の縁石より手前へ出さない（石畳の目地0.12と近い）。
+  // 乱数は引いてから捨てる（後ろの林の形が変わらないように）
+  const carpet = [], scatter = [];
+  const room = (list, x, z) => list.every(([px, pz]) => (px - x) ** 2 + (pz - z) ** 2 >= 1.25 * 1.25);
   for (const [x, z, s] of trees) {
     for (let i = 0; i < 40; i++) {
       const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 17 * s;
-      b.box(0.95, 0.06, 0.75, PINK[(R() * 3) | 0], x + Math.cos(a) * r, 0.1, z + Math.sin(a) * r * 0.8, { rotY: R() * 3 });
+      const col = PINK[(R() * 3) | 0], ry = R() * 3;
+      const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r * 0.8;
+      if (pz > PZ0 - 0.8 || !room(carpet, px, pz)) continue;
+      carpet.push([px, pz]);
+      b.box(0.95, 0.06, 0.75, col, px, 0.1, pz, { rotY: ry });
     }
   }
   for (let i = 0; i < 110; i++) {
     const x = ox - 150 + R() * 300, z = PZ0 + 1 + R() * (PZ1 - PZ0 - 2);
-    b.box(0.9, 0.06, 0.7, PINK[1 + ((R() * 2) | 0)], x, 0.13, z, { rotY: R() * 3 });
+    const col = PINK[1 + ((R() * 2) | 0)], ry = R() * 3;
+    if (!room(scatter, x, z)) continue;
+    scatter.push([x, z]);
+    b.box(0.9, 0.06, 0.7, col, x, 0.13, z, { rotY: ry });
   }
 
   // --- ベンチ（桜の下。木の座面と背もたれ、灰色の脚）---
@@ -251,9 +295,10 @@ export function build(W, halfD, ctx) {
 
   b.done();
 
-  // --- ロビーの明かり（ガラス扉の奥。自発光なので別の描画）---
-  // ホールの正面（HZ）と同じ面に置くと点滅するので、少し手前に出す。枠（HZ+0.4）よりは奥
-  box(29.4, 17.4, 0.2, C.interior, EX, 8.9, HZ + 0.12, { emissive: '#4a3d26', receive: false });
+  // --- ロビーの明かり（ガラス扉の下半分の奥。自発光なので別の描画）---
+  // ホールの正面（HZ）と同じ面に置くと点滅するので、少し手前に出す。枠（HZ+0.4）よりは奥。
+  // 上半分（y 9.2〜17.2）は空の映り込みの板（まとめた箱）で、高さを分けて重ねない
+  box(29.4, 8.6, 0.2, C.interior, EX, 4.9, HZ + 0.12, { emissive: C.interiorGlow, receive: false });
 
   // --- 舞う花びら（1メッシュ。tick で動かす）---
   petals = makePetals(trees, ox, R);
@@ -327,18 +372,21 @@ function bench(b, x, z) {
   }
 }
 
-// 遠くの山。段々に積んだなだらかな稜線を、春霞（霧）で空の色に溶かす。
-// 林の上に山の肩だけが淡く出る高さにしてある
+// 遠くの山。低くなだらかな稜線を、春霞（霧）で空の色に溶かす。
+// 林の上に山の肩だけが淡く出る高さ。同じ形のピラミッドが並ばないよう、段の数・幅・頂の広さ・
+// 裾の張り出し方を山ごとに変える（尖った峰と、台形の長い尾根が混ざる）
 function mountains(b, ox, R) {
   for (let x = ox - 900; x < ox + 900;) {
-    const w = 200 + R() * 180, h = 50 + R() * 34, z = -560 - R() * 70;
-    const steps = 8, sh = h / steps;
-    const sw = (i) => w * (0.25 + 0.75 * (1 - i / steps) ** 2);                // 段の幅
-    const lean = (R() - 0.5) * w * 0.06;                                        // 峰を左右どちらかへ寄せる
+    const w = 260 + R() * 260, h = 28 + R() * 26, z = -560 - R() * 70;
+    const steps = 5 + ((R() * 3) | 0), sh = h / steps;
+    const top = 0.12 + R() * 0.3;                                               // 頂の幅（裾に対する割合）
+    const ex = 1.3 + R() * 1.5;                                                 // 大きいほど裾が長く、峰が尖る
+    const sw = (i) => w * (top + (1 - top) * (1 - i / steps) ** ex);            // 段の幅
+    const lean = (R() - 0.5) * w * 0.08;                                        // 峰を左右どちらかへ寄せる
     for (let i = 0; i < steps; i++) {
       b.box(sw(i), sh, 70 - i * 5, C.mountain, x + lean * i, sh * (i + 0.5), z - i * 2.5);
     }
-    x += w * (0.55 + R() * 0.25);
+    x += w * (0.5 + R() * 0.3);
   }
 }
 
