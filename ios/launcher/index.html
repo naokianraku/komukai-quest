@@ -48,6 +48,11 @@
     font-weight:700;font-size:clamp(12px,2.4vh,15px);letter-spacing:.06em;
     background:var(--accent);color:#15171a;border-radius:10px;padding:clamp(7px,1.8vh,11px) 0}
   .note{font-size:clamp(9px,1.7vh,11px);color:var(--paper-sub)}
+  /* まだ選べない作品（開発中）。押しても何も起きない。色を落とし、ボタンの代わりに「開発中」と出す */
+  .card.locked{pointer-events:none;border-top-color:#9aa0a8}
+  .card.locked .shot{filter:grayscale(1) brightness(.62)}
+  .card.locked h2{color:#8a9099}
+  .card.locked .go{background:#dfe3e7;color:#6c737c;letter-spacing:.3em}
   /* とても低い画面（横向きの小さい iPhone）では写真を省いて文字だけにする */
   @media (max-height:340px){ .shot{display:none} }
 </style>
@@ -66,17 +71,20 @@
         <span class="note">まずはこちらから</span>
       </div>
     </a>
-    <a class="card" id="pick2" href="../game2-3d/index.html?app=1" data-game="game2-3d">
+    <!-- ゴールデンエイジ編は、アプリではまだ選べない（本人の指示 2026-11-14。中身はアプリに入れたまま、選択画面で「開発中」）。
+         開けるときは、この div を <a class="card" id="pick2" href="../game2-3d/index.html?app=1" data-game="game2-3d"> に戻して
+         locked と aria-disabled を外し、ボタンを「▶ ゴールデンエイジ編をプレイ」、その下に
+         <span class="note">前日譚・本編クリア後がおすすめ</span> を戻す。 -->
+    <div class="card locked" id="pick2" data-game="game2-3d" aria-disabled="true">
       <img class="shot" src="shot2.jpg" alt="" onerror="this.remove()">
       <div class="body">
         <div class="eyebrow">小向工場 工程管理システム　Ver 1.0</div>
         <h2>KOMUKAI QUEST 2</h2>
         <div class="jp">ゴ ー ル デ ン エ イ ジ 編</div>
         <p class="lead">— 後にそう呼ばれる者たちの物語 —</p>
-        <span class="go">▶ ゴールデンエイジ編をプレイ</span>
-        <span class="note">前日譚・本編クリア後がおすすめ</span>
+        <span class="go">開発中</span>
       </div>
-    </a>
+    </div>
   </div>
 </body>
 </html>
