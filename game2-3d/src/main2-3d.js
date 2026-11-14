@@ -70,6 +70,9 @@ class Game2_3D extends Game2 {
   }
 }
 
+// 報告書に載せる一言のかぎ括弧。海外の会社の人の一言は英語なので、英語の引用符にする
+const quoteLine = (t) => (/[\u3040-\u30ff\u4e00-\u9fff]/.test(t) ? '「' + t + '」' : '\u201c' + t + '\u201d');
+
 // ===== 撃破の間（3D版だけ） =====
 // 続編のボスは捨てセリフ（lastLine）を持たないので、2D版と同じく倒した瞬間に報告書が出る。
 // 3Dではそれだと、ボスが崩れる絵も、場面が撃破で変わるところ（講堂の棚のヘルメットが配属色に
@@ -389,7 +392,7 @@ function renderScreen() {
         <div class="eyebrow">作 業 報 告 書</div>
         <h2 class="ok">${done ? '完 成' : ch.name + ' 突破'}</h2>
         ${done ? '<p class="lead">納期は遅れた。コストも少し上がった。だが、完成した。</p>' : ''}
-        ${ch.clearLine ? `<p class="lead" style="color:#8a6a3a">「${ch.clearLine.replace(/\n/g, '<br>')}」</p>` : ''}
+        ${ch.clearLine ? `<p class="lead" style="color:#8a6a3a">${quoteLine(ch.clearLine).replace(/\n/g, '<br>')}</p>` : ''}
         ${ch.outro ? `<p class="lead" style="font-size:12px;color:#6c737c">${ch.outro.replace(/\n/g, '<br>')}</p>` : ''}
         <table class="form">
           <tr><th>SCORE</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>

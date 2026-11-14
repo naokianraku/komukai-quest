@@ -189,15 +189,28 @@ export function drawChapterClear2(ctx, ch, t, completion) {
     ctx.fillStyle = GOLD; ctx.font = 'bold 20px system-ui, sans-serif';
     ctx.fillText(ch.name + ' 突破', VIEW_W / 2, 108);
   }
+  let extra = 0;
   if (ch.clearLine) {
     ctx.fillStyle = '#c8a06a'; ctx.font = '11px system-ui, sans-serif';
-    // 改行のある一言（第5章）は行を分けて出す（canvas の fillText は改行を空白にしてしまう）
-    const ls = ch.clearLine.split('\n');
-    ls.forEach((l, i) => ctx.fillText((i ? '' : '「') + l + (i === ls.length - 1 ? '」' : ''), VIEW_W / 2, (completion ? 164 : 148) + i * 15));
+    // 改行のある一言は行を分けて出す（canvas の fillText は改行を空白にしてしまう）。
+    // 海外の会社の人の一言は英語で長いので、画面の幅で単語ごとに折り返し、引用符も英語のものにする
+    const ja = /[\u3040-\u30ff\u4e00-\u9fff]/.test(ch.clearLine);
+    const text = ja ? '「' + ch.clearLine + '」' : '\u201c' + ch.clearLine + '\u201d';
+    const lines = [];
+    for (const para of text.split('\n')) {
+      let cur = '';
+      for (const w of (ja ? [...para] : para.split(' '))) {
+        const next = cur ? (ja ? cur + w : cur + ' ' + w) : w;
+        if (cur && ctx.measureText(next).width > VIEW_W - 24) { lines.push(cur); cur = w; } else cur = next;
+      }
+      lines.push(cur);
+    }
+    lines.forEach((l, i) => ctx.fillText(l, VIEW_W / 2, (completion ? 164 : 148) + i * 15));
+    extra = (lines.length - 1) * 15;
   }
   if (ch.outro) {
     ctx.fillStyle = '#9aa5b4'; ctx.font = '9px system-ui, sans-serif';
-    ch.outro.split('\n').forEach((line, i) => ctx.fillText(line, VIEW_W / 2, 190 + i * 14));
+    ch.outro.split('\n').forEach((line, i) => ctx.fillText(line, VIEW_W / 2, 190 + extra + i * 14));
   }
 }
 

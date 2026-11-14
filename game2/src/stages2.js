@@ -139,7 +139,7 @@ export const UNIT_TYPES2 = {
   l3_toiawase: { name: '技術問合せ', sprite: 'l3_toiawase', taunts: 'l3_toiawase', hp: 3, speed: 44, reach: 22, dmg: 1, kb: 90, cooldown: 0.78, telegraph: 0.44, score: 160 },
   l3_yushutsu: { name: '輸出管理責任者', sprite: 'l3_yushutsu', taunts: 'l3_yushutsu', midboss: true, scale: 1.5, hp: 18, speed: 44, reach: 27, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 800 },
   // HPバーが出ない。食らいつき続けると途中で現れ、そこから普通に勝てる。
-  l3_pm: { name: 'L3社プロマネ', sprite: 'l3_pm', taunts: 'l3_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'その情報は御社に提供できません', score: 2200 },
+  l3_pm: { name: 'L3社プロマネ', sprite: 'l3_pm', taunts: 'l3_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'We cannot provide that information to your company.', score: 2200 },
 
   // --- 第5章 LM社（技術力は高い。それでも完成しない）---
   lm_keiyaku: { name: 'LM社 契約', sprite: 'lm_keiyaku', taunts: 'lm_keiyaku', hp: 4, speed: 44, reach: 23, dmg: 1, kb: 95, cooldown: 0.76, telegraph: 0.44, score: 180 },
@@ -267,7 +267,7 @@ export const CHAPTERS = [
       { x: 1340, label: '帰社 — PM（課長）', enemies: [{ type: 'pm', count: 1 }] },
     ],
     boss: { type: 'gr_pm', x: 1700 },
-    clearLine: '……あの日本人、本社の社長にまたクレームのレターを書いたらしいぞ',
+    clearLine: '...I hear that Japanese guy wrote another complaint letter to our president at HQ.',
     slope: 0.4,
   },
   {
@@ -298,7 +298,7 @@ export const CHAPTERS = [
       { x: 1300, label: '帰社 — PM（課長）', enemies: [{ type: 'pm', count: 1 }] },
     ],
     boss: { type: 'l3_pm', x: 1660 },
-    clearLine: '……あいつら、何度潰しても立ってくるぞ',
+    clearLine: '...No matter how many times we knock them down, they keep getting back up.',
     outro: '納期は遅れた。コストも少し上がった。\nだが——完成した。5年でひとつだけ、自分の手でやりきったもの。',
     slope: 0.6,
   },
@@ -333,7 +333,7 @@ export const CHAPTERS = [
     ],
     boss: { type: 'lm_pm', x: 1800 },
     bossFaceLock: true,
-    clearLine: 'おまえら仕様書の意味わかってるのか。\n仕様は概要欄じゃなくて、仕様欄に書けよ！',
+    clearLine: 'Do you guys even understand what a spec is?\nPut specs in the Specification field, not the Summary!',
     slope: 0.82,
   },
   {

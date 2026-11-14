@@ -1,6 +1,8 @@
 // 小向クエスト2 — セリフ
 // 2026-11-14 本人がセリフ点検表で点検した結果を反映済み（直した文・足した文は本人の言葉のまま。
 // 触らなかった文は、Claude の仮置きを本人がそのまま残したもの）。
+// 海外の会社（GR社・L3社・LM社）の人は英語しか話さない（本人の指示、2026-11-14）。日本語だった文は英訳し、
+// 英語の誤り（つづり・大文字・冠詞）も直した。代理店（商社）は日本語のまま（通訳する側）。
 //
 // 1の TAUNTS オブジェクトへ追加登録するだけなので、game/src/taunts.js には一切手を入れない
 // （あちらは scripts/serifs-to-taunts.mjs が全上書き生成するため、直接編集すると壊れる）。
@@ -31,20 +33,20 @@ export const TAUNTS2 = {
 
   // --- 第3章 GR社 ---
   gr_chotatsu: ['Lead time is 52 weeks. You need to wait one more year.'],
-  gr_gijutsu:  ['確認中です', 'I actually do not know what is going on.'],
-  gr_seizo:    ["It should be working this time!\nthis must be working!", 'I am just following a procedure!'],
+  gr_gijutsu:  ['We are checking.', 'I actually do not know what is going on.'],
+  gr_seizo:    ["It should be working this time!\nThis must be working!", 'I am just following procedure!'],
   gr_pm:       ['We are working on it.'],
 
   // --- 第4章 L3社 ---
-  l3_toiawase: ['回答不可', '回答は1週間程度お待ちください'],
-  l3_yushutsu: ['その質問自体が規制対象です'],
-  l3_pm:       ['提供できません', '俺たちの仲じゃないか。'],
+  l3_toiawase: ['We cannot answer that.', 'Please allow about one week for a reply.'],
+  l3_yushutsu: ['That question itself is export-controlled.'],
+  l3_pm:       ['We cannot provide that.', 'Come on, we go way back.'],
 
   // --- 第5章 LM社 ---
-  lm_keiyaku: ['out of scope!', 'not in scope!', 'we will need contract amendment, means additonal cost!'],
-  lm_cr:      ['Change order を'],
-  lm_shiken:  ['試験不合格'],
-  lm_kanri:   ['見積もりを出します', '追加要求！イコール　追加コスト！'],
+  lm_keiyaku: ['Out of scope!', 'Not in scope!', 'We will need a contract amendment. That means additional cost!'],
+  lm_cr:      ['Submit a change order.'],
+  lm_shiken:  ['Test failed.'],
+  lm_kanri:   ['We will send you a quote.', 'Additional requirement equals additional cost!'],
   lm_pm:      ["That's out of scope."],
 
   // --- 代理店（攻撃しないが間に立つ）---
