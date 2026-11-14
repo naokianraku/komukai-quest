@@ -9,7 +9,8 @@
 // ===== スプライト（1のパレット差し替え方式に追加登録する） =====
 // これは2D版のドット絵の色（b 上衣 / a 肩・縁 / p ズボン / t ネクタイ / h ヘルメット・帽子。
 // スーツ型では髪 / s 肌 / e 目）。3D版は同じ種別を game2-3d/src/chars2.js の PALETTES2_3D で
-// 上書きして、服の型・色・持ち物を作り直している（2D版の見た目は変えない）。
+// 上書きして、服の型・色・持ち物を作り直している（2D版の見た目は基本そのまま。L3社・LM社の
+// 作業着だけは、作業着を着ない人たちなので2D版もスーツ型に直した）。
 export const PALETTES2 = {
   // 主人公: 第1章は白（新人）→ 配属後は緑（＝1のally色）→ エピローグで橙（＝1のplayer色）
   p2_shinjin: { map: 'worker', h: '#e6edf2' },
@@ -47,15 +48,15 @@ export const PALETTES2 = {
   gr_seizo:    { map: 'cap',    h: '#6b5a2c' }, // GR社 製造: キャップ
   gr_pm:       { map: 'suit',   b: '#5a4a2e', p: '#4a3d26', t: '#9a8a5a', h: '#3a2a18' },
 
-  // 第4章 L3社 — 藍。閉じている
-  l3_toiawase: { map: 'worker', h: '#3f51b5' },
-  l3_yushutsu: { map: 'worker', h: '#2e3a86' },
+  // 第4章 L3社 — 藍。閉じている。L3社とLM社の人は作業着を着ない（事務所の人）
+  l3_toiawase: { map: 'suit',   b: '#cfd5e4', p: '#3a3f52', t: '#2e3a86', h: '#1e1812' }, // ワイシャツに藍のネクタイ
+  l3_yushutsu: { map: 'suit',   b: '#2e3866', p: '#262c48', t: '#8a92b8', h: '#1a1610' },
   l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610' },
 
   // 第5章 LM社 — 巨大。濃紺と金
   lm_keiyaku: { map: 'suit',   b: '#2a3050', p: '#232842', t: '#c0a040', h: '#1a1410' },
-  lm_cr:      { map: 'worker', h: '#5a6480' },
-  lm_shiken:  { map: 'cap',    h: '#3b4458' }, // 試験は現場仕事なのでキャップ
+  lm_cr:      { map: 'suit',   b: '#2a3352', p: '#3a3f4c', t: '#e8eaee', h: '#1e1812' }, // 紺のカーディガン（ネクタイなし）
+  lm_shiken:  { map: 'suit',   b: '#eef0f2', p: '#a89a78', t: '#232a48', h: '#2a2018' }, // ワイシャツに紺のネクタイ、チノパン
   lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109' },
   lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c' },
 

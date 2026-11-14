@@ -22,9 +22,10 @@ import { registerPalettes } from '../../game/src/sprites.js';
 // など）は3Dだけが読む。語彙の意味は game/src/sprites.js の SHAPE_KEYS と game/src/voxel.js を参照。
 // 顔（髪型・眼鏡・体格）の固定と持ち物の形は、このファイルの下の FACES2・PROPS2。
 //
-// 他社の人は自社の作業着（空色に紺のヨーク）を着ない。社ごとに服の型と色を1つに決め、
-// 同じ社の役は帽子・着方・持ち物で分ける。社の色は物語のテーマ色から取り、実在企業の
-// コーポレートカラーには寄せない。社章・頭文字に見える記号は描かない。
+// 他社の人は自社の作業着（空色に紺のヨーク）を着ない。工場の会社（M菱重工・GR社）は社ごとに
+// 作業着の型と色を1つに決め、同じ社の役は帽子・着方・持ち物で分ける。L3社・LM社の人は
+// 作業着を着ない（ワイシャツ・上着・カーディガン）。社の色は物語のテーマ色から取る。
+// 社章・頭文字に見える記号は描かない。
 export const PALETTES2_3D = {
   // 主人公: 第1章は白（新人）→ 配属後は緑（＝1のally色）→ エピローグで橙（＝1のplayer色）
   // 3Dでも h はヘルメットの色（2D と同じ意味）。自社の作業着に保護帽。
@@ -72,17 +73,21 @@ export const PALETTES2_3D = {
   // プロマネは腕まくりのワイシャツに緩めたネクタイ。太った体格で、上着は着ていない
   gr_pm:       { map: 'suit',   b: '#d8cc9e', p: '#5a4a2e', t: '#6a4a2a', h: '#3a2a18', a: '#a89a70', outfit: 'shirt', tie: true, roll: true, bodyW: 1.1, weapon: 'roll' },
 
-  // 第4章 L3社 — 藍。閉じている。藍のポロシャツに身分証。責任者は書類挟みを持ち、肩幅があって背が高い（攻撃するので腕は組ませない。組むと殴る瞬間に腕が3本に見える）
-  l3_toiawase: { map: 'worker', h: '#3f51b5', b: '#3a4470', a: '#8a92b8', p: '#4a4a52', x: '#b03a3a', outfit: 'polo', props: ['badge', 'folder'], weapon: 'binder' },
-  l3_yushutsu: { map: 'worker', h: '#2e3a86', b: '#3a4470', a: '#8a92b8', p: '#4a4a52', x: '#b03a3a', outfit: 'polo', props: ['badge', 'clipboard'], shoulder: 1, bodyH: 1.05, weapon: 'stamp' },
+  // 第4章 L3社 — 藍。閉じている。L3社とLM社の人は作業着を着ない（事務所の人。本人の指摘）。
+  // 全員が身分証を首から提げる。問合せはワイシャツに藍のネクタイ、責任者は藍の上着で書類挟みを持ち、
+  // 肩幅があって背が高い（攻撃するので腕は組ませない。組むと殴る瞬間に腕が3本に見える）
+  l3_toiawase: { map: 'suit', b: '#cfd5e4', a: '#a4adc2', p: '#3a3f52', t: '#2e3a86', h: '#1e1812', x: '#b03a3a', outfit: 'shirt', tie: true, props: ['badge', 'folder'], weapon: 'binder' },
+  l3_yushutsu: { map: 'suit', b: '#2e3866', p: '#262c48', t: '#8a92b8', h: '#1a1610', x: '#b03a3a', outfit: 'suit', props: ['badge', 'clipboard'], shoulder: 1, bodyH: 1.05, weapon: 'stamp' },
   // プロマネは顎まで立った襟の長い上着。細く背が高い（中身の見えない人）
   l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610', outfit: 'coat', collar: 'high', skirt: 11, bodyW: 0.94, bodyH: 1.08, weapon: 'binder' },
 
-  // 第5章 LM社 — 巨大。濃紺と金。現場（変更要求・試験）は紺のシャツに金の安全ベスト、
-  // 事務方は形で分ける: 契約は腕まくりしないワイシャツ、契約管理は三つ揃い、プロマネは肩の張った長い上着
+  // 第5章 LM社 — 巨大。濃紺と金。作業着は着ない（工場の場面でも同じ）。形で分ける:
+  // 契約は腕まくりしないワイシャツに金のネクタイ、変更要求は紺のカーディガン、
+  // 試験はワイシャツを腕まくりして紺のネクタイにチノパン（水色は自社の作業着の空色と紛れるので使わない）、
+  // 契約管理は三つ揃い、プロマネは肩の張った長い上着
   lm_keiyaku: { map: 'suit',   b: '#eef0f2', p: '#232842', t: '#c0a040', h: '#1a1410', a: '#c8ccd2', outfit: 'shirt', tie: true, props: ['binder'], weapon: 'binder' },
-  lm_cr:      { map: 'worker', h: '#5a6480', b: '#2a3352', a: '#1e2640', p: '#3a3f4c', v: '#d8b030', outfit: 'vest', props: ['papers'], weapon: 'roll' },
-  lm_shiken:  { map: 'cap',    h: '#2a3352', b: '#2a3352', a: '#1e2640', p: '#3a3f4c', v: '#d8b030', outfit: 'vest', props: ['gloves'], weapon: 'wrench' }, // 試験は現場仕事なのでキャップ
+  lm_cr:      { map: 'suit',   b: '#2a3352', a: '#1e2640', p: '#3a3f4c', w: '#eef0f2', h: '#1e1812', outfit: 'cardigan', props: ['papers'], weapon: 'roll' },
+  lm_shiken:  { map: 'suit',   b: '#eef0f2', a: '#c8ccd2', p: '#a89a78', t: '#232a48', h: '#2a2018', x: '#c0a040', outfit: 'shirt', tie: true, roll: true, props: ['badge', 'clipboard'], weapon: 'roll' },
   lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109', v: '#6a5a2a', outfit: 'suit', vest3: true, props: ['binder'], weapon: 'binder' },
   lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c', outfit: 'suit', skirt: 12, shoulder: 2, bodyW: 1.08, faceAway: 'locked', weapon: 'binder' },
 
