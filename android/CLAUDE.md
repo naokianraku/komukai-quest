@@ -24,7 +24,7 @@ Web 版の 3D をそのまま WebView に入れたアプリ。中身も入口（
 | ビルドの道具 | AGP 9.2.1 / Gradle 9.4.1 / Kotlin 2.4.20（MaxRecovery と同じ版）。JDK は Android Studio 同梱の JBR 21 |
 | 版 | versionName は iPhone 版に合わせる（今は 1.1.0）。versionCode は 1 から、Play に上げるたびに +1（同じ番号は二度と使えない） |
 | 署名 | アップロード鍵 `~/keystores/komukai-upload.jks`。パスワードは同じフォルダの `komukai-upload.properties`（**中身を表示しない**）。アプリの署名鍵は Google が預かる（Play アプリ署名）。アップロード鍵をなくしても Play Console から作り直しを頼める |
-| 中身 | `game3d/` `game/` `game2-3d/` `game2/` と `ios/launcher/`（→ `launcher/`）を assets/www/ に同梱（AAB で約 3.5MB） |
+| 中身 | `game3d/` `game/` `game2-3d/` `game2/` と `ios/launcher/`（→ `launcher/`）を assets/www/ に同梱（AAB で約 2.9MB） |
 
 ## ビルド
 
@@ -54,8 +54,21 @@ cd ~/Developer/komukai && git worktree remove --force $WT
 
 ## Play に上げる
 
+| 版 | 中身 | 上げた日・方法 | 状態 |
+|---|---|---|---|
+| versionCode 1（1.1.0） | iPhone 版 1.1.0 と同じ（続編は「開発中」） | 2026-11-15 06:11・API（play.py） | 内部テストに公開。アプリは「未審査」 |
+
+- **参加用リンク: https://play.google.com/apps/internaltest/4700482543915190230**（テスターのリストに入っている
+  Google アカウントでだけ開ける。「テスターになる」→ Play ストアから入れる）
+- アプリの設定（ストアの掲載情報・アプリのコンテンツの申告）が済んで審査が通るまで、テスターに見えるアプリ名は
+  「com.anraku.komukai (unreviewed)」になる。内部テストはこのままでも入れられる
 - テスターは「テストとリリース」→「テスト」→「内部テスト」→「テスター」のメーリングリスト（Gmail）。
-  **メールのリストは API では編集できない**（API が扱えるのは Google グループだけ）ので Console で行う
+  **メールのリストは API では編集できない**（API が扱えるのは Google グループだけ）ので Console で行う。
+  リストはデベロッパー アカウントで共通。既にある「tester-list」（2 人）は MaxRecovery 側のもので、小向クエストには使っていない
+- **このアプリは「変更が自動で審査に送られる」状態。** play.py の既定（審査に送らない保存）は
+  `changesNotSentForReview must not be set` で弾かれるので、`--send-for-review` を付けて送る（内部テストへの配信は
+  本人の包括許可あり。2026-11-15）
+- play.py が出す「versionCode は 1xxx の決まり」「-beta の目印が無い」の注意は MaxRecovery 用。小向クエストでは気にしない
 - API で上げるときは MaxRecovery の `play.py` を使う。サービスアカウント play-publisher に、小向クエストの
   「テスト版トラックとしてのアプリのリリース」「テスト版トラックの管理、テスターリストの編集」「アプリ情報の閲覧」を
   付けた（2026-11-15。製品版の権限と管理者は付けていない）。使い方は
@@ -70,7 +83,7 @@ python3 tools/play/play.py --package com.anraku.komukai upload-release --track i
 ```
 
 - ブラウザ（Claude in Chrome）は Windows の Chrome しかつながっていない（2026-11-15 時点）。Play Console は
-  ログイン済み。Mac のファイルは `file_upload` で渡す
+  ログイン済み。AAB は API で上げられるので、ブラウザに渡す必要は無い
 
 ## 確かめ方（エミュレーター）
 
