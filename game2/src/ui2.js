@@ -112,9 +112,8 @@ export function drawHUD2(ctx, game, stage) {
     ctx.fillStyle = '#8fa0b4'; ctx.font = 'bold 13px system-ui, sans-serif';
     ctx.fillText('待合室', VIEW_W / 2, 118);
     ctx.fillStyle = '#6a7686'; ctx.font = '10px system-ui, sans-serif';
-    ctx.fillText('通されない。何時間も待たされている。', VIEW_W / 2, 136);
-    ctx.fillStyle = '#4e94c8'; ctx.font = 'bold 9px system-ui, sans-serif';
-    ctx.fillText('——書くことだけが増えていく', VIEW_W / 2, 154);
+    ctx.fillText('いつまでたっても建物の中に通されない。', VIEW_W / 2, 136);
+    ctx.fillText('何時間も待たされている。', VIEW_W / 2, 151);
   }
 }
 
@@ -174,7 +173,7 @@ export function drawSlope2(ctx, from, to, showLine, t) {
   if (showLine) {
     ctx.textAlign = 'center';
     ctx.fillStyle = INK; ctx.font = 'bold 12px system-ui, sans-serif';
-    ctx.fillText('「これから下り坂のない、上り坂の道が、何年か続きます」', VIEW_W / 2, 250);
+    ctx.fillText('「これから下り坂のない、つらい上り坂の道が、何年か続きます」', VIEW_W / 2, 250);
   }
 }
 
@@ -192,7 +191,9 @@ export function drawChapterClear2(ctx, ch, t, completion) {
   }
   if (ch.clearLine) {
     ctx.fillStyle = '#c8a06a'; ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText('「' + ch.clearLine + '」', VIEW_W / 2, completion ? 164 : 148);
+    // 改行のある一言（第5章）は行を分けて出す（canvas の fillText は改行を空白にしてしまう）
+    const ls = ch.clearLine.split('\n');
+    ls.forEach((l, i) => ctx.fillText((i ? '' : '「') + l + (i === ls.length - 1 ? '」' : ''), VIEW_W / 2, (completion ? 164 : 148) + i * 15));
   }
   if (ch.outro) {
     ctx.fillStyle = '#9aa5b4'; ctx.font = '9px system-ui, sans-serif';
@@ -229,17 +230,10 @@ export function drawEpilogue2(ctx, game, t) {
   ctx.beginPath(); ctx.moveTo(x0, base); ctx.lineTo(cut, base - 132); ctx.stroke();
 
   ctx.textAlign = 'center';
+  // 文は本人の点検（2026-11-14）のとおり。前の2行（下り坂／頂上）は本人が外した。3D版と同じく1.0秒に出す
   if (t > 1.0) {
-    ctx.fillStyle = SUB; ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText('下り坂は、一度も来なかった。', VIEW_W / 2, 222);
-  }
-  if (t > 2.6) {
-    ctx.fillStyle = INK; ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText('そして、頂上もなかった。', VIEW_W / 2, 240);
-  }
-  if (t > 4.4) {
     ctx.fillStyle = '#c8a06a'; ctx.font = '10px system-ui, sans-serif';
-    ctx.fillText('後に誰かが、あの年次を金の世代と呼んだ。', VIEW_W / 2, 46);
+    ctx.fillText('後に誰かが、あの年次を金の世代　-ゴールデンエイジ-と呼んだ。', VIEW_W / 2, 46);
     ctx.fillText('誰が言い出したのかは、もう分からない。', VIEW_W / 2, 62);
   }
   if (t > 6.2) {

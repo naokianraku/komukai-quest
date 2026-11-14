@@ -2393,10 +2393,18 @@ function syncLabels() {
       const fs = Math.max(12, Math.min(26 * px2D, 11 * px2D * (1 + (sr - 1) * 0.85)));
       bubble.style.fontSize = fs.toFixed(1) + 'px';
       // 長い一言は折り返す。上限は箱の7割強。そのぶん背が伸びるので、行数ぶん持ち上げる。
+      // 幅は字数から見積もる。全角は1字ぶん、英語などの半角は0.6字ぶん。改行（\n）は行を分ける
+      //（全角だけで改行のない一言は、前と同じ見積もりになる）
       const maxW = stageEl.clientWidth * 0.72;
       bubble.style.maxWidth = maxW.toFixed(0) + 'px';
-      const wantW = e.taunt.length * fs + fs * 1.5;
-      const rows = Math.max(1, Math.ceil(wantW / maxW));
+      let wantW = 0, rows = 0;
+      for (const ln of e.taunt.split('\n')) {
+        let n = 0;
+        for (const c of ln) n += c.charCodeAt(0) < 0x2000 ? 0.6 : 1;
+        const w = n * fs + fs * 1.5;
+        wantW = Math.max(wantW, w);
+        rows += Math.max(1, Math.ceil(w / maxW));
+      }
       const halfW = Math.min(maxW, wantW) / 2;
       const bh = fs * 1.35 * rows + fs * 0.7;
       const bxp = Math.min(Math.max(p.x, halfW + 8), stageEl.clientWidth - halfW - 8);

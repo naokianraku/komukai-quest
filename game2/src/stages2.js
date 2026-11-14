@@ -139,7 +139,7 @@ export const UNIT_TYPES2 = {
   l3_toiawase: { name: '技術問合せ', sprite: 'l3_toiawase', taunts: 'l3_toiawase', hp: 3, speed: 44, reach: 22, dmg: 1, kb: 90, cooldown: 0.78, telegraph: 0.44, score: 160 },
   l3_yushutsu: { name: '輸出管理責任者', sprite: 'l3_yushutsu', taunts: 'l3_yushutsu', midboss: true, scale: 1.5, hp: 18, speed: 44, reach: 27, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44, score: 800 },
   // HPバーが出ない。食らいつき続けると途中で現れ、そこから普通に勝てる。
-  l3_pm: { name: 'L3社プロマネ', sprite: 'l3_pm', taunts: 'l3_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'その情報は提供できません', score: 2200 },
+  l3_pm: { name: 'L3社プロマネ', sprite: 'l3_pm', taunts: 'l3_pm', boss: true, scale: 1.8, hp: 34, speed: 52, reach: 30, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, hideHpBar: true, firstLine: 'その情報は御社に提供できません', score: 2200 },
 
   // --- 第5章 LM社（技術力は高い。それでも完成しない）---
   lm_keiyaku: { name: 'LM社 契約', sprite: 'lm_keiyaku', taunts: 'lm_keiyaku', hp: 4, speed: 44, reach: 23, dmg: 1, kb: 95, cooldown: 0.76, telegraph: 0.44, score: 180 },
@@ -236,7 +236,7 @@ export const CHAPTERS = [
     ],
     boss: { type: 'm_pm', x: 1700 },
     bossFaceLock: true, // 最初こちらを向かない・怯まない
-    clearLine: '……あの若いの、何度突き返しても持ってくるな',
+    clearLine: '……あの若いの、何度突き返しても持ってくるな　何考えてるんだ',
     slope: 0.2,
   },
   {
@@ -246,7 +246,7 @@ export const CHAPTERS = [
     playerRank: '小向新兵',
     playerSprite: 'p2_haizoku',
     location: 'GR社 工場 待合室',
-    intro: '主要機器の供給元。技術力が低く、モノが完成しない。作っては壊れ、作り直し、また壊れる。\nそして扱いがひどい。金を払っているのはこちらなのに、\n肌寒いタイル張りの待合室で、何時間も待たされる。',
+    intro: '主要機器の供給元。\n技術力が低く、モノが完成しない。\n作っては壊れ、作り直し、また壊れる。\n\nクレームに行っても、肌寒いタイル張りの待合室で、何時間も待たされる。',
     width: 1800,
     bg: { scene: 'factory', wall: '#3e4248', floor: '#5c6068', detail: '#2c3036', accent: '#8e9298' },
     // 3D の場面。タイル張りの待合室（待ちの間は x≤420 から出られない）→ 古い工場 → 帰社 → ボスは古い会議室
@@ -267,7 +267,7 @@ export const CHAPTERS = [
       { x: 1340, label: '帰社 — PM（課長）', enemies: [{ type: 'pm', count: 1 }] },
     ],
     boss: { type: 'gr_pm', x: 1700 },
-    clearLine: '……あの日本人、また手紙を書いたらしいぞ',
+    clearLine: '……あの日本人、本社の社長にまたクレームのレターを書いたらしいぞ',
     slope: 0.4,
   },
   {
@@ -333,7 +333,7 @@ export const CHAPTERS = [
     ],
     boss: { type: 'lm_pm', x: 1800 },
     bossFaceLock: true,
-    clearLine: '……金の世代、か。そう呼ばれてたらしいぞ、あいつら',
+    clearLine: 'おまえら仕様書の意味わかってるのか。\n仕様は概要欄じゃなくて、仕様欄に書けよ！',
     slope: 0.82,
   },
   {

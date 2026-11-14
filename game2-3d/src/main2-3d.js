@@ -133,6 +133,7 @@ function holdForDown(g, before) {
   if (hand) { b.downStyle = 'stand'; startHandshake(st, b); }
   b.dying = true; b.downT = b.downMax = hand ? DOWN_SEC_HAND : DOWN_SEC;
   b.taunt = st.data.clearLine || null;
+  // 3.2秒で消す。握手の章（第3・5章）は残りの1.4秒、吹き出しに隠れない握手の絵を見せる（一言は報告書にも出る）
   b.tauntT = b.taunt ? DOWN_SEC : 0;
   b.chatterT = 99;
   b.hitstun = 0; b.kbx = 0; b.attack = null; b.attackActive = false; b.state = 'idle';
@@ -388,7 +389,7 @@ function renderScreen() {
         <div class="eyebrow">作 業 報 告 書</div>
         <h2 class="ok">${done ? '完 成' : ch.name + ' 突破'}</h2>
         ${done ? '<p class="lead">納期は遅れた。コストも少し上がった。だが、完成した。</p>' : ''}
-        ${ch.clearLine ? `<p class="lead" style="color:#8a6a3a">「${ch.clearLine}」</p>` : ''}
+        ${ch.clearLine ? `<p class="lead" style="color:#8a6a3a">「${ch.clearLine.replace(/\n/g, '<br>')}」</p>` : ''}
         ${ch.outro ? `<p class="lead" style="font-size:12px;color:#6c737c">${ch.outro.replace(/\n/g, '<br>')}</p>` : ''}
         <table class="form">
           <tr><th>SCORE</th><td class="mono">${String(game.score).padStart(6, '0')}</td></tr>
@@ -412,7 +413,7 @@ function renderScreen() {
           <circle cx="310" cy="${y(to)}" r="4" fill="#1b1e23"/>
         </svg>
         ${game.chapterIndex === 1
-          ? '<p class="lead" style="text-align:center">「これから下り坂のない、上り坂の道が、何年か続きます」</p>'
+          ? '<p class="lead" style="text-align:center">「これから下り坂のない、つらい上り坂の道が、何年か続きます」</p>'
           : ''}
         ${hint('Enter で次の章へ', '画面を押して次の章へ')}
       </div>`);
@@ -429,14 +430,14 @@ function renderScreen() {
       </div>`, 'veil');
       break;
     case 'epilogue':
+      // 文は本人の点検（2026-11-14）のとおり。前にあった2行（下り坂／頂上）を本人が外したので、
+      // 残った2行を1.0秒に出す。「— 小向戦士 —」は3Dのヘルメットが橙に変わる6.2秒のまま
       showScreen(`<div class="sheet">
-        <div class="eyebrow" style="animation:fadein .8s 4.4s both">後に誰かが、あの年次を金の世代と呼んだ。<br>誰が言い出したのかは、もう分からない。</div>
+        <div class="eyebrow" style="animation:fadein .8s 1.0s both">後に誰かが、あの年次を金の世代　-ゴールデンエイジ-と呼んだ。<br>誰が言い出したのかは、もう分からない。</div>
         <svg viewBox="0 0 320 100" style="width:100%;height:auto;margin:10px 0" aria-hidden="true">
           <line x1="10" y1="92" x2="310" y2="92" stroke="#d3d8dd" stroke-width="1"/>
           <line x1="10" y1="88" x2="226" y2="20" stroke="#d2a23c" stroke-width="2.5" stroke-linecap="round"/>
         </svg>
-        <p class="lead" style="animation:fadein .6s 1.0s both">下り坂は、一度も来なかった。</p>
-        <p class="lead" style="animation:fadein .6s 2.6s both">そして、頂上もなかった。</p>
         <h2 style="animation:fadein .8s 6.2s both;color:var(--accent);text-align:center">— 小向戦士 —</h2>
         <p class="k" style="animation:fadein .8s 6.2s both">${touch() ? '画面を押して 小向クエスト（本編）へ' : 'Enter で 小向クエスト（本編）へ'}</p>
       </div>`, 'veil');
