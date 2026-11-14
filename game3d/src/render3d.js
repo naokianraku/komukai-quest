@@ -1854,7 +1854,67 @@ function makeFlash() {
 }
 
 const mat = (c, opts = {}) => new THREE.MeshLambertMaterial({ color: new THREE.Color(c), ...opts });
-// 各武器は「主パーツ＋補助パーツ」の最大2つで形を作る
+
+// ===== N村の一升瓶 =====
+// 投げる瓶と、手に握って振り回す瓶は同じ形。前は暗い緑の筒に帯を巻いただけで、ワインの瓶に
+// 見えていた（遊んだ人の声）。一升瓶だと一目で分かるよう、
+//  ・茶色のガラス（ワインに多い深緑をやめる）と、片側の照り
+//  ・なで肩から長い首へ細っていく形（一升瓶の背丈と太さの比 約3.8:1 に合わせる）
+//  ・白い和紙のラベルに大きく「酒」、朱の落款。首に赤い掛け紙、金の王冠
+// を入れ、円柱の面の数も増やして滑らかにした。ラベルは前後の両面に貼る（握って向きが変わっても見える）。
+// 形と材質は全部の瓶で使い回す（投げるたびに作ると、消したあとも GPU に残る）。
+// 立てた向き（+y が口）。底が y=-9、王冠の上が y=14。
+const SAKE = (() => {
+  const glass = mat('#6e3a14', { emissive: new THREE.Color('#2a1206') });
+  const label = (() => {
+    const W = 160, H = 240;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g2 = cv.getContext('2d');
+    g2.fillStyle = '#f4eedc'; g2.fillRect(0, 0, W, H);
+    g2.fillStyle = '#c9a44a'; g2.fillRect(0, 8, W, 5); g2.fillRect(0, H - 13, W, 5);   // 上下の金の罫
+    g2.fillStyle = '#16120e';
+    g2.font = 'bold 132px "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif';
+    g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.fillText('酒', W / 2, H * 0.44);
+    g2.fillStyle = '#c4352a'; g2.fillRect(W - 50, H - 66, 30, 30);                       // 朱の落款
+    g2.fillStyle = '#f4eedc'; g2.fillRect(W - 44, H - 60, 18, 18);
+    g2.fillStyle = '#c4352a'; g2.fillRect(W - 40, H - 56, 10, 10);
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  })();
+  const LT = 1.9;   // ラベルが回り込む角度（約109°）
+  return {
+    parts: [
+      // [形, 材質, y]
+      [new THREE.CylinderGeometry(2.6, 2.6, 12.5, 28), glass, -2.75],                    // 胴
+      [new THREE.CylinderGeometry(2.42, 2.5, 0.6, 28), mat('#4a260c'), -9.0],              // 底の縁
+      [new THREE.CylinderGeometry(1.05, 2.6, 4.5, 28), glass, 5.75],                      // なで肩
+      [new THREE.CylinderGeometry(1.0, 1.05, 4.6, 18), glass, 10.3],                       // 長い首
+      [new THREE.CylinderGeometry(1.12, 1.12, 1.7, 18), mat('#b3262b'), 10.6],             // 首の赤い掛け紙
+      [new THREE.CylinderGeometry(1.2, 1.2, 0.5, 18), glass, 12.85],                       // 口の縁
+      [new THREE.CylinderGeometry(1.24, 1.28, 1.05, 18), mat('#d4ae46'), 13.6],            // 金の王冠
+      // ガラスの照り（左上から光が当たっている側に細く明るい筋）
+      [new THREE.CylinderGeometry(2.63, 2.63, 11.0, 6, 1, true, -1.25, 0.22), mat('#c98a52'), -2.5],
+      [new THREE.CylinderGeometry(1.08, 2.63, 4.2, 6, 1, true, -1.25, 0.22), mat('#c98a52'), 5.7],
+      // ラベル（前 +z と後ろ -z）
+      [new THREE.CylinderGeometry(2.66, 2.66, 7.6, 20, 1, true, -LT / 2, LT), mat('#ffffff', { map: label }), -1.6],
+      [new THREE.CylinderGeometry(2.66, 2.66, 7.6, 20, 1, true, Math.PI - LT / 2, LT), mat('#ffffff', { map: label }), -1.6],
+    ],
+  };
+})();
+function makeSakeBottle() {
+  const g = new THREE.Group();
+  for (const [geo, m, y] of SAKE.parts) {
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.y = y; mesh.castShadow = true;
+    g.add(mesh);
+  }
+  return g;
+}
+
+// 各武器は「主パーツ＋補助パーツ」の最大2つで形を作る（一升瓶だけは上の makeSakeBottle をそのまま握る）
 const WEAPON_SPEC = {
   fist:   { a: [new THREE.BoxGeometry(2.8, 2.8, 2.8), mat('#f1c79b'), [0, 0, 0]] },
   roll:   { a: [new THREE.CylinderGeometry(1.7, 1.7, 12, 8), mat('#eceee8'), [0, 0, 0], [0, 0, Math.PI / 2]],
@@ -1865,8 +1925,6 @@ const WEAPON_SPEC = {
             b: [new THREE.BoxGeometry(0.9, 10, 8), mat('#f2f4f6'), [1.2, 0, 0]] },
   stamp:  { a: [new THREE.CylinderGeometry(2.2, 2.2, 6, 10), mat('#8a6a46'), [0, 0, 0], [0, 0, Math.PI / 2]],
             b: [new THREE.CylinderGeometry(2.4, 2.4, 1.0, 10), mat('#c0352a'), [3.4, 0, 0], [0, 0, Math.PI / 2]] },
-  bottle: { a: [new THREE.CylinderGeometry(2.0, 2.0, 11, 10), mat('#1d4a2c'), [0, 0, 0], [0, 0, Math.PI / 2]],
-            b: [new THREE.CylinderGeometry(1.0, 1.0, 4.0, 8), mat('#1d4a2c'), [7.4, 0, 0], [0, 0, Math.PI / 2]] },
   pipe:   { a: [new THREE.CylinderGeometry(1.25, 1.25, 13, 10), mat('#848d95'), [2.5, 0, 0], [0, 0, Math.PI / 2]],
             b: [new THREE.CylinderGeometry(1.3, 1.3, 0.9, 10), mat('#4d555c'), [8.8, 0, 0], [0, 0, Math.PI / 2]] },
 };
@@ -1922,7 +1980,6 @@ const armMats = new Map();
 const armMatOf = (c) => { let m = armMats.get(c); if (!m) { m = mat(c); armMats.set(c, m); } return m; };
 
 function makeWeapon(kind, armCol) {
-  const spec = WEAPON_SPEC[kind] || WEAPON_SPEC.fist;
   const g = new THREE.Group();
   // 前腕。道具だけが宙に浮いて見えるのを防ぐため、必ず胴側へ伸ばす
   // armCol が無い（本編の全員）ときは、従来どおり作業着の袖と同じ空色・同じ肌色。
@@ -1930,6 +1987,20 @@ function makeWeapon(kind, armCol) {
   arm.position.set(-5.0, 0, 0); arm.castShadow = true; g.add(arm);
   const wrist = new THREE.Mesh(wristGeo, armCol ? armMatOf(armCol.skin) : wristMat);
   wrist.position.set(-1.6, 0, 0); wrist.castShadow = true; g.add(wrist);
+  if (kind === 'bottle') {
+    // 一升瓶は首を握る。口（+y）を手の側（-x）へ倒し、王冠が手首のすぐ先に来るように置く。
+    // 投げる瓶（遠くで回るので大きめ）より一回り小さくして、腕の長さとの釣り合いを取る
+    const b = makeSakeBottle();
+    b.rotation.z = Math.PI / 2;
+    b.scale.setScalar(0.82);
+    b.position.x = 14 * 0.82 - 0.8;
+    g.add(b);
+    // 左を向くと得物ごと左右反転するので、ラベルの「酒」が鏡文字になる。瓶の周りの向きだけもう一度
+    // 反転して打ち消す（syncWeapons が向きに合わせて scale.x を入れる）
+    g.userData.unmirror = b;
+    return g;
+  }
+  const spec = WEAPON_SPEC[kind] || WEAPON_SPEC.fist;
   for (const key of ['a', 'b']) {
     const part = spec[key];
     if (!part) continue;
@@ -1989,6 +2060,8 @@ function syncWeapons() {
     r.group.position.set(px, py, pz);
     r.group.rotation.y = yaw;
     r.group.scale.set(sc * dir, sc, sc);          // 向きで左右反転
+    const um = r.group.userData.unmirror;
+    if (um) um.scale.x = Math.abs(um.scale.x) * dir;
     r.group.visible = true;
     // 閃光は「当たったとき」だけ出す。attackActive の間ずっと出していると、
     // 空振りでも☆が出て当たったように見える。
@@ -2045,20 +2118,8 @@ const THROWN = {
     tip.position.x = 4.2; tip.rotation.z = -Math.PI / 2; g.add(tip);
     return g;
   },
-  // N村の一升瓶
-  sake: () => {
-    const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 10, 10), mat('#1d4a2c')));
-    const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 2.1, 2.0, 10), mat('#1d4a2c'));
-    shoulder.position.y = 6.0; g.add(shoulder);
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 3.2, 8), mat('#1d4a2c'));
-    neck.position.y = 8.3; g.add(neck);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 1.0, 8), mat('#c8a23a'));
-    cap.position.y = 10.1; g.add(cap);
-    const label = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 4.4, 10), mat('#efe7d2'));
-    label.position.y = -0.6; g.add(label);
-    return g;
-  },
+  // N村の一升瓶（形は上の makeSakeBottle。握って振り回す瓶と同じ）
+  sake: () => makeSakeBottle(),
   // 魔王Y下の投げ物
   pipe: () => {
     const g = new THREE.Group();
@@ -2226,7 +2287,7 @@ function updateDomes(dt) {
 }
 
 // 砕けた投げ物の破片の色（2D側の DEBRIS と揃える）
-const SHARD = { sake: '#9ccfae', pipe: '#b4bcc3', dumbbell: '#6b7076', pc: '#7fd4ff' };
+const SHARD = { sake: '#c98a52', pipe: '#b4bcc3', dumbbell: '#6b7076', pc: '#7fd4ff' };
 
 // 打撃の粒子
 const partGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);

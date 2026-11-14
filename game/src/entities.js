@@ -663,20 +663,32 @@ export const THROWS = {
 export const JUNK = ['pipe', 'dumbbell', 'pc'];
 
 const px = (ctx, c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+// 一升瓶は3D版と同じ見分けどころ（茶色のガラス・なで肩と長い首・白いラベルに黒い字・朱の印・
+// 首の赤い掛け紙・金の王冠）。前の深緑の短い瓶はワインに見えていた。
+const SAKE_2D = { glass: '#6e3a14', shine: '#c98a52', label: '#f4eedc', ink: '#16120e', seal: '#c4352a', wrap: '#b3262b', cap: '#d4ae46' };
 const THROWN_2D = {
   sake: (ctx, x, y, up) => {
+    const c = SAKE_2D;
     if (up) {
-      px(ctx, '#1d4a2c', x - 2, y - 4, 5, 9);   // 胴
-      px(ctx, '#3f7d52', x - 2, y - 4, 1, 9);   // 照り
-      px(ctx, '#1d4a2c', x - 1, y - 7, 3, 3);   // 首
-      px(ctx, '#c8a23a', x - 1, y - 8, 3, 1);   // 王冠
-      px(ctx, '#efe7d2', x - 2, y - 1, 5, 4);   // ラベル
-    } else {
-      px(ctx, '#1d4a2c', x - 4, y - 2, 9, 5);
-      px(ctx, '#3f7d52', x - 4, y - 2, 9, 1);
-      px(ctx, '#1d4a2c', x + 5, y - 1, 3, 3);
-      px(ctx, '#c8a23a', x + 8, y - 1, 1, 3);
-      px(ctx, '#efe7d2', x - 2, y - 2, 4, 5);
+      px(ctx, c.cap,   x - 1, y - 10, 2, 1);  // 王冠
+      px(ctx, c.wrap,  x - 1, y - 9, 2, 2);   // 首の掛け紙
+      px(ctx, c.glass, x - 1, y - 7, 2, 1);   // 首
+      px(ctx, c.glass, x - 2, y - 6, 4, 1);   // なで肩
+      px(ctx, c.glass, x - 3, y - 5, 6, 10);  // 胴
+      px(ctx, c.shine, x - 2, y - 5, 1, 9);   // 照り
+      px(ctx, c.label, x - 3, y - 3, 6, 6);   // ラベル
+      px(ctx, c.ink,   x - 1, y - 2, 2, 4);   // 「酒」の字（墨の太い一画）
+      px(ctx, c.seal,  x + 1, y + 1, 1, 1);   // 朱の印
+    } else {                                   // 横倒し（口が右）
+      px(ctx, c.cap,   x + 9, y - 1, 1, 2);
+      px(ctx, c.wrap,  x + 7, y - 1, 2, 2);
+      px(ctx, c.glass, x + 6, y - 1, 1, 2);
+      px(ctx, c.glass, x + 5, y - 2, 1, 4);
+      px(ctx, c.glass, x - 5, y - 3, 10, 6);
+      px(ctx, c.shine, x - 4, y - 2, 9, 1);
+      px(ctx, c.label, x - 3, y - 3, 6, 6);
+      px(ctx, c.ink,   x - 2, y - 1, 4, 2);
+      px(ctx, c.seal,  x + 1, y + 1, 1, 1);
     }
   },
   pipe: (ctx, x, y, up) => {

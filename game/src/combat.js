@@ -14,7 +14,7 @@ export function targetable(t) { return t.team !== 'mob' && !t.dying; }
 
 // 投げ物が砕けたときの破片の色・数・音
 const DEBRIS = {
-  sake:     { cols: ['#1d4a2c', '#cfe8d6'], spray: '#f4f1e2', n: 14, sp: 70, sfx: 'sfxSmash' },
+  sake:     { cols: ['#6e3a14', '#e8c9a0'], spray: '#f4f1e2', n: 14, sp: 70, sfx: 'sfxSmash' },
   pipe:     { cols: ['#848d95', '#4d555c'], spray: null,      n: 9,  sp: 80, sfx: 'sfxClang' },
   dumbbell: { cols: ['#3c4046', '#6b7076'], spray: null,      n: 8,  sp: 56, sfx: 'sfxThud'  },
   pc:       { cols: ['#2b3038', '#c9ced4'], spray: '#7fd4ff', n: 15, sp: 76, sfx: 'sfxSmash' },

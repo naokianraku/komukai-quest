@@ -28,6 +28,8 @@ const game = {
 };
 let stage = new Stage(STAGES[0], game);
 setGame(game); setStage(stage);
+// 確認用（?dbg=1 のときだけ）: ヘッドレスの確かめでゲームと今のステージに触れるように
+if (Q.get('dbg') === '1') window.__g1 = { game, get stage() { return stage; } };
 buildTitleScenery(STAGES[0].width);
 
 // 打撃フック: ヒットストップ＋カメラシェイク（案D）。値は描画側の FX に持たせてある
