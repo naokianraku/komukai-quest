@@ -186,9 +186,10 @@ export function build(W, halfD /* , ctx */) {
   // 光: 第5章（坂 0.82）。灯りは冷たい白で、強さは GR社（0.4）より少し下げる。
   // 明るく見せるのは床と壁の白さと、高窓・大扉の外光（自発光）に任せる
   setLighting(false);
-  hemi.color.set('#d3def0'); hemi.groundColor.set('#5a6478'); hemi.intensity = 1.72;
-  sun.color.set('#e2ebfb'); sun.intensity = 0.92;
-  fill.intensity = 0.82;   // fill の色は他の場面が戻さないので触らない
+  // 第5章（坂0.82）。広く明るい工場だが、第1〜3章より明るくならないよう一段落とす
+  hemi.color.set('#d3def0'); hemi.groundColor.set('#5a6478'); hemi.intensity = 1.42;
+  sun.color.set('#e2ebfb'); sun.intensity = 0.80;
+  fill.intensity = 0.74;   // fill の色は他の場面が戻さないので触らない
   scene.background = hex(C.fog);
   scene.fog = new THREE.Fog(hex(C.fog), 260, 820);
 
