@@ -18,6 +18,7 @@ const DEBRIS = {
   pipe:     { cols: ['#848d95', '#4d555c'], spray: null,      n: 9,  sp: 80, sfx: 'sfxClang' },
   dumbbell: { cols: ['#3c4046', '#6b7076'], spray: null,      n: 8,  sp: 56, sfx: 'sfxThud'  },
   pc:       { cols: ['#2b3038', '#c9ced4'], spray: '#7fd4ff', n: 15, sp: 76, sfx: 'sfxSmash' },
+  paper:    { cols: ['#f4f6f8', '#d8dde2'], spray: null,      n: 8,  sp: 46, sfx: null },        // 扇に投げた資料（音は当たりの音だけ）
 };
 
 // ヒット適用（HP減・ノックバック・硬直・無敵・エフェクト）
@@ -88,7 +89,8 @@ export function resolveProjectiles(projectiles, entities, fx) {
         if (Math.hypot(cx - t.x, (cy - t.y) * 1.6) > p.aoe) continue;     // 奥行きは詰めて判定
         applyHit(t, sign(t.x - cx) || 1, p.dmg, p.kb, fx);
       }
-      fx.meteor(cx, cy, p.aoe);
+      // 着弾の見せ方: 彗星（既定）／必殺技の足元の衝撃（shock）／降ってくる紙（paper）
+      fx[p.impact && fx[p.impact] ? p.impact : 'meteor'](cx, cy, p.aoe);
       p.alive = false;
       continue;
     }
@@ -161,10 +163,37 @@ export class Fx {
     this.texts.push({ x, y: y - 26, str: 'メテオ', color: '#ff7f0e', life: 1.1, vy: -14, big: true });
   }
 
+  // 必殺技の足元の衝撃（判子・足踏み・一喝）。土ぼこりを輪に散らす。字は出さない
+  shock(x, y, radius = 52) {
+    Audio.sfxThud();
+    const n = 22;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const sp = 90 + (radius / 52) * 60 + (i % 3) * 30;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.4 - 40,
+        life: 0.5, color: i % 3 === 0 ? '#fff4d8' : i % 3 === 1 ? '#d8c8a8' : '#ff7f0e', size: 2 + (i % 3),
+      });
+    }
+  }
+
+  // 降ってくる紙（技師長の赤ペン）が床に落ちた。白い紙片と赤を散らす
+  paper(x, y) {
+    Audio.sfxHit();
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const sp = 60 + (i % 3) * 30;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.5 - 50,
+        life: 0.5, color: i % 3 === 0 ? '#d0282a' : '#f4f6f8', size: 2 + (i % 2),
+      });
+    }
+  }
+
   // 投げ物が砕ける（一升瓶=ガラス片と酒／鉄パイプ・鉄アレイ=金属片／パソコン=樹脂片と火花）
   shatter(x, y, look = 'sake') {
     const d = DEBRIS[look] || DEBRIS.sake;
-    Audio[d.sfx]();
+    if (d.sfx) Audio[d.sfx]();
     for (let i = 0; i < d.n; i++) {
       const a = (i / d.n) * Math.PI * 2;
       const sp = d.sp + (i % 4) * 44;

@@ -25,38 +25,43 @@ export const UNIT_TYPES = {
   kanren:  { name: '関連会社社員', sprite: 'kanren',  taunts: 'kanren',  hp: 5, speed: 46, reach: 22, dmg: 1, kb: 90,  cooldown: 0.8,  telegraph: 0.4,  score: 120 },
   shukkou: { name: '出向先上長',   sprite: 'shukkou', taunts: 'shukkou', elite: true, hp: 8, speed: 42, reach: 26, dmg: 2, kb: 120, cooldown: 0.7,  telegraph: 0.46, score: 400 },
   // 関連会社社長: 見た目は怖い（黒スーツ/白髪/日焼け/赤目）。能力は普通の部長級。
-  shacho:  { name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.2, hp: 14, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.46, score: 1500 },
+  shacho:  { special: { kind: 'slam', first: 2.4, every: 5.0, wind: 0.8, radius: 84, dmg: 1, kb: 320, recover: 0.6 }, name: '関連会社社長', sprite: 'shacho',  taunts: 'shacho',  boss: true, scale: 2.2, hp: 24, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.46, score: 1500 },
 
   // 味方（同じプロジェクトのメンバー）
   ally:   { name: '同僚',        sprite: 'ally',   team: 'ally', taunts: 'ally', hp: 5, speed: 62, reach: 23, dmg: 1, kb: 90, cooldown: 0.55, telegraph: 0.22, score: 0 },
 
   // ボス: 工場内の三大ボス（生産部長/技師長/工場長）＋ 真のボス（事業部長）
+  // special … 必殺技（ボス・中ボスの大技。entities.js の startSpecial）。溜めの間に予兆を見せ、当たる場所を床に先に出す。
+  //   技術部長=資料を扇に5枚 / 技師長=赤ペンの紙が降る / 工場長=部下を呼ぶ・足踏みの衝撃を交互 /
+  //   事業部長=4連続の突進（売上・利益・納期・コストの4つ）/ 関連会社社長=一喝（大きな輪で吹き飛ばす）/
+  //   管理担当K・K目=判子の衝撃 / K目息子=ランドセルで突進 / 生産企画課長・N村=一升瓶を3本まとめて。
+  //   体力は、遊んだ人の「ボスが弱すぎる」に合わせて2〜3割増やした（2026-11-14）。魔王は元から強いのでそのまま
   boss1: { name: '生産部長', sprite: 'boss1', taunts: 'boss_seisan', boss: true, scale: 1.6, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.50, score: 1000 },
   // 技術部長（Stage1ボス・セリフは生産部長と同じ）
-  boss_gijutsubu: { name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', firstLine: '事前配布資料はもう用意できたか？', boss: true, scale: 1.8, hp: 22, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, lastLine: 'おれもこれまでか。もう子会社転籍か。。', score: 1000 },
+  boss_gijutsubu: { special: { kind: 'fan', n: 5, first: 3.2, every: 5.2, wind: 0.75, backstep: 70, speed: 170, spread: 30, dmg: 1, kb: 85, recover: 0.6 }, name: '技術部長', sprite: 'boss_gijutsubu', taunts: 'boss_seisan', firstLine: '事前配布資料はもう用意できたか？', boss: true, scale: 1.8, hp: 30, speed: 40, reach: 30, dmg: 2, kb: 130, cooldown: 0.8, telegraph: 0.50, lastLine: 'おれもこれまでか。もう子会社転籍か。。', score: 1000 },
   // 生産部長（Stage2で技師長と一緒に出る・非ボスの強敵）
   seisan: { name: '生産部長', sprite: 'seisan', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
   // 技術管理部長（Stage2で技師長と一緒に出る・セリフは技術部長/生産部長と同じ boss_seisan）
   gijutsukanri: { name: '技術管理部長', sprite: 'pmr_gijutsu', taunts: 'boss_seisan', scale: 1.6, hp: 12, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.75, telegraph: 0.46, score: 500 },
-  boss2: { name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  firstLine: '事前配布資料にコメントしたけど、本番で全部回答しろよ', boss: true, scale: 1.8, hp: 30, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, lastLine: '今後も、しっかりとコスト管理をよろしくお願いします', score: 1500 },
-  boss3: { name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   firstLine: '安全とコンプライアンスはすべてに優先する！', boss: true, scale: 1.9, hp: 40, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, lastLine: 'お前もこの立場になればわかる', score: 2000 },
-  boss4: { name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', firstLine: '売上あげろ！利益確保しろ！納期守れ！コスト下げろ！', boss: true, scale: 2.05, hp: 58, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, lastLine: '究極のジェネラリストを目指していたが、俺もここまでか', score: 5000 },
+  boss2: { special: { kind: 'rain', first: 3.4, every: 6.0, wind: 1.0, n: 6, radius: 28, fall: 1.0, stagger: 0.18, dmg: 1, kb: 120, recover: 0.5 }, name: '技師長',   sprite: 'boss2', taunts: 'boss_gishi',  firstLine: '事前配布資料にコメントしたけど、本番で全部回答しろよ', boss: true, scale: 1.8, hp: 38, speed: 42, reach: 30, dmg: 2, kb: 130, cooldown: 0.8,  telegraph: 0.48, thrower: true, lastLine: '今後も、しっかりとコスト管理をよろしくお願いします', score: 1500 },
+  boss3: { special: [{ kind: 'summon', types: ['buka', 'senpai', 'buka'], max: 5, first: 3.0, every: 5.4, wind: 0.9, recover: 0.6 }, { kind: 'slam', every: 5.4, wind: 0.9, radius: 62, dmg: 2, kb: 230, recover: 0.8 }], name: '工場長',   sprite: 'boss3', taunts: 'boss_kojo',   firstLine: '安全とコンプライアンスはすべてに優先する！', boss: true, scale: 1.9, hp: 50, speed: 44, reach: 32, dmg: 2, kb: 140, cooldown: 0.75, telegraph: 0.46, lastLine: 'お前もこの立場になればわかる', score: 2000 },
+  boss4: { special: { kind: 'dash', count: 4, first: 4.0, every: 7.2, wind: 0.75, windNext: 0.42, speed: 360, dist: 240, track: 90, dmg: 2, kb: 190, recover: 0.9 }, name: '事業部長（真のボス）', sprite: 'boss4', taunts: 'boss_jigyo', firstLine: '売上あげろ！利益確保しろ！納期守れ！コスト下げろ！', boss: true, scale: 2.05, hp: 70, speed: 50, reach: 34, dmg: 3, kb: 160, cooldown: 0.65, telegraph: 0.42, thrower: true, lastLine: '究極のジェネラリストを目指していたが、俺もここまでか', score: 5000 },
   // 企画部長（事業部長と同時出現・セリフは事業部長と同じ boss_jigyo）
   kikakubucho: { name: '企画部長', sprite: 'kikakubucho', taunts: 'boss_jigyo', scale: 1.85, hp: 16, speed: 48, reach: 32, dmg: 2, kb: 140, cooldown: 0.7, telegraph: 0.44, score: 800 },
 
   // 中ボス（道中の強敵。midboss=地獄でも増殖しない。セリフは後から セリフ一覧.md の同名カテゴリに追記可）
-  kanrik:    { name: '管理担当K',    sprite: 'kanrik',    taunts: 'kanrik',    midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
+  kanrik:    { special: { kind: 'slam', first: 2.6, every: 5.4, wind: 0.85, radius: 54, dmg: 2, kb: 210, recover: 0.7 }, name: '管理担当K',    sprite: 'kanrik',    taunts: 'kanrik',    midboss: true, scale: 1.5, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
                lastLine: '第二、第三のK目が必ずやお前を倒すだろう',
                heir: 'kanrik_son', score: 700 }, // Stage2 中ボス。言い終わって崩れたあと、息子が出てくる
   // 管理担当Kの息子。父を倒したその場に現れる。若いぶん速いが、体力は父より軽い。
   // セリフは本人ゆずりの一言だけ（増やすときは セリフ一覧.md の kanrik_son に追記）。
   // K目息子。小学生。通学帽とランドセルで、父（黒ヘルメットの作業着）と対になる。
   // 体は大人より小さいぶん速い。背負い物は3D版だけ（2D版はドット絵なので帽子までで表現）。
-  kanrik_son:{ name: 'K目息子', sprite: 'kanrik_son', taunts: 'kanrik_son', midboss: true, scale: 0.8, hp: 14, speed: 58, reach: 26, dmg: 2, kb: 110, cooldown: 0.58, telegraph: 0.36,
+  kanrik_son:{ special: { kind: 'dash', first: 2.2, every: 4.6, wind: 0.6, speed: 300, dist: 200, dmg: 2, kb: 170, recover: 0.6 }, name: 'K目息子', sprite: 'kanrik_son', taunts: 'kanrik_son', midboss: true, scale: 0.8, hp: 16, speed: 58, reach: 26, dmg: 2, kb: 110, cooldown: 0.58, telegraph: 0.36,
                satchel: true, firstLine: '俺がK目だ！', score: 500 },
   // 生産企画課長（N村）: 一升瓶を山なりに投げる。投げるのは近すぎない間合いのときだけ。
   // 間合いに入られたら瓶を振り回す（swing）。遅くて広くて重い、見てからかわす大振り。
-  seikikaku: { name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 18, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
+  seikikaku: { special: { kind: 'fan', look: 'sake', n: 3, first: 4.2, every: 6.4, wind: 0.65, backstep: 60, spread: 46, recover: 0.7 }, name: '生産企画課長', sprite: 'seikikaku', taunts: 'seikikaku', midboss: true, scale: 1.5, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 120, cooldown: 0.7, telegraph: 0.44,
                thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.5,
                swing: { first: 2.6, every: 4.4, telegraph: 0.62, active: 0.34, recover: 0.95, dmg: 3, kb: 215 },
                lastLine: '鹿島田のエンジェルで待っている',
@@ -64,11 +69,11 @@ export const UNIT_TYPES = {
 
   // 裏ステージ（事業部長撃破後の真・最終決戦／業火の60号7階Aゾーン）
   // Y下5人衆（一人ずつ別キャラ）。N村=生産企画課長／K目=管理担当K の再登場（セリフ流用）。
-  shitennou_nmura: { name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44,
+  shitennou_nmura: { special: { kind: 'fan', look: 'sake', n: 3, first: 3.6, every: 5.8, wind: 0.6, backstep: 60, spread: 46, recover: 0.6 }, name: 'N村', sprite: 'shitennou_nmura', taunts: 'seikikaku', elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44,
                      thrower: true, proj: 'sake', projRange: 200, throwCooldown: 1.4,
                      swing: { first: 2.2, every: 3.8, telegraph: 0.58, active: 0.34, recover: 0.85, dmg: 3, kb: 230 },
                      score: 1200 }, // 生産企画課長と同一人物＝同じく一升瓶を投げる（裏では振りも速い）
-  shitennou_kme:   { name: 'K目', sprite: 'shitennou_kme',   taunts: 'kanrik',    elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
+  shitennou_kme:   { special: { kind: 'slam', first: 2.4, every: 5.0, wind: 0.8, radius: 54, dmg: 2, kb: 210, recover: 0.6 }, name: 'K目', sprite: 'shitennou_kme',   taunts: 'kanrik',    elite: true, scale: 1.6, hp: 22, speed: 46, reach: 28, dmg: 2, kb: 130, cooldown: 0.7, telegraph: 0.44, score: 1200 },
   // S田・H本は攻撃してこない（passive）が体力多め。セリフは「。。。」のみ。
   shitennou_sda:   { name: 'S田', sprite: 'shitennou_sda',   taunts: 'sda',   elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },
   shitennou_hmoto: { name: 'H本', sprite: 'shitennou_hmoto', taunts: 'hmoto', elite: true, passive: true, scale: 1.6, hp: 40, speed: 40, reach: 26, dmg: 0, kb: 110, cooldown: 0.9, telegraph: 0.5, score: 1000 },

@@ -14,7 +14,7 @@ import {
   box,
   applyScene, sceneAt, buildScenery, buildTitleScenery, clearStageObjects,
   getScene, setScene, setStage, setGame, setGaugeTarget, setHudTop,
-  addFloat, burst, meteorBoom,
+  addFloat, burst, meteorBoom, shockBoom, paperBurst, syncWarnings,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
 } from './render3d.js';
@@ -49,6 +49,11 @@ stage.fx.shatter = (x, y, look) => { origShatter(x, y, look); FX.shake = Math.ma
 // メテオ着弾。揺らして赤く光らせる
 const origMeteor = stage.fx.meteor.bind(stage.fx);
 stage.fx.meteor = (x, y, r) => { origMeteor(x, y, r); meteorBoom(x, y, r); };
+// 必殺技の足元の衝撃・降ってきた紙。音と2D側の粒子は fx 本体、3Dの輪と粒子はここ
+const origShock = stage.fx.shock.bind(stage.fx);
+stage.fx.shock = (x, y, r) => { origShock(x, y, r); shockBoom(x, y, r); };
+const origPaper = stage.fx.paper.bind(stage.fx);
+stage.fx.paper = (x, y, r) => { origPaper(x, y, r); paperBurst(x, y); };
 
 function attachStage(st, data) {
   clearStageObjects();
@@ -62,6 +67,10 @@ function attachStage(st, data) {
   stage.fx.shatter = (x, y, look) => { origShatter2(x, y, look); FX.shake = Math.max(FX.shake, 0.7); burst(x, y, SHARD[look] || SHARD.sake); };
   const origMeteor2 = stage.fx.meteor.bind(stage.fx);
   stage.fx.meteor = (x, y, r) => { origMeteor2(x, y, r); meteorBoom(x, y, r); };
+  const origShock2 = stage.fx.shock.bind(stage.fx);
+  stage.fx.shock = (x, y, r) => { origShock2(x, y, r); shockBoom(x, y, r); };
+  const origPaper2 = stage.fx.paper.bind(stage.fx);
+  stage.fx.paper = (x, y, r) => { origPaper2(x, y, r); paperBurst(x, y); };
   stage.player.ranged = (game.difficulty === 'easy');   // 2D版の applyDifficulty と同じ
   buildScenery(data);
   camPos.set(wx(stage.player.x), CAM.height, wz(stage.player.y) + CAM.dist);
@@ -506,6 +515,7 @@ function loop(now) {
   renderer.render(scene, camera);
   syncWeapons();
   syncProjectiles();
+  syncWarnings();
   updateParts(frame);
   syncLabels();
   syncDoorPlate();

@@ -1549,6 +1549,8 @@ function clearStageObjects() {
   meshes.clear();
   for (const [, r] of projMeshes) { scene.remove(r.group); if (r.mark) scene.remove(r.mark.g); }
   projMeshes.clear();
+  for (const [, r] of warnMeshes) { scene.remove(r.g); r.fill.material.dispose(); r.edgeMat.dispose(); }
+  warnMeshes.clear();
   for (const [, r] of weapons) { scene.remove(r.group); scene.remove(r.flash); }
   weapons.clear();
   for (const p of parts) { p.m.visible = false; partPool.push(p.m); }
@@ -2139,6 +2141,20 @@ const THROWN = {
     }
     return g;
   },
+  // 必殺技の足元の衝撃。本体は見せない（床の輪だけで知らせる）
+  shock: () => new THREE.Group(),
+  // 技師長の必殺技で降ってくる紙。赤ペンの書き込みと赤丸（形と材質は使い回す）
+  redpen: () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(REDPEN.sheet, REDPEN.white));
+    for (const [w, x, z] of REDPEN.lines) {
+      const l = new THREE.Mesh(REDPEN.line, REDPEN.red);
+      l.scale.x = w; l.position.set(x, 0.26, z); g.add(l);
+    }
+    const ring = new THREE.Mesh(REDPEN.circle, REDPEN.red);
+    ring.rotation.x = Math.PI / 2; ring.position.set(2.0, 0.26, 2.6); g.add(ring);
+    return g;
+  },
   pc: () => {
     const g = new THREE.Group();
     const base = new THREE.Mesh(new THREE.BoxGeometry(11, 0.9, 8), mat('#c9ced4'));
@@ -2179,9 +2195,18 @@ const THROWN = {
   },
 };
 const LOOKS = ['paper', 'mug', 'keyboard'];
+// 赤ペンの紙の形と材質（上の THROWN.redpen が使う）
+const REDPEN = {
+  sheet: new THREE.BoxGeometry(6.4, 0.4, 8.2),
+  line: new THREE.BoxGeometry(1, 0.12, 0.45),
+  circle: new THREE.TorusGeometry(1.1, 0.22, 6, 14),
+  white: mat('#f4f6f8'), red: mat('#d0282a'),
+  lines: [[4.6, -0.2, -2.2], [3.4, -0.8, 0.0], [4.0, -0.5, 2.0]],
+};
 // 投げ物ごとの回り方。倒れずに回る軸と速さで、重さの違いを出す。
 const SPIN = {
   meteor:   { z: 0.25, x: 0 },    // 岩塊なのでゆっくり回る
+  redpen:   { z: 0.5, x: 0.9 },   // 紙なので、ひらひら舞いながら落ちる
   sake:     { z: 1.5, x: 0 },     // 端から端へくるくる回る
   pipe:     { z: 2.6, x: 0 },     // 一番速く回る
   dumbbell: { z: 0.9, x: 0 },     // 重いのでゆっくり
@@ -2224,7 +2249,9 @@ function syncProjectiles() {
     }
     if (r.mark) {
       const rr = pr.aoe * S;
-      const prog = 1 - Math.min(1, Math.max(0, pr.z) / 240);     // 0=出たばかり 1=着地直前
+      const prog = pr.kind === 'shock'                            // 0=出たばかり 1=着地直前
+        ? (pr.delay0 > 0 ? 1 - Math.max(0, pr.delay) / pr.delay0 : 1)   // 足元の衝撃は溜めの残りで
+        : 1 - Math.min(1, Math.max(0, pr.z) / 240);
       r.mark.g.position.set(wx(pr.mx), 0.2, wz(pr.my));
       r.mark.g.scale.set(rr, 1, rr / 1.6);                        // 奥行きを潰す
       r.mark.fill.material.opacity = 0.10 + 0.26 * prog;
@@ -2274,6 +2301,66 @@ function meteorBoom(gx, gy, radius = 42) {
   }
 }
 
+// 必殺技の足元の衝撃: 床に輪が広がって消える。土ぼこりを散らし、強めに揺らす
+const shockGeo = new THREE.RingGeometry(0.6, 1.0, 40); shockGeo.rotateX(-Math.PI / 2);
+function shockBoom(gx, gy, radius = 52) {
+  FX.hitstop = Math.max(FX.hitstop, 0.04);
+  FX.shake = Math.max(FX.shake, 2.4);
+  burst(gx, gy, '#fff4d8'); burst(gx, gy, '#ff7f0e');
+  const R = radius * S * 1.1;
+  for (const [col, k, op] of [['#fff4d8', 1.0, 0.85], ['#ff9a3a', 0.72, 0.7]]) {
+    const m = new THREE.Mesh(shockGeo, new THREE.MeshBasicMaterial({
+      color: hex(col), transparent: true, opacity: op,
+      depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.position.set(wx(gx), 0.35, wz(gy));
+    m.renderOrder = 5;
+    scene.add(m);
+    domes.push({ m, r: R * k, t: 0, life: 0.42 + k * 0.12, op, flat: true });
+  }
+}
+// 降ってきた紙が床に落ちた
+function paperBurst(gx, gy) {
+  FX.shake = Math.max(FX.shake, 0.8);
+  burst(gx, gy, '#f4f6f8'); burst(gx, gy, '#d0282a');
+}
+
+// 床の警告（必殺技の突進の筋）。走る道を赤い帯で先に見せる。走り出しが近いほど濃い
+const laneGeo = new THREE.PlaneGeometry(1, 1); laneGeo.rotateX(-Math.PI / 2);
+const warnMeshes = new Map();
+function syncWarnings() {
+  const seen = new Set();
+  for (const w of (stage.warnings || [])) {
+    if (w.dead) continue;
+    seen.add(w);
+    let r = warnMeshes.get(w);
+    if (!r) {
+      const fill = new THREE.Mesh(laneGeo, new THREE.MeshBasicMaterial({
+        color: hex('#ff2a0e'), transparent: true, opacity: 0.2, depthWrite: false, fog: false }));
+      const edgeMat = new THREE.MeshBasicMaterial({
+        color: hex('#ff7a3a'), transparent: true, opacity: 0.8, depthWrite: false, fog: false });
+      const ea = new THREE.Mesh(laneGeo, edgeMat), eb = new THREE.Mesh(laneGeo, edgeMat);
+      fill.renderOrder = 2; ea.renderOrder = eb.renderOrder = 3;
+      const g = new THREE.Group(); g.add(fill); g.add(ea); g.add(eb); g.position.y = 0.22;
+      scene.add(g);
+      r = { g, fill, ea, eb, edgeMat };
+      warnMeshes.set(w, r);
+    }
+    const x0 = wx(Math.min(w.x0, w.x1)), x1 = wx(Math.max(w.x0, w.x1));
+    const z0 = wz(w.y - w.depth), z1 = wz(w.y + w.depth);
+    const k = Math.min(1, w.t / Math.max(0.01, w.life));
+    const cx = (x0 + x1) / 2, len = Math.max(0.01, x1 - x0);
+    r.fill.position.set(cx, 0, (z0 + z1) / 2); r.fill.scale.set(len, 1, z1 - z0);
+    r.ea.position.set(cx, 0.01, z0); r.ea.scale.set(len, 1, 0.6);
+    r.eb.position.set(cx, 0.01, z1); r.eb.scale.set(len, 1, 0.6);
+    r.fill.material.opacity = 0.24 + 0.3 * k;     // 明るい床（食堂の板張りなど）でも見えるよう濃いめに
+    r.edgeMat.opacity = 0.65 + 0.35 * k;
+  }
+  for (const [w, r] of warnMeshes) {
+    if (seen.has(w)) continue;
+    scene.remove(r.g); r.fill.material.dispose(); r.edgeMat.dispose(); warnMeshes.delete(w);
+  }
+}
+
 function updateDomes(dt) {
   for (let i = domes.length - 1; i >= 0; i--) {
     const d = domes[i];
@@ -2281,13 +2368,14 @@ function updateDomes(dt) {
     const q = d.t / d.life;
     if (q >= 1) { scene.remove(d.m); d.m.material.dispose(); domes.splice(i, 1); continue; }
     const g = d.r * (0.35 + 0.65 * Math.sqrt(q));     // 最初に速く広がって止まる
-    d.m.scale.set(g, g * 0.95, g * 0.78);             // 丸く盛り上がった火球
+    if (d.flat) d.m.scale.set(g, 1, g / 1.6);          // 床に広がる衝撃の輪（当たりと同じく奥行きを潰す）
+    else d.m.scale.set(g, g * 0.95, g * 0.78);        // 丸く盛り上がった火球
     d.m.material.opacity = d.op * (1 - q * q);
   }
 }
 
 // 砕けた投げ物の破片の色（2D側の DEBRIS と揃える）
-const SHARD = { sake: '#c98a52', pipe: '#b4bcc3', dumbbell: '#6b7076', pc: '#7fd4ff' };
+const SHARD = { sake: '#c98a52', pipe: '#b4bcc3', dumbbell: '#6b7076', pc: '#7fd4ff', paper: '#f4f6f8' };
 
 // 打撃の粒子
 const partGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
@@ -2584,7 +2672,7 @@ export {
   // 場面を書くための道具（続編の scenes2.js が使う）
   hex, zones, setLighting, ceilingSlab, chair, fireRow, hemi, sun, fill, ROOM,
   boxBatch, addScenery,
-  addFloat, burst, meteorBoom,
+  addFloat, burst, meteorBoom, shockBoom, paperBurst, syncWarnings,
   syncEntities, syncWeapons, syncProjectiles, syncLabels, syncDoorPlate,
   updateCamera, updateFlames, updateParts, updateDomes, updateFloats,
 };

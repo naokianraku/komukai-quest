@@ -27,6 +27,7 @@ export class Stage {
     this.player = new Player(60, FLOOR_MID);
     this.entities = [this.player];
     this.projectiles = [];
+    this.warnings = [];   // 床に出す警告（必殺技の突進の筋）。見た目だけで当たりは無い
     this.fx = new Fx();
     this.camera = { x: 0 };
 
@@ -123,13 +124,75 @@ export class Stage {
     // 画面の右奥から左手前へ、全部そろった向きで降らせる（流星群らしく見せる）。
     const vx = -(150 + (this.projectiles.length % 3) * 26);
     const p = new Projectile(x - vx * fall, y, vx, 0, team, {
-      kind: 'meteor', look: 'meteor', dmg: m.dmg, kb: m.kb || 190, w: 10,
+      // look / impact は必殺技の「降ってくる紙」で差し替える（未指定は彗星のまま）
+      kind: 'meteor', look: m.look || 'meteor', impact: m.impact || null, dmg: m.dmg, kb: m.kb || 190, w: 10,
       vz: 0, gz: 2 * Z0 / (fall * fall), floorZ: 0, aoe: m.radius,
       mx: x, my: y, delay, life: delay + fall + 1.5,
       ff: !!m.ff, owner: owner ? owner.id : null,
     });
     p.z = Z0;
     this.projectiles.push(p);
+  }
+
+  // ===== 必殺技（ボス・中ボスの大技）の出しもの。Char.startSpecial / stepSpecial から呼ぶ =====
+  warn(w) { this.warnings.push(w); return w; }
+
+  // 足元の衝撃（判子・足踏み・一喝）。溜めの間は輪を出し、溜め終わりにその輪の中へ当てる
+  spawnShock(owner, s, delay) {
+    this.projectiles.push(new Projectile(owner.x, owner.y, 0, 0, owner.team, {
+      kind: 'shock', look: 'shock', impact: 'shock', dmg: s.dmg ?? 2, kb: s.kb ?? 200, w: 10,
+      vz: 0, gz: 1, floorZ: 0, aoe: s.radius ?? 52, mx: owner.x, my: owner.y,
+      delay, life: delay + 0.5, owner: owner.id,
+    }));
+  }
+
+  // 降ってくる紙（技師長の赤ペン）。魔王のメテオと同じく、落ちる場所に輪を出してから順に落とす。
+  // 1枚目は足元へ。ほかは周りに散らす（画面の中に収める）
+  spawnRain(owner, target, s) {
+    const n = s.n ?? 6;
+    const lo = this.camera.x + 26, hi = this.camera.x + VIEW_W - 26;
+    const half = (PLAY.bottom - PLAY.top) / 2, mid = (PLAY.top + PLAY.bottom) / 2;
+    const m = { dmg: s.dmg ?? 1, kb: s.kb ?? 120, radius: s.radius ?? 28, fall: s.fall ?? 1.0, look: 'redpen', impact: 'paper' };
+    for (let i = 0; i < n; i++) {
+      const raw = i === 0 ? target.x : target.x + ((i % 2) ? 1 : -1) * (34 + ((i * 47) % 96));
+      const tx = clamp(raw, Math.min(lo, hi), Math.max(lo, hi));
+      const ty = i === 0 ? target.y : mid + (((i * 71) % 100) / 100 - 0.5) * 2 * half * 0.85;
+      this.spawnMeteor(tx, clamp(ty, PLAY.top, PLAY.bottom), owner.team, m, i * (s.stagger ?? 0.18), owner);
+    }
+  }
+
+  // 扇に投げる（技術部長の資料・N村の一升瓶）。狙った相手を真ん中に、奥行きへ散らす
+  spawnFan(owner, target, s) {
+    const n = s.n ?? 5;
+    const dirx = Math.sign((target && target.alive ? target.x : owner.x + owner.facing) - owner.x) || owner.facing || 1;
+    const aim = target && target.alive ? clamp((target.y - owner.y) / 0.9, -40, 40) : 0;
+    const spread = s.spread ?? 30;
+    for (let i = 0; i < n; i++) {
+      const off = (i - (n - 1) / 2) * spread;
+      if (s.look === 'sake') {
+        const t = THROWS.sake;
+        this.projectiles.push(new Projectile(owner.x + dirx * 9, owner.y, dirx * t.vx, aim + off, owner.team,
+          { kind: 'thrown', look: 'sake', dmg: t.dmg, kb: t.kb, w: t.w, vz: t.vz, gz: t.gz, clampY: true }));
+      } else {
+        this.projectiles.push(new Projectile(owner.x + dirx * 8, owner.y, dirx * (s.speed ?? 165), aim * 0.6 + off, owner.team,
+          { kind: 'paper', look: 'paper', dmg: s.dmg ?? 1, kb: s.kb ?? 80, w: 5, clampY: true, life: 2.4 }));
+      }
+    }
+    Audio.sfxSwing();
+  }
+
+  // 呼び集める（工場長）。画面の右端・左端から交互に部下が駆けつける
+  summonUnits(owner, s) {
+    const types = s.types || ['buka', 'senpai', 'buka'];
+    const L = this.camera.x + 16, R = this.camera.x + VIEW_W - 16;
+    const band = PLAY.bottom - PLAY.top - 12;
+    types.forEach((type, i) => {
+      const x = i % 2 === 0 ? R : L;
+      const y = PLAY.top + 6 + Math.round(band * ((i * 0.618 + 0.21) % 1));
+      this.entities.push(new Char(x, y, defFor(type)));
+      this.fx.hit(x, y - 10, '#ffd24a');
+    });
+    Audio.sfxClang();
   }
 
   spawnWave(w) {
@@ -304,6 +367,8 @@ export class Stage {
     this.time += dt;
     for (const e of this.entities) if (e.alive) e.update(dt, this);
     for (const p of this.projectiles) if (p.alive) p.update(dt);
+    for (const w of this.warnings) w.t += dt;
+    this.warnings = this.warnings.filter((w) => !w.dead && w.t < w.life);
     resolveMelee(this.entities, this.fx);
     resolveProjectiles(this.projectiles, this.entities, this.fx);
     this.fx.update(dt);
@@ -556,6 +621,20 @@ export class Stage {
   render(ctx) {
     this.drawBackground(ctx);
     this.drawDoor(ctx);
+    // 床の警告（必殺技の突進の筋）。人より先に、床に描く。走り出しが近いほど濃い
+    for (const w of this.warnings) {
+      const x0 = Math.min(w.x0, w.x1) - this.camera.x, x1 = Math.max(w.x0, w.x1) - this.camera.x;
+      const k = Math.min(1, w.t / Math.max(0.01, w.life));
+      ctx.save();
+      ctx.globalAlpha = 0.16 + 0.26 * k;
+      ctx.fillStyle = '#ff2a0e';
+      ctx.fillRect(Math.round(x0), Math.round(w.y - w.depth), Math.round(x1 - x0), Math.round(w.depth * 2));
+      ctx.globalAlpha = 0.45 + 0.45 * k;
+      ctx.fillStyle = '#ff5a2a';
+      ctx.fillRect(Math.round(x0), Math.round(w.y - w.depth), Math.round(x1 - x0), 1);
+      ctx.fillRect(Math.round(x0), Math.round(w.y + w.depth) - 1, Math.round(x1 - x0), 1);
+      ctx.restore();
+    }
     // 足元yで奥行きソート（下にいる者が手前）
     const order = this.entities.filter((e) => e.alive).sort((a, b) => a.y - b.y);
     for (const e of order) e.draw(ctx, this.camera.x);

@@ -285,6 +285,12 @@ export class Char extends Entity {
     // メテオ（魔王Y下の大技）。def に無ければ一切撃たない＝他のキャラの挙動は変わらない。
     this.meteorDef = def.meteor || null;
     this.meteorT = this.meteorDef ? this.meteorDef.first ?? 4.5 : 0;
+    // 必殺技（ボス・中ボスの大技）。def.special に1つ、または並べて順番に使う。
+    // def に無ければ一切出さない（雑魚と続編の種別の挙動は変わらない）。
+    this.specialDefs = def.special ? [].concat(def.special) : null;
+    this.specialN = 0;
+    this.specialT = this.specialDefs ? (this.specialDefs[0].first ?? 3.0) : 0;
+    this.sp = null;            // いま出している必殺技の途中経過
     // 倒されると跡を継ぐ者（管理担当K → 息子）。def に無ければ誰も出てこない。
     this.heir = def.heir || null;
     // 奥の手のK田。両腕を回しながら突っ切るだけの専用の動き。def に無ければ一切関係ない。
@@ -377,6 +383,15 @@ export class Char extends Entity {
       if (this.downT <= 0) this.alive = false;
       return;
     }
+    // 必殺技の最中。殴られても怯まず、普段の動き（詰める・殴る・投げる）はしない
+    if (this.sp) {
+      this.stepSpecial(dt, stage);
+      this.integrate(dt);
+      return;
+    }
+    // 必殺技の間隔は、殴り合いの最中も数える（手が空いた瞬間しか数えないと、殴り続ける相手はまず出さない）。
+    // 体力が半分を切ると早く回ってくる（追い詰めるほど荒れる）
+    if (this.specialDefs && this.team === 'enemy') this.specialT -= dt * (this.hp <= this.maxhp * 0.5 ? 1.6 : 1);
     this.advanceFSM(dt);
     if (this.team === 'ally' && !this.betrayed && !this.noFumble) this.tryFumble(dt, stage);
     if (!this.isBoss && this.hitstun <= 0) this.separate(dt, stage); // 間隔保持（固まり防止）
@@ -420,6 +435,16 @@ export class Char extends Entity {
     if (this.meteorDef) {
       this.meteorT -= dt;
       if (this.meteorT <= 0 && target.alive) { this.startMeteor(stage, target); this.integrate(dt); return; }
+    }
+
+    // 必殺技（間隔は上で数えている）。手が空いたところで出す
+    if (this.specialDefs && this.team === 'enemy') {
+      if (this.specialT <= 0) {
+        const s = this.specialDefs[this.specialN % this.specialDefs.length];
+        const ok = this.specialReady(s, stage, dx, dy);
+        if (ok) { this.startSpecial(s, stage, target); this.integrate(dt); return; }
+        if (ok === null) { this.specialN++; this.specialT = 0.8; }   // 今は出せない技（呼べる人数がいっぱい等）は飛ばす
+      }
     }
 
     // 飛び道具（スタッフ=書類 / 携行ミサイル兵=誘導弾）
@@ -568,6 +593,115 @@ export class Char extends Entity {
       const ty = i === 0 ? target.y : mid + (((i * 71) % 100) / 100 - 0.5) * 2 * half * 0.9;
       stage.spawnMeteor(tx, clamp(ty, PLAY.top, PLAY.bottom), this.team, m, i * 0.24, this);
     }
+  }
+
+  // ===== 必殺技 =====
+  // どれも「溜め（wind）」で予兆を見せてから出す。溜めの間は体を反らせ（3D版は画面がうっすら赤く揺れる）、
+  // 当たる場所は床に先に出す（衝撃・降ってくる紙は赤い輪、突進は走る筋）。見てから動けば必ずかわせる。
+  //   slam   … 足元の衝撃。溜めの間、自分の周りに輪を出し、溜め終わりにその輪の中へ当てる
+  //   fan    … 扇に投げる（資料・一升瓶）。狙った相手を真ん中に奥行きへ散らす
+  //   dash   … 突進。走る筋を床に出してから一直線に走る。count 回つづける（2回目からは奥行きも寄せてくる）
+  //   rain   … 降ってくる紙。落ちる場所に輪を出してから順に落とす（魔王のメテオと同じ作り）
+  //   summon … 呼び集める。画面の両端から部下が駆けつける（もう大勢いるときは出さず次の技へ）
+  // 返り値: true=出せる / false=まだ（間合いを詰めて待つ）/ null=今は出せないので飛ばす
+  specialReady(s, stage, dx, dy) {
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    switch (s.kind) {
+      case 'slam':   return ax <= (s.radius ?? 52) * 1.5 && ay <= (s.radius ?? 52);
+      case 'fan':    return ax <= (s.range ?? 260) && ay <= PLAY.depthTol * 3;
+      case 'dash':   return ax <= (s.dist ?? 220) + 40 && ay <= PLAY.depthTol * 1.4;
+      case 'rain':   return true;
+      case 'summon': return stage.aliveEnemies() < (s.max ?? 3) ? true : null;
+      default:       return null;
+    }
+  }
+
+  startSpecial(s, stage, target) {
+    this.specialN++;
+    this.specialT = (s.every ?? 5) + (this.id % 3) * 0.3;
+    const wind = s.wind ?? 0.8;
+    const dir = sign(target.x - this.x) || this.facing || 1;
+    this.sp = { s, t: 0, n: 0, phase: 'wind', wind, dir, dist: 0, warn: null, target };
+    this.spKeepKb = this.noKb; this.noKb = true;      // 大技の最中は怯まない
+    this.state = 'cast'; this.moving = false; this.attack = null; this.attackActive = false; this.kbx = 0;
+    if (this.faceLock == null) this.facing = dir;
+    if (this.tauntCat) this.setTaunt(wind + 0.4);
+    if (s.kind === 'slam') stage.spawnShock(this, s, wind);
+    else if (s.kind === 'rain') stage.spawnRain(this, target, s);
+    else if (s.kind === 'dash') this.sp.warn = stage.warn(this.laneOf(s, wind));
+  }
+
+  // 突進の筋（床に出す警告）。自分の今の位置から、向いている方へ走る距離ぶん
+  laneOf(s, life) {
+    const sp = this.sp;
+    return { kind: 'lane', x0: this.x, x1: this.x + sp.dir * (s.dist ?? 220), y: this.y, depth: PLAY.depthTol, t: 0, life };
+  }
+
+  stepSpecial(dt, stage) {
+    const sp = this.sp, s = sp.s;
+    sp.t += dt;
+    this.hitstun = 0; this.kbx = 0;
+    if (sp.phase === 'wind') {
+      this.state = 'cast'; this.moving = false;
+      if (s.kind === 'dash') {
+        // 2回目からは、溜めの間に相手の奥行きへ寄せて向き直す（筋もついてくる）
+        const t = sp.target;
+        if (sp.n > 0 && t && t.alive) {
+          const dy = t.y - this.y;
+          this.y += sign(dy) * Math.min(Math.abs(dy), (s.track ?? 80) * dt);
+          sp.dir = sign(t.x - this.x) || sp.dir;
+        }
+        if (this.faceLock == null) this.facing = sp.dir;
+        if (sp.warn) Object.assign(sp.warn, { x0: this.x, x1: this.x + sp.dir * (s.dist ?? 220), y: this.y });
+      }
+      // 扇に投げる技は、溜めの間に一歩下がって間合いを取る（至近で投げると束のまま当たって扇に見えない）
+      if (s.backstep) {
+        const lo = stage.camera.x + 14, hi = stage.camera.x + VIEW_W - 14;
+        this.x = clamp(this.x - sp.dir * s.backstep * dt, lo, hi);
+        this.moving = true;
+      }
+      if (sp.t < sp.wind) return;
+      if (s.kind === 'fan') { stage.spawnFan(this, sp.target, s); this.endSpecial(); return; }
+      if (s.kind === 'summon') { stage.summonUnits(this, s); this.endSpecial(); return; }
+      if (s.kind === 'dash') {
+        sp.phase = 'run'; sp.t = 0; sp.dist = 0;
+        if (sp.warn) { sp.warn.dead = true; sp.warn = null; }
+        this.state = 'attack';
+        this.attack = { reach: this.atkReach * 0.8, back: this.w * 0.5, depth: PLAY.depthTol,
+          dmg: s.dmg ?? 2, kb: s.kb ?? 180, hitSet: new Set() };
+        Audio.sfxSwing();
+        return;
+      }
+      this.endSpecial();   // slam / rain は出した輪が時間で落ちる。溜めが終われば普段に戻る
+      return;
+    }
+    // 突進の最中: 一直線に走る。画面の端に着くか、走る距離を走りきったら止まる
+    this.state = 'attack'; this.attackActive = true; this.moving = true;
+    if (this.faceLock == null) this.facing = sp.dir;
+    const v = s.speed ?? 320;
+    const lo = stage.camera.x + 14, hi = stage.camera.x + VIEW_W - 14;
+    this.x += sp.dir * v * dt;
+    sp.dist += v * dt;
+    const wall = this.x <= lo || this.x >= hi;
+    this.x = clamp(this.x, lo, hi);
+    if (sp.dist < (s.dist ?? 220) && !wall) return;
+    sp.n++;
+    if (sp.n >= (s.count ?? 1)) { this.endSpecial(); return; }
+    // 続けてもう一度。相手のいる方へ向き直して、短い溜めから
+    const t = sp.target;
+    sp.dir = (t && t.alive) ? (sign(t.x - this.x) || -sp.dir) : -sp.dir;
+    sp.phase = 'wind'; sp.t = 0; sp.wind = s.windNext ?? 0.45;
+    this.attack = null; this.attackActive = false; this.moving = false; this.state = 'cast';
+    sp.warn = stage.warn(this.laneOf(s, sp.wind));
+  }
+
+  endSpecial() {
+    const s = this.sp.s;
+    if (this.sp.warn) this.sp.warn.dead = true;
+    this.sp = null;
+    this.noKb = this.spKeepKb;
+    this.attack = null; this.moving = false;
+    this.state = 'recover'; this.stateT = s.recover ?? 0.7;
   }
 
   // 味方のうっかり攻撃: 時々、後ろから意図しない一撃を入れてくる（言い訳つき）
@@ -748,6 +882,10 @@ export class Projectile {
     this.aoe = opts.aoe || 0;
     // 斜めに降るので、いま居る場所と落ちる場所は別。印と範囲判定はこちらを使う。
     this.mx = opts.mx ?? x;
+    // 範囲の当たりの出し方（combat.js の fx 名）。未指定は彗星（メテオ）。必殺技の衝撃・降る紙で使い分ける
+    this.impact = opts.impact || null;
+    this.delay0 = this.delay;             // 溜めの長さ（足元の衝撃の輪が、あと何秒かを濃さで見せる）
+    this.clampY = !!opts.clampY;          // 扇に投げた物は床の帯から出さない（奥行きへ散らすので）
     this.my = opts.my ?? y;
     // ff=true: 敵味方の区別なく当たる（魔王のメテオ）。owner は降らせた本人＝自分だけは巻き込まない。
     this.ff = !!opts.ff;
@@ -775,6 +913,7 @@ export class Projectile {
     }
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+    if (this.clampY) this.y = clamp(this.y, PLAY.top, PLAY.bottom);
     if (this.gz) {
       // z はキャラの当たり判定と同じ高さ尺度。手の高さ(0)から投げ上げ、床(-HAND_Z)で止める。
       this.z += this.vz * dt;
@@ -802,6 +941,19 @@ export class Projectile {
       ctx.fillRect(Math.round(sx - 5), Math.round(sy), 10, 4);
       ctx.fillStyle = '#c73333'; // 弾頭
       ctx.fillRect(Math.round(sx + dir * 4), Math.round(sy), 3, 4);
+    } else if (this.kind === 'shock') {
+      // 足元の衝撃（必殺技）。溜めの間、輪だけを出す。溜め終わりが近いほど濃く、少し縮む
+      const mx = Math.round(this.mx - camX), my = Math.round(this.my);
+      const prog = this.delay0 > 0 ? 1 - Math.max(0, this.delay) / this.delay0 : 1;
+      const rr = this.aoe * (1 - 0.12 * prog);
+      ctx.save();
+      ctx.globalAlpha = 0.35 + 0.55 * prog;
+      ctx.strokeStyle = '#ff5a2a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(mx, my, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.12 + 0.22 * prog;
+      ctx.fillStyle = '#ff2a0e';
+      ctx.beginPath(); ctx.ellipse(mx, my, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     } else if (this.kind === 'meteor') {
       // 印は「落ちる場所」に出す。彗星は斜めに飛んでくるので現在地とは別。
       const mx = Math.round(this.mx - camX), my = Math.round(this.my);
@@ -815,7 +967,12 @@ export class Projectile {
       ctx.fillStyle = '#ff2a0e';
       ctx.beginPath(); ctx.ellipse(mx, my, rr, rr * 0.4, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
-      if (this.z > 0) {                       // 本体と尾（空にいる間だけ描く）
+      if (this.z > 0 && this.look === 'redpen') {   // 降ってくる紙（技師長の赤ペン）
+        const bx = Math.round(sx), by = Math.round(this.y - this.z);
+        ctx.fillStyle = '#f4f6f8'; ctx.fillRect(bx - 4, by - 3, 8, 6);
+        ctx.fillStyle = '#d0282a'; ctx.fillRect(bx - 3, by - 2, 5, 1); ctx.fillRect(bx - 3, by, 3, 1);
+        ctx.fillStyle = '#d0282a'; ctx.fillRect(bx + 2, by + 1, 1, 1);
+      } else if (this.z > 0) {                // 本体と尾（空にいる間だけ描く）
         const bx = Math.round(sx), by = Math.round(this.y - this.z);
         // 尾は進行方向の逆へ。斜めに来るので横にもずらす。
         const dirx = this.vx >= 0 ? -1 : 1;
