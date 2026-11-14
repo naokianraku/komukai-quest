@@ -57,7 +57,7 @@ cd ~/Developer/komukai && git worktree remove --force $WT
 
 | もの | 値 |
 |---|---|
-| 募集ページ | **https://anraku-tech.com/komukai/android**（noindex。URL を知っている人に配る）。元は `~/Developer/website-anrakutech/public/komukai/android.html`（git 管理外。`npm run deploy` で公開）。冒頭の「準備中」の帯は、審査が通ったら消す |
+| 募集ページ | **https://anraku-tech.com/komukai/android**（noindex。URL を知っている人に配る）。元は `~/Developer/website-anrakutech/public/komukai/android.html`（git 管理外。`npm run deploy` で公開）。審査中に出していた冒頭の「準備中」の帯は、通ったので外した（2026-11-15） |
 | Google グループ | 「小向クエスト テスター」 komukai-testers@googlegroups.com（https://groups.google.com/g/komukai-testers）。オーナーは開発者用の anraku.tech@gmail.com（個人のアドレスは出さない）。誰でも参加可・投稿とメンバー一覧は管理者だけ（MaxRecovery のグループと同じ設定） |
 | 参加用リンク（クローズド） | https://play.google.com/apps/testing/com.anraku.komukai |
 | トラック | クローズド テスト - Alpha。国は日本だけ。テスターはこのグループ |
@@ -65,7 +65,7 @@ cd ~/Developer/komukai && git worktree remove --force $WT
 
 | 版 | 中身 | 上げた日・方法 | 状態 |
 |---|---|---|---|
-| versionCode 1（1.1.0） | iPhone 版 1.1.0 と同じ（続編は「開発中」） | 2026-11-15 06:11・API（play.py）で内部テストへ。同じ版をライブラリから Alpha へ | 2026-11-15 07:05 に審査へ送った（ストアの掲載情報・申告とまとめて 13 件。管理対象の公開はオフ＝通れば自動で公開） |
+| versionCode 1（1.1.0） | iPhone 版 1.1.0 と同じ（続編は「開発中」） | 2026-11-15 06:11・API（play.py）で内部テストへ。同じ版をライブラリから Alpha へ | 2026-11-15 07:05 に審査へ送った（ストアの掲載情報・申告とまとめて 13 件。管理対象の公開はオフ）。**数時間で通って同日に公開**。テスターにグループ、フィードバック先に support@anraku-tech.com を入れた 2 件は、グループができたあとに別に審査へ送り、15 分ほどで公開。これで Alpha は「有効」 |
 
 - テスターはグループのメンバーなので、Play Console でメールアドレスを集めたり登録したりしない（本人がアドレスを預からない）
 - 審査が通るまで、テスターに見えるアプリ名は「com.anraku.komukai (unreviewed)」
