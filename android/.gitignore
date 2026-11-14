@@ -1,0 +1,14 @@
+/.gradle/
+/.kotlin/
+/build/
+/app/build/
+/local.properties
+/.idea/
+*.iml
+/captures/
+# Play に上げる AAB の置き場（ビルドのたびに作る）
+/dist/
+# 鍵はリポジトリに入れない（本物は ~/keystores/ にある）
+*.jks
+*.keystore
+keystore.properties

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 起動画面の地の色は iPhone 版の LaunchBackground（#15171A）と同じ -->
+    <color name="launch_bg">#15171A</color>
+    <!-- アイコンの外側の色（元の絵の縁の平均。マスクの外なので、ふだんは見えない） -->
+    <color name="ic_launcher_bg">#2C1409</color>
+
+    <style name="Theme.Komukai" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/launch_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

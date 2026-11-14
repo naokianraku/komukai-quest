@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ネットの権限（INTERNET）は付けない。ゲームは丸ごと assets に入っていて、
+  外へは一切つながない（iPhone 版と同じく機内でも動く）。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:appCategory="game"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.Komukai">
+
+        <!--
+          横向きだけ（16:9 の横画面のゲーム。iPhone 版と同じ）。
+          configChanges: 折りたたみの開閉・画面サイズや文字の大きさの変更で Activity を
+          作り直させない。作り直すと WebView が読み込み直しになり、遊んでいる途中の状態が消える。
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|touchscreen|uiMode|density|fontScale|fontWeightAdjustment|layoutDirection|locale|colorMode|grammaticalGender"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            android:windowSoftInputMode="adjustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
