@@ -170,6 +170,7 @@ export function registerPalettes(extra) { Object.assign(CHAR_PALETTES, extra); }
 export const SHAPE_KEYS = new Set([
   'map', 'shirt',
   'outfit', 'tie', 'roll', 'skirt', 'collar', 'vest3', 'shoulder',   // 服の型と、その細部
+  'zip', 'knit', 'blazer',                                            // ハーフジップ・ニットのベスト・替え上着
   'headwear', 'pose', 'back', 'props', 'eyes', 'aura',               // かぶりもの・姿勢・後ろ姿・小物・光
   'age', 'keepSkinHair', 'faceAway', 'weapon', 'bodyW', 'bodyH',     // 個体差・向き・得物・体格
 ]);

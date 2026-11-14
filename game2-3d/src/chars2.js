@@ -22,10 +22,10 @@ import { registerPalettes } from '../../game/src/sprites.js';
 // など）は3Dだけが読む。語彙の意味は game/src/sprites.js の SHAPE_KEYS と game/src/voxel.js を参照。
 // 顔（髪型・眼鏡・体格）の固定と持ち物の形は、このファイルの下の FACES2・PROPS2。
 //
-// 他社の人は自社の作業着（空色に紺のヨーク）を着ない。工場の会社（M菱重工・GR社）は社ごとに
-// 作業着の型と色を1つに決め、同じ社の役は帽子・着方・持ち物で分ける。L3社・LM社の人は
-// 作業着を着ない（ワイシャツ・上着・カーディガン）。社の色は物語のテーマ色から取る。
-// 社章・頭文字に見える記号は描かない。
+// 他社の人は自社の作業着（空色に紺のヨーク）を着ない。国内の元請け（M菱重工）は作業着の型と色を
+// 1つに決め、役は帽子・着方・持ち物で分ける。海外の会社（GR社・L3社・LM社）の人は作業着もスーツも
+// 着ない（普通のシャツ・セーター・カーディガン・替え上着＝ビジネスカジュアル）。商社（代理店）だけが
+// 高そうなスーツ（本人の指摘、2026-11-14）。社の色は物語のテーマ色から取る。社章・頭文字に見える記号は描かない。
 export const PALETTES2_3D = {
   // 主人公: 第1章は白（新人）→ 配属後は緑（＝1のally色）→ エピローグで橙（＝1のplayer色）
   // 3Dでも h はヘルメットの色（2D と同じ意味）。自社の作業着に保護帽。
@@ -65,34 +65,38 @@ export const PALETTES2_3D = {
   // プロマネは銀鼠の三つ揃い（機体側の白〜銀）。肩を張って少し背を高く。振り向くまでは背中を向けている（bossFaceLock）
   m_pm:     { map: 'suit',   b: '#5c6878', p: '#4a5464', t: '#c8ccd2', h: '#1e1a14', v: '#46505e', outfit: 'suit', vest3: true, shoulder: 1, bodyH: 1.04, faceAway: 'locked', weapon: 'binder' },
 
-  // 第3章 GR社 — 古い工場。褪せた黄土のつなぎ（上下同じ布）。
-  // 調達は書類の束、技術は上を脱いで腰で結び工具袋、製造は帽子と革手袋
-  gr_chotatsu: { map: 'worker', h: '#9a8048', b: '#b09a64', a: '#7a6a44', p: '#b09a64', outfit: 'coverall', props: ['papers'], weapon: 'binder' },
-  gr_gijutsu:  { map: 'worker', h: '#8a7240', b: '#b09a64', a: '#7a6a44', p: '#b09a64', w: '#d6d2c6', outfit: 'coverall', roll: true, props: ['toolpouch'], weapon: 'wrench' },
-  gr_seizo:    { map: 'cap',    h: '#6b5a2c', b: '#b09a64', a: '#7a6a44', p: '#b09a64', outfit: 'coverall', props: ['gloves'], weapon: 'wrench' },
+  // 第3章 GR社 — 古い工場。褪せた黄土。海外の会社（GR社・L3社・LM社）の人は作業着もスーツも着ない。
+  // 普通のシャツやビジネスカジュアル（本人の指摘）。工場の場面でも同じ。
+  // 調達は黄土の丸首セーターで書類の束、技術は生成りのシャツを腕まくりして紙挟み、
+  // 製造（中ボス）は暗いオリーブのハーフジップにチノパン（素手で殴る）
+  gr_chotatsu: { map: 'suit', b: '#a8915a', a: '#86733f', p: '#4a3d2a', w: '#eef0f2', h: '#2a2018', outfit: 'sweater', props: ['papers'], weapon: 'binder' },
+  gr_gijutsu:  { map: 'suit', b: '#e9e5da', a: '#c4bfb0', p: '#6e6440', h: '#2a2018', outfit: 'shirt', roll: true, props: ['clipboard'], weapon: 'roll' },
+  gr_seizo:    { map: 'suit', b: '#5f5530', a: '#463f24', p: '#b09a64', w: '#e9e5da', h: '#2a2018', outfit: 'sweater', zip: true, weapon: 'fist' },
   // プロマネは腕まくりのワイシャツに緩めたネクタイ。太った体格で、上着は着ていない
   gr_pm:       { map: 'suit',   b: '#d8cc9e', p: '#5a4a2e', t: '#6a4a2a', h: '#3a2a18', a: '#a89a70', outfit: 'shirt', tie: true, roll: true, bodyW: 1.1, weapon: 'roll' },
 
-  // 第4章 L3社 — 藍。閉じている。L3社とLM社の人は作業着を着ない（事務所の人。本人の指摘）。
-  // 全員が身分証を首から提げる。問合せはワイシャツに藍のネクタイ、責任者は藍の上着で書類挟みを持ち、
-  // 肩幅があって背が高い（攻撃するので腕は組ませない。組むと殴る瞬間に腕が3本に見える）
+  // 第4章 L3社 — 藍。閉じている。全員が身分証を首から提げる。問合せはワイシャツに藍のネクタイ、
+  // 責任者は藍のハーフジップで書類挟みを持ち、肩幅があって背が高い
+  // （攻撃するので腕は組ませない。組むと殴る瞬間に腕が3本に見える）
   l3_toiawase: { map: 'suit', b: '#cfd5e4', a: '#a4adc2', p: '#3a3f52', t: '#2e3a86', h: '#1e1812', x: '#b03a3a', outfit: 'shirt', tie: true, props: ['badge', 'folder'], weapon: 'binder' },
-  l3_yushutsu: { map: 'suit', b: '#2e3866', p: '#262c48', t: '#8a92b8', h: '#1a1610', x: '#b03a3a', outfit: 'suit', props: ['badge', 'clipboard'], shoulder: 1, bodyH: 1.05, weapon: 'stamp' },
-  // プロマネは顎まで立った襟の長い上着。細く背が高い（中身の見えない人）
-  l3_pm:       { map: 'suit',   b: '#232a4a', p: '#1c2240', t: '#6a78c0', h: '#1a1610', outfit: 'coat', collar: 'high', skirt: 11, bodyW: 0.94, bodyH: 1.08, weapon: 'binder' },
+  l3_yushutsu: { map: 'suit', b: '#2e3866', a: '#222a4c', p: '#4e5260', w: '#eef0f2', h: '#1a1610', x: '#b03a3a', outfit: 'sweater', zip: true, props: ['badge', 'clipboard'], shoulder: 1, bodyH: 1.05, weapon: 'stamp' },
+  // プロマネは藍のタートルネック。首を顎の下まで包む（中身の見えない人）。細く背が高い
+  l3_pm:       { map: 'suit', b: '#1c2240', a: '#141a33', p: '#2a2f45', h: '#1a1610', outfit: 'sweater', collar: 'high', bodyW: 0.94, bodyH: 1.08, weapon: 'binder' },
 
-  // 第5章 LM社 — 巨大。濃紺と金。作業着は着ない（工場の場面でも同じ）。形で分ける:
+  // 第5章 LM社 — 巨大。濃紺と金。形で分ける:
   // 契約は腕まくりしないワイシャツに金のネクタイ、変更要求は紺のカーディガン、
   // 試験はワイシャツを腕まくりして紺のネクタイにチノパン（水色は自社の作業着の空色と紛れるので使わない）、
-  // 契約管理は三つ揃い、プロマネは肩の張った長い上着
+  // 契約管理（中ボス）は紺のニットのベストに金のネクタイ、プロマネは紺の替え上着に金ボタン・開襟・灰色のズボン
   lm_keiyaku: { map: 'suit',   b: '#eef0f2', p: '#232842', t: '#c0a040', h: '#1a1410', a: '#c8ccd2', outfit: 'shirt', tie: true, props: ['binder'], weapon: 'binder' },
   lm_cr:      { map: 'suit',   b: '#2a3352', a: '#1e2640', p: '#3a3f4c', w: '#eef0f2', h: '#1e1812', outfit: 'cardigan', props: ['papers'], weapon: 'roll' },
   lm_shiken:  { map: 'suit',   b: '#eef0f2', a: '#c8ccd2', p: '#a89a78', t: '#232a48', h: '#2a2018', x: '#c0a040', outfit: 'shirt', tie: true, roll: true, props: ['badge', 'clipboard'], weapon: 'roll' },
-  lm_kanri:   { map: 'suit',   b: '#242a44', p: '#1e2338', t: '#d0b050', h: '#151109', v: '#6a5a2a', outfit: 'suit', vest3: true, props: ['binder'], weapon: 'binder' },
-  lm_pm:      { map: 'suit',   b: '#161c30', p: '#121728', t: '#d8bc58', h: '#12100c', outfit: 'suit', skirt: 12, shoulder: 2, bodyW: 1.08, faceAway: 'locked', weapon: 'binder' },
+  lm_kanri:   { map: 'suit',   b: '#eef0f2', a: '#c8ccd2', v: '#242a44', p: '#5a5e66', t: '#d0b050', h: '#151109', outfit: 'vest', knit: true, tie: true, props: ['binder'], weapon: 'binder' },
+  lm_pm:      { map: 'suit',   b: '#161c30', p: '#6a6e78', w: '#eef0f2', x: '#d8bc58', h: '#12100c', outfit: 'suit', tie: false, blazer: true, shoulder: 2, bodyW: 1.08, faceAway: 'locked', weapon: 'binder' },
 
-  // 代理店（商社）— 攻撃してこない。灰色のスーツで「間に立つ」。鞄を提げている
-  dairiten: { map: 'suit', b: '#8a8f98', p: '#767b84', t: '#5a5f68', h: '#241c14', outfit: 'suit', props: ['briefcase'] },
+  // 代理店（商社）— 攻撃してこない。海外の会社の人と違い、バシッと決めた高そうなスーツ（本人の指摘）:
+  // 炭色の三つ揃い、白いシャツに深紅のネクタイと金のタイピン、胸のチーフ、金の腕時計、革の鞄
+  dairiten: { map: 'suit', b: '#2a2d33', a: '#1c1e22', v: '#50545c', p: '#2a2d33', t: '#a01e2c', w: '#f6f7f8', h: '#241c14',
+              outfit: 'suit', vest3: true, shoulder: 1, bodyW: 0.96, bodyH: 1.04, props: ['pocketsquare', 'tiepin', 'watch', 'briefcase'] },
 
   // 最終章 発注官庁 ＋ 四騎士
   kensakan:   { map: 'suit',   b: '#3a4038', p: '#30352e', t: '#8a9080', h: '#1c1810', x: '#d8c040', outfit: 'suit', props: ['armband', 'clipboard'], weapon: 'stamp' },
@@ -238,6 +242,18 @@ export const PROPS2 = {
     [23, 27, 13, 18, 20 + bd, 21 + bd, '#5a3e22'],
     [24, 25, 19, 25, 21 + bd, 21 + bd, '#9aa0a6'],
   ],
+  // 胸ポケットのチーフ（白）。鞄を提げる側の胸（x の大きい側）
+  pocketsquare: ({ bd }) => {
+    const F = 19 + bd;
+    return [
+      [25, 27, 31, 32, F + 1, F + 1, '#f6f7f8'],
+      [26, 26, 33, 33, F + 1, F + 1, '#f6f7f8'],     // 先を少し立てる
+    ];
+  },
+  // ネクタイの金のタイピン（ネクタイの1段手前）
+  tiepin: ({ bd }) => [[18, 21, 28, 28, 21 + bd, 21 + bd, '#d8b84a']],
+  // 金の腕時計（鞄を提げる側の手首。袖口の高さで腕をひと回り巻く）
+  watch: ({ bw, sh }) => [[29 + bw + sh, 33 + bw + sh, 22, 22, 7, 17, '#d8b84a']],
   // 鞄（右手に提げる）
   briefcase: ({ bw, sh }) => {
     const x = 33 + bw + sh;
