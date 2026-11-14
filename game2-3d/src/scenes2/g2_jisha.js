@@ -33,7 +33,7 @@ const C = {
   cabinet: '#cfd1ca', cabinetLine: '#a6a9a2', handle: '#80858b', shelfBack: '#9a9e98',
   desk: '#bfc2bc', deskTop: '#d3d5cf', deskEdge: '#9fa39e', drawer: '#c8cbc5', mat: '#5d8a71',
   chair: '#7c828a', metal: '#6f757c',          // 灰色の布張り（古い型）。色のヘルメットが映える
-  pmTop: '#7a6048', pmBody: '#b2b0a7', pmChair: '#4a3f3c', pmMat: '#3b5646',
+  pmTop: '#7a6048', pmBody: '#b2b0a7', pmChair: '#7a3e46', pmMat: '#3b5646',
   crt: '#d4cfc0', crtDark: '#b5af9f', screenOff: '#2b3238',
   phone: '#d0cbbd', phoneDark: '#7e7a70', pc: '#d8d3c4',
   paper: ['#f4f3ee', '#e8e6dd', '#efe9d6', '#f7f6f2'],
@@ -42,11 +42,12 @@ const C = {
   board: '#f6f7f3', boardFrame: '#9aa1a6', cork: '#ae895c', corkFrame: '#7e6142',
   cardboard: '#b8956a', fileBox: '#e9e7de', tube: '#2c2f34',
 };
-// ヘルメットの色は配属先の色（stages2.js の PALETTES2 の h と同じ）。現場はキャップ。
+// ヘルメットの色は配属先の色（3Dのキャラの保護帽＝game2-3d/src/chars2.js の PALETTES2_3D の h と同じ）。
+// 現場も3Dでは黄色の保護帽（名札の色と同じ系統）。紺のキャップの人物は3Dには出てこない
 const OWNER = {
   player:       { helmet: '#36b06a' },
   douki_sekkei: { helmet: '#4a7ad0' },
-  douki_genba:  { helmet: '#44507a', cap: true },
+  douki_genba:  { helmet: '#e8c838' },
   douki_hinsho: { helmet: '#9a6ad0' },
 };
 const DOUKI = ['douki_sekkei', 'douki_genba', 'douki_hinsho'];
@@ -173,8 +174,10 @@ function chairAt(b, x, z, rot, color, cast) {
 function bossChairAt(b, x, z, rot) {
   const p = placer(b, x, z, rot, true);
   p(7.6, 1.2, 7.2, C.pmChair, 0, 5.7, 0);
-  p(7.8, 11.0, 1.2, C.pmChair, 0, 14.2, 3.4);         // 高い背もたれ（窓の下端にかかる）
-  p(7.2, 1.2, 1.6, '#5a4d49', 0, 19.6, 3.2);          // 頭当て
+  // 背もたれは中くらいの明るさのえんじ。暗い色で高いと、前に立つPM（黒い作業着・黒髪の後ろ姿）の頭と
+  // つながって、シルクハットをかぶった人に見える
+  p(7.8, 8.0, 1.2, C.pmChair, 0, 12.7, 3.4);          // 背もたれ（上端 16.7）
+  p(7.2, 1.0, 1.6, '#8c4f57', 0, 17.0, 3.2);          // 頭当て
   p(0.9, 0.7, 4.6, '#3a3b40', -4.1, 9.0, 0.6);        // 肘掛け
   p(0.9, 0.7, 4.6, '#3a3b40', 4.1, 9.0, 0.6);
   p(0.7, 3.0, 0.7, '#3a3b40', -4.1, 7.2, 1.6);

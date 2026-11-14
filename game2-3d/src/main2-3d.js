@@ -636,8 +636,11 @@ function placeWatchers(st) {
   if (!st.data.soloBoss) return;
   const ws = st.entities.filter((e) => e.alive && e.team === 'mob'
     && ((st.doukiUnits || []).includes(e) || e === st.supportUnit));
+  // 置き場は部屋（章の右端）から決める。自機の位置から決めると、ボス戦に入った地点しだいで
+  // いちばん右の人がガラスの内側（会議室の側）に立ってしまう。仕切りは W−88〜W−100 にあるので、
+  // その左（W−127〜W−105）に並べる
   ws.forEach((e, i) => {
-    e.x = Math.max(12, st.player.x - 150 + i * 24);
+    e.x = Math.max(12, st.width - 380 + i * 22);
     e.y = PLAY.top + 6 + (i % 2) * 9;
     e._pin = { x: e.x, y: e.y };
   });

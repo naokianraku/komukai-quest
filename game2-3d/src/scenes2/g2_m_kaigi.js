@@ -20,12 +20,12 @@ import { THREE, S, wx, wz, box, boxBatch, addScenery, hex, zones, setLighting, c
 
 // 配色。相手先は白〜銀。実在企業の色には寄せない（無彩色と青灰だけ）
 const C = {
-  wall: '#eceff2', base: '#b4bcc4', ceiling: '#f4f6f7', column: '#e3e7ea',
-  carpet: '#717a85', carpetB: '#77808b', dais: '#5b6470', daisEdge: '#c6cdd4',
+  wall: '#f1eee8', base: '#b4bcc4', ceiling: '#f6f4ef', column: '#e8e6e1',
+  carpet: '#7d7972', carpetB: '#837f77', dais: '#5b6470', daisEdge: '#c6cdd4',
   tile: '#b2b7bb', grout: '#9aa0a6',
   frame: '#c3cad1', frameDark: '#98a1aa',
   top: '#f4f5f6', edge: '#b9c0c7', skirt: '#d2d7dc', leg: '#a0a8b0',
-  exec: '#2f353d', execHi: '#3d444d', steel: '#aab1b8', headPanel: '#3b424b',
+  exec: '#2f353d', execHi: '#3d444d', steel: '#aab1b8', headPanel: '#7a5a40',
   ourTop: '#d3d5d0', ourLeg: '#868c92', ourChair: '#5b6571',
   card: '#fbfbf9', paper: '#f4f4ef', paperB: '#ebeae2', mic: '#2a2e33', cup: '#d3e5ee',
   door: '#9da5ad', plate: '#f4f5f3',
@@ -105,7 +105,7 @@ let anim = null;
 
 // ボス戦の光。窓を背にした上座が少し冷たく締まる（色と強さだけ。灯りは増やさない）
 function bossLight() {
-  hemi.color.set(0xe8eef4); hemi.groundColor.set(0x8a939d); hemi.intensity = 1.95;
+  hemi.color.set(0xf1eee8); hemi.groundColor.set(0x8a939d); hemi.intensity = 1.95;
   sun.color.set(0xf4f6fa); sun.intensity = 1.12;
 }
 
@@ -114,8 +114,8 @@ export function build(W, halfD, ctx = {}) {
   const { BACK, FRONT } = zones(halfD, 38, 70);          // 奥 -66 / 手前 98
   setLighting(false);
   // 第2章（坂 0.2）: まだ明るい。春の暖かさが抜けて、晴れた昼の白い光
-  hemi.color.set(0xf0f4f8); hemi.groundColor.set(0x959da6); hemi.intensity = 2.15;
-  sun.color.set(0xfff7ec); sun.intensity = 1.0; fill.intensity = 1.0;
+  hemi.color.set(0xf9f3e8); hemi.groundColor.set(0x9f998e); hemi.intensity = 2.15;
+  sun.color.set(0xffebd2); sun.intensity = 1.0; fill.intensity = 1.0;
   scene.background = hex(C.wall);
   scene.fog = new THREE.Fog(hex(C.wall), 360, 1150);
 
@@ -491,7 +491,7 @@ export function build(W, halfD, ctx = {}) {
   // ===== 手前: こちらの机（下座）=====
   // 折りたたみの机と積み重ね椅子。席札もマイクも無い（マイクは3台に1本を回して使う）。
   // 書類の山・バインダー・丸めた図面。背の高い物は置かない（手前の線より低く）
-  const ourEnd = W - 60;
+  const ourEnd = W - 140;   // ボス戦が始まるときのカメラに机が入らないように（自機の足元が机に隠れた）
   for (let s = 0, x0 = HALL + 6; x0 + 40 <= ourEnd + 0.1; x0 += 40, s++) {
     const x = x0 + 20;
     B.box(39, 0.6, 9, C.ourTop, x, 7.3, FZ);

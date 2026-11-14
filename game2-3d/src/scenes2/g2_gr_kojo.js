@@ -352,7 +352,8 @@ function buildOverhead(K) {
   const { b, W } = K;
   b.box(W + 80, 1.6, 1.2, C.ochreDk, W / 2, 45.2, 39.4);     // 天井の切り口に通す梁
   // 吊り灯。ところどころ切れていて、製造部門の1つはちらつく。どこで止まっても画面に切れた灯りが1つは入る並び
-  const states = ['on', 'off', 'on', 'off', 'on', 'off', 'flicker', 'on', 'off', 'on', 'off', 'on'];
+  // x=414（8つ目）は消しておく。製造部門の中ボス戦の真後ろに点いた灯りの黄色い円錐が来て、黄土の作業着が溶けるため
+  const states = ['on', 'off', 'on', 'off', 'on', 'off', 'flicker', 'off', 'off', 'on', 'off', 'on'];
   let i = 0;
   const spots = [];
   for (let x = 22; x < W + 40; x += 56, i++) {
@@ -895,11 +896,11 @@ function lathe(K, x, z) {
 function mill(K, x, z) {
   const { b, X } = K;
   b.box(10, 1, 12, C.machDk, x, 0.5, z, { cast: true });
-  b.box(8, 24, 8, C.machCream, x, 13, z - 2, { cast: true });                // コラム
-  b.box(8.5, 6, 7, C.machCream, x, 9, z + 3.5, { cast: true });              // ニー
+  b.box(8, 24, 8, C.machLt, x, 13, z - 2, { cast: true });                // コラム
+  b.box(8.5, 6, 7, C.machLt, x, 9, z + 3.5, { cast: true });              // ニー
   b.box(18, 1.4, 5.5, C.steel, x, 12.7, z + 4.5, { cast: true });            // テーブル
-  b.box(5, 4, 13, C.machCream, x, 27, z + 0.5, { cast: true });              // ラム
-  b.box(4.5, 7, 4.5, C.machCream, x, 22.6, z + 5.2, { cast: true });         // 主軸頭
+  b.box(5, 4, 13, C.machLt, x, 27, z + 0.5, { cast: true });              // ラム
+  b.box(4.5, 7, 4.5, C.machLt, x, 22.6, z + 5.2, { cast: true });         // 主軸頭
   X.cyl(0.6, 0.6, 3.2, C.steel, x, 17.5, z + 5.2, { seg: 8 });
   X.cyl(1.1, 1.1, 0.4, C.iron, x + 9.4, 12.7, z + 4.5, { rz: Math.PI / 2, seg: 10 });   // ハンドル
   b.box(9, 0.3, 0.1, C.machDk, x, 11, z + 7.05);
@@ -909,11 +910,12 @@ function mill(K, x, z) {
 
 function press(K, x, z) {
   const { b, X } = K;
-  b.box(26, 7, 13, C.ochreDk, x, 3.5, z, { cast: true });                   // ベッド
+  // 本体は古い機械の灰緑（黄土だと、黄土の作業着の中ボスが前に立ったとき輪郭が溶ける）。黄土ははずみ車だけ
+  b.box(26, 7, 13, C.machDk, x, 3.5, z, { cast: true });                    // ベッド
   b.box(20, 1.2, 10, C.steelDk, x, 7.6, z + 0.5);                            // ボルスタ
-  for (const s of [-1, 1]) b.box(5, 24, 11, C.ochre, x + s * 10.5, 19, z, { cast: true });   // 柱
-  b.box(27, 7, 13, C.ochre, x, 34.5, z, { cast: true });                    // クラウン
-  b.box(15, 5, 9, C.ochreDk, x, 21, z + 0.5, { cast: true });               // ラム
+  for (const s of [-1, 1]) b.box(5, 24, 11, C.mach, x + s * 10.5, 19, z, { cast: true });    // 柱
+  b.box(27, 7, 13, C.mach, x, 34.5, z, { cast: true });                     // クラウン
+  b.box(15, 5, 9, C.machDk, x, 21, z + 0.5, { cast: true });                // ラム
   b.box(13, 2.5, 8, C.iron, x, 9.45, z + 0.5);                               // 金型
   b.box(13, 2.5, 8, C.iron, x, 17.25, z + 0.5);
   for (let i = 0; i < 6; i++) b.box(2.4, 1.2, 0.15, i % 2 ? C.black : C.line, x - 6 + i * 2.4, 19.3, z + 5.06);
@@ -926,17 +928,15 @@ function press(K, x, z) {
   b.box(0.8, 0.8, 0.3, '#3f7a4a', x - 15.5, 10.6, z + 5.9);
   b.box(4, 2.2, 0.15, C.rust, x - 9, 5.2, z + 6.55);
   b.box(3, 3.5, 0.15, C.rust, x + 7, 3.8, z + 6.55);
-  b.box(3.6, 3.0, 0.3, C.line, x - 6.5, 27.2, z + 6.6);                     // 注意の板（無地）
-  b.box(2.6, 0.5, 0.12, C.black, x - 6.5, 27.2, z + 6.8);
 }
 
 function drill(K, x, z) {
   const { b, X } = K;
   b.box(7, 1, 7, C.machDk, x, 0.5, z, { cast: true });
   X.cyl(0.8, 0.8, 22, C.steel, x, 12, z - 2, { seg: 10, cast: true });
-  b.box(6, 1, 6, C.machCream, x, 9, z + 0.6, { cast: true });
-  b.box(1.8, 1.6, 2, C.machCream, x, 9, z - 1.4);
-  b.box(5, 5, 8, C.machCream, x, 22, z, { cast: true });
+  b.box(6, 1, 6, C.machLt, x, 9, z + 0.6, { cast: true });
+  b.box(1.8, 1.6, 2, C.machLt, x, 9, z - 1.4);
+  b.box(5, 5, 8, C.machLt, x, 22, z, { cast: true });
   b.box(3.5, 3, 3, C.machDk, x, 25.6, z - 2.5);
   X.cyl(0.4, 0.4, 3, C.steel, x, 18.2, z + 2.4, { seg: 8 });
   for (let i = 0; i < 3; i++) {

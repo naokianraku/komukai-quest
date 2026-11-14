@@ -18,8 +18,8 @@
 //                白板の工程表だけが残る（磁石と付箋は消え、マーカーの線は消し忘れ）。
 //                「最後の同期が呼ばれて出ていく」の行（3.4秒）に合わせて右端の扉が開き、
 //                廊下の光が床に差して、閉じる。
-//   'epilogue' … そのまま。手前（画面の外）の窓から夕方の光が一筋差し、白板の期限を越えた棒のあたりに
-//                縦の帯、床と机に斜めの帯を落とす。奥の窓の外は暮れていく。時計は1時間ほど進んでいる。
+//   'epilogue' … そのまま。手前（画面の外）の窓から外の明かりが一筋差し、白板の期限を越えた棒のあたりに
+//                縦の帯、床と机に斜めの帯を落とす。奥の窓の外は夜が深くなる。時計は1時間ほど進んでいる。
 //   'tick'     … 壁の時計（秒針は1秒ずつ）と、上の変化の進み。
 // build のたびに「人がいる」状態から建て直す。
 //
@@ -60,7 +60,8 @@ const MAGNET = ['#c8382f', '#2f5a8f', '#e0b23a', '#2a2e2c'];
 const NOTE = ['#f3e27a', '#f2b6c4', '#f3e27a'];
 
 // 光（坂 1.0）。人がいる／照明が半分落ちた／エピローグ
-const L0 = { hemi: '#c3d0c9', ground: '#45504a', hi: 1.55, sun: '#dfe9e4', si: 0.74, fi: 0.88, fog: '#5b6660' };
+// 直前の区間（5階の審査室）は四騎士と戦ううちに夜になる。そのあとで明るい昼に戻らないよう、夜の室内の明るさから始める
+const L0 = { hemi: '#c3d0c9', ground: '#45504a', hi: 1.15, sun: '#dfe9e4', si: 0.56, fi: 0.76, fog: '#4a5450' };
 const L1 = { hi: 0.98, si: 0.40, fi: 0.64, fog: '#3d4641' };
 const L2 = { hi: 0.88, si: 0.34, fi: 0.60, fog: '#383f3b' };
 
@@ -82,7 +83,7 @@ const T = {
   lights: [0.95, 1.75],       // 照明が落ちる（2段）
   doorOpen: 3.4, doorOpenDur: 0.9, doorHold: 1.6, doorClose: 0.8,
 };
-const DOOR_MAX = 1.15;        // 扉の開き（rad）
+const DOOR_MAX = 1.55;        // 扉の開き（rad）。ほぼ直角まで開く（浅いと、扉へ歩いて入る同期の体を戸の縁が縦に切る）
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const smooth = (v) => { v = clamp01(v); return v * v * (3 - 2 * v); };
@@ -219,7 +220,7 @@ export function build(W, halfD, ctx = {}) {
   const B = geoBatch();      // 光を受ける・動かない物（影なし）
   const K = geoBatch();      // 光を受ける・動かない物（影を落とす。奥の大物だけ）
   const G = geoBatch();      // 自分で光る物（誘導灯・廊下）
-  const Bl = geoBatch();     // ブラインド越しの外の明るさ（エピローグで夕方の色に変える）
+  const Bl = geoBatch();     // ブラインド越しの外の明るさ（外は夜。エピローグでさらに暗くする）
   const Bd = geoBatch();     // ホワイトボードの面と線（部屋が暗くなっても読めるよう少し自発光）
   const IB = itemList();     // 机の上の物（箱）。解散で消える
   const IC = itemList();     // 机の上の物（円柱）。解散で消える
@@ -399,6 +400,7 @@ export function build(W, halfD, ctx = {}) {
   G.done(unlit(), { receive: false });
   const blindMat = unlit();
   Bl.done(blindMat, { receive: false });
+  blindMat.color.set('#56606c');   // 外は夜（ブラインドの羽根が室内の明かりを少し拾うだけ）
   const boardMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: hex('#2c312e') });
   Bd.done(boardMat);
 
@@ -630,7 +632,7 @@ function buildClock(B, x, y, BACK) {
   return {
     hour: hand(2.0, 0.42, C.clockRim, 0.8), min: hand(2.9, 0.28, C.clockRim, 0.86), sec: hand(3.0, 0.12, '#c8382f', 0.92),
     // 16時47分ごろ（審査が長引いている）から進める
-    base: 16 * 3600 + 47 * 60 + 12,
+    base: 19 * 3600 + 6 * 60 + 12,   // 日没後（審査室で夜になったあと）
   };
 }
 
@@ -654,7 +656,7 @@ function lightQuads(list) {
   return addScenery(m);
 }
 
-// エピローグの光: 手前（画面の外）の窓の、カーテンの隙間から夕方の光が一筋。
+// エピローグの光: 手前（画面の外）の窓の、カーテンの隙間から外の明かりが一筋。
 // 縦に細い隙間を通った光は「縦の板」になるので、奥の壁には縦の帯、床と机の上には
 // 奥から手前左へ斜めに走る帯として落ちる。白板の上なら、期限の線を越えた赤い棒のあたりを横切らせる。
 // 書類が画面の真ん中から下を塞ぐので、帯は画面の上（壁と奥の机）で読めるよう、自機（＝カメラ）の近くに置く。
@@ -726,7 +728,7 @@ export function onEvent(name, arg) {
     if (a.epilogueAt == null) {
       a.epilogueAt = a.t;
       a.doorAtEpi = a.doorA;
-      a.clock.base += 72 * 60;                         // 時間が経っている（夕方）
+      a.clock.base += 72 * 60;                         // 時間が経っている（夜）
       a.beam = makeStreak(a);
     }
   }
@@ -802,7 +804,7 @@ function stepEpilogue(a, v) {
   const e = smooth(v / 2.0);
   applyLight(1, e);
   // 奥の窓（日の当たらない側）の外は暮れていく。手前の窓から夕方の光が一筋
-  a.blindMat.color.set('#ffffff').lerp(_tmp.set('#8e9fb4'), smooth(v / 2.5));
+  a.blindMat.color.set('#56606c').lerp(_tmp.set('#3a4350'), smooth(v / 2.5));
   if (a.beam) a.beam.material.opacity = smooth((v - 0.6) / 2.4);
   // 扉が開いていたら閉じる（エピローグに入った時の開きから）
   setDoor(a, a.doorAtEpi * (1 - smooth(v / 0.8)));

@@ -286,13 +286,14 @@ export function build(W, halfD, ctx = {}) {
   // 会議室: 左の壁（廊下の奥の壁から部屋の奥の壁まで）・奥の壁・右の壁。藍の布張りパネル
   P.box(2, 64, HZ - BACK + 2, C.wall, PX - 1, 32, (HZ + BACK - 2) / 2);
   P.box(RW, 64, 2, C.wall, RM, 32, BACK - 1);
-  P.box(2, 64, CEIL - BACK + 2, C.wall, XR + 1, 32, (CEIL + BACK - 2) / 2);
+  // 右の壁は床の手前端まで（天井の切り口 z=40 で止めると、寄ったカメラの右下に背景の色がそのまま出た）
+  P.box(2, 64, FRONT - BACK + 2, C.wall, XR + 1, 32, (FRONT + BACK - 2) / 2);
   for (let x = PX + 10; x < XR - 4; x += 10) P.box(0.35, 44.8, 0.12, C.joint, x, 23.6, BACK + 0.06);
   for (let z = BACK + 10; z < HZ - 3; z += 10) P.box(0.12, 44.8, 0.35, C.joint, PX + 0.06, 23.6, z);
-  for (let z = BACK + 10; z < CEIL - 4; z += 10) P.box(0.12, 44.8, 0.35, C.joint, XR - 0.06, 23.6, z);
+  for (let z = BACK + 10; z < FRONT - 4; z += 10) P.box(0.12, 44.8, 0.35, C.joint, XR - 0.06, 23.6, z);
   P.box(RW, 1.2, 0.4, C.base, RM, 0.6, BACK + 0.2);
   P.box(0.4, 1.2, HZ - BACK, C.base, PX + 0.2, 0.6, (HZ + BACK) / 2);
-  P.box(0.4, 1.2, CEIL - BACK, C.base, XR - 0.2, 0.6, (CEIL + BACK) / 2);
+  P.box(0.4, 1.2, FRONT - BACK, C.base, XR - 0.2, 0.6, (FRONT + BACK) / 2);
 
   // ---------- 天井（手前は z=40 で切る）----------
   ceilingSlab(W, halfD, BACK, C.ceiling, 47);
@@ -357,8 +358,10 @@ export function build(W, halfD, ctx = {}) {
   // ---------- ガラスの仕切り（帯を横切るのは細い枠だけ）----------
   const PZ1 = 25.6;                                                           // 仕切りの手前の端（帯の縁）
   P.box(1.2, 46, 1.2, C.alu, PX, 23, HZ + 0.6);
-  for (const z of [-9.6, 9.6]) P.box(0.8, 46, 0.8, C.alu, PX, 23, z);
-  P.box(0.9, 46, 0.9, C.alu, PX, 23, PZ1);
+  // 帯の中の縦の枠（引き戸の両脇・帯の手前の端）はごく細く。太いと、ガラスの外で見ている同期の体や、
+  // 仕切りのそばで戦う人の顔を縦に切る
+  for (const z of [-9.6, 9.6]) P.box(0.3, 46, 0.3, C.alu, PX, 23, z);
+  P.box(0.4, 46, 0.4, C.alu, PX, 23, PZ1);
   P.box(1.0, 1.0, PZ1 - HZ, C.alu, PX, 45.5, (PZ1 + HZ) / 2);                 // 上枠
   P.box(0.7, 0.7, PZ1 - HZ, C.alu, PX, 27.2, (PZ1 + HZ) / 2);                 // 欄間の横枠
   // 引き戸の上の「使用中」の灯（閉: 赤 → 開: 緑）。両面に向ける。廊下の壁に付けるとボス戦では HUD の裏に隠れる
@@ -545,7 +548,8 @@ export function build(W, halfD, ctx = {}) {
   P.box(14.2, 2.0, 8.8, '#3a3e47', RXc, 3.3, RZc + 0.1);
 
   // 黒い箱（奥の右端）。試験台の上に載った、窓も表示も無い箱。前面に丸いコネクタと取っ手だけ
-  const BXc = XR - 21, BZc = -56, BF = BZc + 6.5;          // BF: 箱の前面
+  // 中心は W+1（右端 W+11）。W+19 だと、ボス戦の始まりの位置で倒したとき箱が画面の右端で切れ、完成の灯りが見えない
+  const BXc = XR - 39, BZc = -56, BF = BZc + 6.5;          // BF: 箱の前面
   PC.box(26, 0.8, 16, C.standTop, BXc, 8.6, BZc);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) PC.box(1.2, 8.2, 1.2, C.stand, BXc + 12 * sx, 4.1, BZc + 7 * sz);
   P.box(24, 0.6, 14, C.stand, BXc, 2.4, BZc);

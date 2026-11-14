@@ -32,14 +32,16 @@ import {
 
 // ===== 配色: 暗めの藍。注意は黄黒の縞と赤い灯 =====
 const P = {
-  bg: '#1a1f33',
-  wall: '#313a62', wallLo: '#262d4d', wallLine: '#262d4a', trim: '#5a64a0',
-  soffit: '#232945', ceiling: '#1c2034',
-  floor: '#353c5e', band: '#3c4568', joint: '#2b3152', escort: '#c4443b', chevron: '#5b68a6',
-  frame: '#232943', frameLt: '#3b4472', panel: '#465081', panelDk: '#363e68',
+  // 大きな面は藍のまま明るさを上げ、彩度を少し落とした（第4章が最終章より暗く冷たくなっていた。
+  // 床が暗いと、この章の敵の藍のポロシャツが床に溶けて胴の輪郭が読めない）
+  bg: '#2e3245',
+  wall: '#52597f', wallLo: '#414764', wallLine: '#414661', trim: '#6a74ae',
+  soffit: '#3c415b', ceiling: '#303446',
+  floor: '#565c7b', band: '#616889', joint: '#474c6b', escort: '#c4443b', chevron: '#6b78b4',
+  frame: '#3c4159', frameLt: '#606893', panel: '#7179a6', panelDk: '#595f86',
   steel: '#a5adc6', steelDk: '#5a6283',
   tint: '#16213b', tintHi: '#203259', screen: '#35558f',
-  tarp: '#283158', tarpLt: '#3e4a84', tarpDk: '#191e37', tarpBk: '#16181f', tarpBkLt: '#2b2f3c', tarpGy: '#4a5274', tarpGyLt: '#5f6890',
+  tarp: '#6b77a3', tarpLt: '#8c97c2', tarpDk: '#4d5884', tarpBk: '#16181f', tarpBkLt: '#2b2f3c', tarpGy: '#8d93a8', tarpGyLt: '#aab0c4',
   strap: '#c99d33',
   contact: '#272d4a',
   black: '#14151b', blackLt: '#22242d', handle: '#6a6f80',
@@ -53,7 +55,7 @@ const P = {
 };
 
 // ===== 光（第4章は坂0.6: 第3章より冷たく暗い。蛍光灯ではなく、低い天井の冷たい線の灯）=====
-const LIGHT = { hemi: '#bccbed', ground: '#343a56', hi: 1.55, sun: '#cdd8f4', si: 0.74, fi: 0.84 };
+const LIGHT = { hemi: '#bccbed', ground: '#545972', hi: 1.8, sun: '#cdd8f4', si: 0.82, fi: 0.9 };
 
 // ゲートの位置（ワールド x）と、回転ゲートの組み方。区間の色は gate[i-1]〜gate[i] の間
 const GATES = [
@@ -96,7 +98,7 @@ function textures() {
     // 金網（菱形の目）。線を太めに描いておくと、遠くで縮んでも網が消えずに灰色の霞になる
     mesh: make(64, (g, n) => {
       g.clearRect(0, 0, n, n);
-      g.strokeStyle = '#c9d0e2';
+      g.strokeStyle = '#8c93ab';   // 金網は少し落とす（明るいと奥の覆いを掛けた機材が消える）
       g.lineWidth = 4.5;
       for (const o of [-n, 0, n]) {
         g.beginPath(); g.moveTo(o, 0); g.lineTo(o + n, n); g.stroke();

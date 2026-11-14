@@ -28,8 +28,9 @@ import {
 // ===== 配色: 冷えた灰青と、くすんだ白いタイル =====
 const P = {
   bg: '#7d8a93',
-  tile: '#cad0d1', grout: '#8b959a', checker: '#4e6371', crack: '#7c868b',
-  tileOld: ['#c4cac9', '#c9ccc4', '#bdc5c7', '#d6d9d3', '#b8bfbf'],
+  // 床のタイルは腰壁の白タイルより一段暗く（明るすぎる床に、この章の敵の服が溶けていた）
+  tile: '#919696', grout: '#6f777b', checker: '#4e6371', crack: '#636b6f',
+  tileOld: ['#8d9191', '#91938d', '#888e8f', '#9a9c98', '#848a8a'],
   wtile: '#dfe4e3', wgrout: '#a1abaf', trim: '#4c6776', cap: '#c4cccd', base: '#3a4953',
   wall: '#95a6b1', rail: '#73858f', glow1: '#a6b7c1', glow2: '#bdcbd3',
   soffit: '#a5b4bd', soffitLine: '#6d7d87', ceiling: '#a9b4ba', pipe: '#c3cbcf', clip: '#5f6a70',
@@ -454,7 +455,7 @@ function setHands(s) {
 
 // 便箋の束。1束（厚み0.4）ずつ少しずらして積んだ形を1つのメッシュにまとめ、
 // setDrawRange で下から何束目まで描くかを変える（描画は1山1回のまま、紙が積み上がっていく）
-const BUNDLE = 0.4, PER_BUNDLE = 36;   // BoxGeometry 1個の添字の数
+const BUNDLE = 0.75, PER_BUNDLE = 36;   // 待った時間＝レターの山。満タンで腰壁の笠木を越えて見えるくらいに   // BoxGeometry 1個の添字の数
 function paperPile(x, y, z, rotY, n, seed) {
   const pos = [], nor = [], col = [], idx = [];
   const c = new THREE.Color(), v = new THREE.Vector3(), nv = new THREE.Vector3();
@@ -513,7 +514,7 @@ function applyOpen(s) {
   s.leaf.rotation.y = -DOOR_MAX * d;
   s.spill.visible = d > 0.01;
   s.spill.material.opacity = 0.34 * d;
-  setWarmth(clamp01((t - 0.3) / 2.5));
+  setWarmth(0.35 * clamp01((t - 0.3) / 2.5));   // 扉が開いても「少しだけ」温かく（床が青白からクリームへ反転しない）
 }
 
 export function onEvent(name, arg) {
